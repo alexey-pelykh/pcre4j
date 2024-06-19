@@ -71,6 +71,33 @@ publishing {
             groupId = "org.pcre4j"
             artifactId = project.name
             version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
+
+            pom {
+                name = "org.pcre4j:${project.name}"
+                description = "PCRE4J JNA Backend"
+                url = "https://pcre4j.org"
+
+                licenses {
+                    license {
+                        name = "GNU Lesser General Public License v3.0"
+                        url = "https://www.gnu.org/licenses/lgpl-3.0.en.html"
+                    }
+                }
+                developers {
+                    developer {
+                        name = "Alexey Pelykh"
+                        email = "alexey.pelykh@gmail.com"
+                        organization = "The PCRE4J Project"
+                        organizationUrl = "https://pcre4j.org"
+
+                    }
+                }
+                scm {
+                    connection = "scm:git:git://github.com/alexey-pelykh/pcre4j.git"
+                    developerConnection = "scm:git:ssh://github.com:alexey-pelykh/pcre4j.git"
+                    url = "https://github.com/alexey-pelykh/pcre4j"
+                }
+            }
         }
     }
 
