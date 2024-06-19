@@ -15,6 +15,7 @@
 plugins {
     `java-library`
     `maven-publish`
+    `signing`
 }
 
 repositories {
@@ -80,11 +81,21 @@ publishing {
             }
         }
 
-        mavenCentral {
+        maven {
+            name = "OSSRH"
+            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
             credentials {
-                username = findProperty("pcre4j.mavenCentral.user") as String? ?: ""
-                password = findProperty("pcre4j.mavenCentral.password") as String? ?: ""
+                username = System.getenv("OSSRH_USERNAME")
+                password = System.getenv("OSSRH_TOKEN")
             }
         }
     }
+}
+
+signing {
+    useInMemoryPgpKeys(
+        System.getenv("GPG_PRIVATE_KEY"),
+        System.getenv("GPG_PASSPHRASE")
+    )
+    sign(publishing.publications["mavenJava"])
 }
