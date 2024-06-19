@@ -63,9 +63,6 @@ publishing {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
 
-            artifact(tasks.named("sourcesJar"))
-            artifact(tasks.named("javadocJar"))
-
             groupId = "org.pcre4j"
             artifactId = project.name
             version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
@@ -73,6 +70,15 @@ publishing {
     }
 
     repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/" + System.getenv("GITHUB_REPOSITORY"))
+            credentials {
+                username = System.getenv("GITHUB_ACTOR")
+                password = System.getenv("GITHUB_TOKEN")
+            }
+        }
+
         mavenCentral {
             credentials {
                 username = findProperty("pcre4j.mavenCentral.user") as String? ?: ""
