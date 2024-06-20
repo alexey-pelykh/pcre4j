@@ -1,11 +1,34 @@
 # PCRE4J: PCRE for Java
 
+![GitHub License](https://img.shields.io/github/license/alexey-pelykh/pcre4j)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/alexey-pelykh/pcre4j/main)
+![Maven Central Version](https://img.shields.io/maven-central/v/org.pcre4j/lib)
+
 The PCRE4J project's goal is to bring the power of the [PCRE](https://www.pcre.org) library to Java.
 
 This project is brought to you by [Alexey Pelykh](https://github.com/alexey-pelykh) with a great gratitude to the PCRE
 library author [Philip Hazel](https://github.com/PhilipHazel) and its contributors.
 
 ## Usage
+
+To use the PCRE4J library in your project, add the following dependency to your `pom.xml` file:
+
+```xml
+<dependency>
+    <groupId>org.pcre4j</groupId>
+    <artifactId>lib</artifactId>
+    <version>0.0.0</version>
+</dependency>
+<dependency>
+    <groupId>org.pcre4j</groupId>
+    <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
+    <artifactId>jna</artifactId>
+    <!-- <artifactId>ffm</artifactId> -->
+    <version>0.0.0</version>
+</dependency>
+```
+
+Then, you can use the PCRE4J library in your Java code as follows:
 
 ```java
 import org.pcre4j.Pcre2Code;
