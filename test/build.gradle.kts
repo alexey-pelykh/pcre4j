@@ -17,6 +17,8 @@ plugins {
     jacoco
 }
 
+version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
+
 repositories {
     mavenCentral()
 }

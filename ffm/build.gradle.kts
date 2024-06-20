@@ -19,6 +19,8 @@ plugins {
     jacoco
 }
 
+version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
+
 repositories {
     mavenCentral()
 }
@@ -98,7 +100,7 @@ publishing {
 
             groupId = "org.pcre4j"
             artifactId = project.name
-            version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
+            version = project.version.toString()
 
             pom {
                 name = "org.pcre4j:${project.name}"
@@ -141,7 +143,12 @@ publishing {
 
         maven {
             name = "OSSRH"
-            url = uri("https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/")
+            url = uri(
+                if (project.version.toString().endsWith("-SNAPSHOT"))
+                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                else
+                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            )
             credentials {
                 username = System.getenv("OSSRH_USERNAME")
                 password = System.getenv("OSSRH_TOKEN")
