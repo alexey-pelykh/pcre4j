@@ -2,6 +2,7 @@
 
 ![GitHub License](https://img.shields.io/github/license/alexey-pelykh/pcre4j)
 ![GitHub branch check runs](https://img.shields.io/github/check-runs/alexey-pelykh/pcre4j/main)
+[![codecov](https://codecov.io/gh/alexey-pelykh/pcre4j/graph/badge.svg?token=7UJZ501GWT)](https://codecov.io/gh/alexey-pelykh/pcre4j)
 ![Maven Central Version](https://img.shields.io/maven-central/v/org.pcre4j/lib)
 
 The PCRE4J project's goal is to bring the power of the [PCRE](https://www.pcre.org) library to Java.
@@ -12,9 +13,10 @@ library author [Philip Hazel](https://github.com/PhilipHazel) and its contributo
 ## Usage
 
 The PCRE4J library provides several APIs to interact with the PCRE library:
- - `java.util.regex`-alike API via `org.pcre4j.regex.Pattern` and `org.pcre4j.regex.Matcher`
- - The PCRE4J API via `org.pcre4j.Pcre2Code` and related classes
- - The `libpcre2` direct API via backends that implement `org.pcre4j.api.IPcre2`
+
+- `java.util.regex`-alike API via `org.pcre4j.regex.Pattern` and `org.pcre4j.regex.Matcher`
+- The PCRE4J API via `org.pcre4j.Pcre2Code` and related classes
+- The `libpcre2` direct API via backends that implement `org.pcre4j.api.IPcre2`
 
 ### Quick Start with `java.util.regex`-alike API
 

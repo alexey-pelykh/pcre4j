@@ -14,6 +14,7 @@
  */
 plugins {
     `java-library`
+    jacoco
 }
 
 repositories {
@@ -50,4 +51,14 @@ java {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.jacocoTestReport {
+    dependsOn(tasks.test)
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
 }
