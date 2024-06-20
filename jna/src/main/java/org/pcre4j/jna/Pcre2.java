@@ -20,6 +20,7 @@ import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
+import com.sun.jna.ptr.PointerByReference;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.reflect.Method;
@@ -150,8 +151,10 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int patternInfo(long code, int what, ByteBuffer where) {
-        Pointer wherePtr = Native.getDirectBufferPointer(where);
-        return library.pcre2_pattern_info(new Pointer(code), what, wherePtr);
+        PointerByReference whereRef = new PointerByReference();
+        int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
+        where.put(whereRef.getValue().getByteArray(0, where.capacity()));
+        return result;
     }
 
     @Override

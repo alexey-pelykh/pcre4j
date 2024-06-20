@@ -125,4 +125,16 @@ public abstract class Pcre2Tests {
         }, ovector);
     }
 
+    @Test
+    public void nameTable() {
+        final var code = new Pcre2Code(
+                "(?<number>42)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var nameTable = code.nameTable();
+        assertEquals(1, nameTable.length);
+        assertEquals(new Pcre2Code.NameTableEntry(1, "number"), nameTable[0]);
+    }
+
 }
