@@ -15,7 +15,7 @@
 plugins {
     `java-library`
     `maven-publish`
-    `signing`
+    signing
 }
 
 repositories {
@@ -23,7 +23,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":api"))
+    api(project(":api"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(project(":lib"))
     testImplementation(project(":test"))
