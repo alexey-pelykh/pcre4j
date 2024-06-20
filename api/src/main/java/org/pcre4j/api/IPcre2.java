@@ -459,7 +459,7 @@ public interface IPcre2 {
     public static final int INFO_ALLOPTIONS = 0;
 
     /**
-     * Options passed to {@link #compile(String, int, int[], long[], long)}
+     * Options passed to {@link #compile}
      */
     public static final int INFO_ARGOPTIONS = 1;
 

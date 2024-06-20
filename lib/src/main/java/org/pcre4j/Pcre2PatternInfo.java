@@ -26,7 +26,7 @@ public enum Pcre2PatternInfo {
     INFO_ALLOPTIONS(IPcre2.INFO_ALLOPTIONS),
 
     /**
-     * Options passed to {@link IPcre2#compile(String, int, int[], long[], long)}
+     * Options passed to {@link IPcre2#compile}
      */
     INFO_ARGOPTIONS(IPcre2.INFO_ARGOPTIONS),
 
