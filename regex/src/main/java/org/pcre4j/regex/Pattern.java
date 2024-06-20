@@ -18,6 +18,7 @@ import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileError;
 import org.pcre4j.Pcre2CompileOption;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -178,52 +179,90 @@ public class Pattern {
 
     // TODO: quote(String s)
 
-//    /**
-//     * Splits the given input around matches of this pattern.
-//     *
-//     * @param input the input to split
-//     * @return the array of strings computed by splitting the input around matches of this pattern
-//     */
-//    public String[] split(CharSequence input) {
-//        return split(input, 0, false);
-//    }
-//
-//    /**
-//     * Splits the given input around matches of this pattern.
-//     *
-//     * @param input the input to split
-//     * @param limit the maximum number of items to return
-//     * @return the array of strings computed by splitting the input around matches of this pattern
-//     */
-//    public String[] split(CharSequence input, int limit) {
-//        return split(input, limit, false);
-//    }
-//
-//    /**
-//     * Splits the given input around matches of this pattern and returns both the strings and the matching delimiters.
-//     *
-//     * @param input the input to split
-//     * @param limit the maximum number of items to return
-//     * @return the array of strings and matching delimiters computed by splitting the input around matches of this
-//     * pattern
-//     */
-//    public String[] splitWithDelimiters(CharSequence input, int limit) {
-//        return split(input, limit, true);
-//    }
-//
-//    /**
-//     * Splits the given input around matches of this pattern and returns either just the strings or both the strings
-//     * and the matching delimiters.
-//     *
-//     * @param input the input to split
-//     * @param limit the maximum number of items to return
-//     * @param includeDelimiters whether to include the matching delimiters in the result
-//     * @return the array of strings and optionally matching delimiters computed by splitting the input around matches
-//     * of this pattern
-//     */
-//    public String[] split(CharSequence input, int limit, boolean includeDelimiters) {
-//        // TODO:
-//    }
+    /**
+     * Splits the given input around matches of this pattern.
+     *
+     * @param input the input to split
+     * @return the array of strings computed by splitting the input around matches of this pattern
+     */
+    public String[] split(CharSequence input) {
+        return split(input, 0, false);
+    }
+
+    /**
+     * Splits the given input around matches of this pattern.
+     *
+     * @param input the input to split
+     * @param limit the maximum number of items to return
+     * @return the array of strings computed by splitting the input around matches of this pattern
+     */
+    public String[] split(CharSequence input, int limit) {
+        return split(input, limit, false);
+    }
+
+    /**
+     * Splits the given input around matches of this pattern and returns both the strings and the matching delimiters.
+     *
+     * @param input the input to split
+     * @param limit the maximum number of items to return
+     * @return the array of strings and matching delimiters computed by splitting the input around matches of this
+     * pattern
+     */
+    public String[] splitWithDelimiters(CharSequence input, int limit) {
+        return split(input, limit, true);
+    }
+
+    /**
+     * Splits the given input around matches of this pattern and returns either just the strings or both the strings
+     * and the matching delimiters.
+     *
+     * @param input the input to split
+     * @param limit the maximum number of items to return
+     * @param includeDelimiters whether to include the matching delimiters in the result
+     * @return the array of strings and optionally matching delimiters computed by splitting the input around matches
+     * of this pattern
+     */
+    public String[] split(CharSequence input, int limit, boolean includeDelimiters) {
+        final var matcher = matcher(input);
+        final var result = new ArrayList<String>();
+        var numMatches = 0;
+        var offset = 0;
+        while (matcher.find()) {
+            if (limit <= 0 || numMatches < limit - 1) {
+                if (offset == 0 && offset == matcher.start() && matcher.start() == matcher.end()) {
+                    continue;
+                }
+                final var match = input.subSequence(offset, matcher.start()).toString();
+                result.add(match);
+                offset = matcher.end();
+                if (includeDelimiters) {
+                    result.add(input.subSequence(matcher.start(), offset).toString());
+                }
+                numMatches += 1;
+            } else if (numMatches == limit - 1) {
+                final var match = input.subSequence(offset, input.length()).toString();
+                result.add(match);
+                offset = matcher.end();
+                numMatches += 1;
+            }
+        }
+
+        if (result.isEmpty()) {
+            return new String[]{input.toString()};
+        }
+
+        if (limit <= 0 || numMatches < limit) {
+            result.add(input.subSequence(offset, input.length()).toString());
+        }
+
+        var resultSize = result.size();
+        if (limit <= 0) {
+            while (resultSize > 0 && result.get(resultSize - 1).isEmpty()) {
+                resultSize--;
+            }
+        }
+        return result.subList(0, resultSize).toArray(new String[resultSize]);
+    }
 
     // TODO: splitAsStream(CharSequence input)
 

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.pcre4j.Pcre4j;
 import org.pcre4j.jna.Pcre2;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -35,5 +36,17 @@ public class PatternTests {
         var pcre4jPattern = Pattern.compile("(?<number>42)");
 
         assertEquals(javaPattern.namedGroups(), pcre4jPattern.namedGroups());
+    }
+
+    @Test
+    void split() {
+        var javaPattern = java.util.regex.Pattern.compile("\\D+");
+        var pcre4jPattern = Pattern.compile("\\D+");
+
+        var input = "0, 1, 1, 2, 3, 5, 8, ..., 144, ...";
+
+        assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
+        assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
+        assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
     }
 }
