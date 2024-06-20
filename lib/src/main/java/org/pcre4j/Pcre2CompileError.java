@@ -22,6 +22,21 @@ public class Pcre2CompileError extends IllegalArgumentException {
     private static final int PATTERN_REGION_SIZE = 3;
 
     /**
+     * The pattern that caused the error
+     */
+    private final String pattern;
+
+    /**
+     * The offset of the error in the pattern
+     */
+    private final long offset;
+
+    /**
+     * The error message
+     */
+    private final String message;
+
+    /**
      * Create a new pattern compilation error.
      *
      * @param pattern the pattern
@@ -42,6 +57,36 @@ public class Pcre2CompileError extends IllegalArgumentException {
      */
     public Pcre2CompileError(String pattern, long offset, String message, Throwable cause) {
         super("Error in pattern at %d (%s): %s".formatted(offset, getPatternRegion(pattern, offset), message), cause);
+        this.pattern = pattern;
+        this.offset = offset;
+        this.message = message;
+    }
+
+    /**
+     * Get the pattern that caused the error.
+     *
+     * @return the pattern
+     */
+    public String pattern() {
+        return pattern;
+    }
+
+    /**
+     * Get the offset of the error in the pattern.
+     *
+     * @return the offset
+     */
+    public long offset() {
+        return offset;
+    }
+
+    /**
+     * Get the error message.
+     *
+     * @return the error message
+     */
+    public String message() {
+        return message;
     }
 
     /**
