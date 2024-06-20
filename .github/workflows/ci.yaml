@@ -103,4 +103,4 @@ jobs:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -Ppcre4j.version=${{ github.ref_name }}-SNAPSHOT
+        run: ./gradlew publish -Ppcre4j.version=${{ github.ref_name }}-SNAPSHOT
