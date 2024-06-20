@@ -12,11 +12,28 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-rootProject.name = "pcre4j"
+package org.pcre4j.regex;
 
-include(":api")
-include(":lib")
-include(":test")
-include(":jna")
-include(":ffm")
-include(":regex")
+import org.junit.jupiter.api.Test;
+import org.pcre4j.Pcre4j;
+import org.pcre4j.jna.Pcre2;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+/**
+ * Tests to ensure API likeness of the {@link Pattern} to the {@link java.util.regex.Pattern}.
+ */
+public class PatternTests {
+
+    static {
+        Pcre4j.setup(new Pcre2());
+    }
+
+    @Test
+    void namedGroups() {
+        var javaPattern = java.util.regex.Pattern.compile("(?<number>42)");
+        var pcre4jPattern = Pattern.compile("(?<number>42)");
+
+        assertEquals(javaPattern.namedGroups(), pcre4jPattern.namedGroups());
+    }
+}
