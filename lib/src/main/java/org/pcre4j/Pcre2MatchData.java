@@ -28,10 +28,12 @@ public class Pcre2MatchData {
      * The match data handle
      */
     /* package-private */ final long handle;
+
     /**
      * The PCRE2 API reference to use across the entire lifecycle of the object
      */
-    private final IPcre2 api;
+    /* package-private */ final IPcre2 api;
+
     /**
      * The cleaner to free the resources
      */
@@ -77,6 +79,24 @@ public class Pcre2MatchData {
         this.api = api;
         this.handle = handle;
         this.cleanable = cleaner.register(this, new Pcre2MatchData.Clean(api, handle));
+    }
+
+    /**
+     * Get the PCRE2 API backing this match data
+     *
+     * @return the PCRE2 API
+     */
+    public IPcre2 api() {
+        return api;
+    }
+
+    /**
+     * Get the handle of the match data
+     *
+     * @return the handle of the match data
+     */
+    public long handle() {
+        return handle;
     }
 
     /**

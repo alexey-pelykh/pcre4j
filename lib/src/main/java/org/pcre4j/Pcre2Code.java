@@ -25,14 +25,17 @@ import java.util.EnumSet;
 public class Pcre2Code {
 
     private static final Cleaner cleaner = Cleaner.create();
+
     /**
      * The compiled pattern handle
      */
     /* package-private */ final long handle;
+
     /**
      * The PCRE2 API reference to use across the entire lifecycle of the object
      */
-    private final IPcre2 api;
+    /* package-private */ final IPcre2 api;
+
     /**
      * The cleaner to free the compiled pattern
      */
@@ -118,6 +121,24 @@ public class Pcre2Code {
         }
 
         throw new Pcre2PatternInfoSizeError(Pcre2PatternInfo.valueOf(IPcre2.INFO_FRAMESIZE).orElseThrow(), infoSize);
+    }
+
+    /**
+     * Get the PCRE2 API backing this compiled pattern
+     *
+     * @return the PCRE2 API
+     */
+    public IPcre2 api() {
+        return api;
+    }
+
+    /**
+     * Get the handle of the compiled pattern
+     *
+     * @return the handle of the compiled pattern
+     */
+    public long handle() {
+        return handle;
     }
 
     /**

@@ -28,7 +28,7 @@ public class Pcre2GeneralContext {
     /**
      * The PCRE2 API reference to use across the entire lifecycle of the object
      */
-    private final IPcre2 api;
+    /* package-private */ final IPcre2 api;
     /**
      * The cleaner to free the resources
      */
@@ -48,6 +48,24 @@ public class Pcre2GeneralContext {
         this.api = api;
         this.handle = handle;
         this.cleanable = cleaner.register(this, new Pcre2GeneralContext.Clean(api, handle));
+    }
+
+    /**
+     * Get the PCRE2 API backing this general context
+     *
+     * @return the PCRE2 API
+     */
+    public IPcre2 api() {
+        return api;
+    }
+
+    /**
+     * Get the handle of the general context
+     *
+     * @return the handle of the general context
+     */
+    public long handle() {
+        return handle;
     }
 
     private record Clean(IPcre2 api, long generalContext) implements Runnable {
