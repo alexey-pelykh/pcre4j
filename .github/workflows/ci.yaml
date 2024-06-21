@@ -107,14 +107,14 @@ jobs:
           pandoc -f gfm -t html5 -s --shift-heading-level-by=-1 --lua-filter=gh-pages/filter.lua \
             -o build/gh-pages/pcre2-api.html PCRE2_API.md
 
-          mkdir -p build/gh-pages/docs
+          mkdir -p build/gh-pages/javadoc
           pandoc -f markdown -t html5 -s  --shift-heading-level-by=-1 --lua-filter=gh-pages/filter.lua \
-            -o build/gh-pages/docs/index.html gh-pages/docs/index.md
-          cp -a api/build/docs/. build/gh-pages/docs/api
-          cp -a lib/build/docs/. build/gh-pages/docs/lib
-          cp -a jna/build/docs/. build/gh-pages/docs/jna
-          cp -a ffm/build/docs/. build/gh-pages/docs/ffm
-          cp -a regex/build/docs/. build/gh-pages/docs/regex
+            -o build/gh-pages/javadoc/index.html gh-pages/javadoc/index.md
+          cp -a api/build/docs/javadoc/. build/gh-pages/javadoc/api
+          cp -a lib/build/docs/javadoc/. build/gh-pages/javadoc/lib
+          cp -a jna/build/docs/javadoc/. build/gh-pages/javadoc/jna
+          cp -a ffm/build/docs/javadoc/. build/gh-pages/javadoc/ffm
+          cp -a regex/build/docs/javadoc/. build/gh-pages/javadoc/regex
 
       - name: Codecov
         uses: codecov/codecov-action@v4
