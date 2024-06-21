@@ -166,6 +166,8 @@ public class Usage {
 }
 ```
 
+See the exposed PCRE2 API functions list [here](./PCRE2_API.md).
+
 ## Backends
 
 The PCRE4J library supports several backends to invoke the `pcre2` API.
