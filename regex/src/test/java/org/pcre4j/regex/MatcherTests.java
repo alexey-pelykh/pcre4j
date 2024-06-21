@@ -81,6 +81,56 @@ public class MatcherTests {
     }
 
     @Test
+    void lookingAtTrue() {
+        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!");
+        var pcre4jMatcher = Pattern.compile("42").matcher("42!");
+
+        assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @Test
+    void lookingAtFalse() {
+        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("!42");
+        var pcre4jMatcher = Pattern.compile("42").matcher("!42");
+
+        assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
+        assertThrows(IllegalStateException.class, javaMatcher::start);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
+        assertThrows(IllegalStateException.class, javaMatcher::end);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
+    }
+
+    @Test
+    void lookingAtTrueInRegion() {
+        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[42!]");
+        var pcre4jMatcher = Pattern.compile("42").matcher("[42!]");
+
+        javaMatcher.region(1, 4);
+        pcre4jMatcher.region(1, 4);
+
+        assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @Test
+    void lookingAtFalseRegion() {
+        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[!42]");
+        var pcre4jMatcher = Pattern.compile("42").matcher("[!42]");
+
+        javaMatcher.region(1, 4);
+        pcre4jMatcher.region(1, 4);
+
+        assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
+        assertThrows(IllegalStateException.class, javaMatcher::start);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
+        assertThrows(IllegalStateException.class, javaMatcher::end);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
+    }
+
+    @Test
     void findTrue() {
         var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!");
         var pcre4jMatcher = Pattern.compile("42").matcher("42!");
