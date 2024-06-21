@@ -216,8 +216,8 @@ public class Pattern {
      * Splits the given input around matches of this pattern and returns either just the strings or both the strings
      * and the matching delimiters.
      *
-     * @param input the input to split
-     * @param limit the maximum number of items to return
+     * @param input             the input to split
+     * @param limit             the maximum number of items to return
      * @param includeDelimiters whether to include the matching delimiters in the result
      * @return the array of strings and optionally matching delimiters computed by splitting the input around matches
      * of this pattern

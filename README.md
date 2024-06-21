@@ -180,7 +180,8 @@ the JNA.
 
 ### `ffm`
 
-The `ffm` backend uses the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/21/core/foreign-function-and-memory-api.html)
+The `ffm` backend uses
+the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/21/core/foreign-function-and-memory-api.html)
 to invoke the `pcre2` shared library. For this backend to work, the `pcre2` shared library must be installed on the
 system and be visible via `java.library.path`.
 

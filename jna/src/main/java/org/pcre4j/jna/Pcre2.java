@@ -47,8 +47,8 @@ public class Pcre2 implements IPcre2 {
     /**
      * Constructs a new PCRE2 API using the specified library name and function suffix.
      *
-     * @param libraryName the library name
-     *                    (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux, "libpcre2-8.dylib" on macOS)
+     * @param libraryName the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
+     *                    "libpcre2-8.dylib" on macOS)
      * @param suffix      the function suffix (e.g. "_8" as in "pcre2_compile_8")
      */
     public Pcre2(String libraryName, String suffix) {
@@ -228,7 +228,14 @@ public class Pcre2 implements IPcre2 {
 
         void pcre2_compile_context_free(Pointer ccontext);
 
-        Pointer pcre2_compile(String pattern, long patternLength, int options, IntByReference errorcode, LongByReference erroroffset, Pointer ccontext);
+        Pointer pcre2_compile(
+                String pattern,
+                long patternLength,
+                int options,
+                IntByReference errorcode,
+                LongByReference erroroffset,
+                Pointer ccontext
+        );
 
         void pcre2_code_free(Pointer code);
 
@@ -248,7 +255,15 @@ public class Pcre2 implements IPcre2 {
 
         void pcre2_match_context_free(Pointer mcontext);
 
-        int pcre2_match(Pointer code, String subject, long length, long startOffset, int options, Pointer matchData, Pointer mcontext);
+        int pcre2_match(
+                Pointer code,
+                String subject,
+                long length,
+                long startOffset,
+                int options,
+                Pointer matchData,
+                Pointer mcontext
+        );
 
         int pcre2_get_ovector_count(Pointer matchData);
 
