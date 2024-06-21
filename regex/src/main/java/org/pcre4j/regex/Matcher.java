@@ -16,6 +16,8 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2MatchData;
 import org.pcre4j.Pcre2MatchOption;
+import org.pcre4j.Pcre4j;
+import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
 import java.util.EnumSet;
@@ -72,8 +74,6 @@ public class Matcher implements MatchResult {
     // TODO: appendTail(StringBuffer sb)
 
     // TODO: appendTail(StringBuilder sb)
-
-    // TODO: end()
 
     /**
      * Returns the end index of the most recent match
@@ -244,12 +244,38 @@ public class Matcher implements MatchResult {
 
     // TODO: hitEnd()
 
-    // TODO: lookingAt()
+    /**
+     * Attempts to match the input sequence, starting at the beginning of the region, against the pattern
+     *
+     * @return {@code true} if the input sequence region starts with the pattern, otherwise {@code false}
+     */
+    public boolean lookingAt() {
+        final var matchData = new Pcre2MatchData(pattern.code);
+        final var result = pattern.code.match(
+                input.subSequence(0, regionEnd).toString(),
+                regionStart,
+                EnumSet.of(Pcre2MatchOption.ANCHORED),
+                matchData,
+                null
+        );
+        if (result < 1) {
+            if (result == IPcre2.ERROR_NOMATCH) {
+                return false;
+            }
+
+            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+            throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
+        }
+
+        this.lastMatchData = matchData;
+
+        return true;
+    }
 
     /**
-     * Attempts to match the entire input against the pattern
+     * Attempts to match the input sequence, from the start of the region till its end, against the pattern
      *
-     * @return {@code true} if the entire input sequence matches the pattern, otherwise {@code false}
+     * @return {@code true} if the entire input sequence region matches the pattern, otherwise {@code false}
      */
     public boolean matches() {
         final var matchData = new Pcre2MatchData(pattern.code);
@@ -264,7 +290,9 @@ public class Matcher implements MatchResult {
             if (result == IPcre2.ERROR_NOMATCH) {
                 return false;
             }
-            throw new IllegalStateException("Failed to find an anchored match: " + result);
+
+            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+            throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
         this.lastMatchData = matchData;
@@ -466,7 +494,9 @@ public class Matcher implements MatchResult {
             if (result == IPcre2.ERROR_NOMATCH) {
                 return false;
             }
-            throw new IllegalStateException("Failed to find next match: " + result);
+
+            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+            throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
         }
 
         lastMatchData = matchData;
