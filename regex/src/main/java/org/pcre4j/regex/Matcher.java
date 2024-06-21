@@ -16,14 +16,12 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2MatchData;
 import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre4j;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.regex.MatchResult;
 
 /**
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims

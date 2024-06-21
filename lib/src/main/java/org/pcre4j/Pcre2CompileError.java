@@ -63,6 +63,28 @@ public class Pcre2CompileError extends IllegalArgumentException {
     }
 
     /**
+     * Get the region around the error in the pattern.
+     *
+     * @param pattern the pattern
+     * @param offset  the offset of the error in the pattern
+     * @return the region around the error
+     */
+    private static String getPatternRegion(String pattern, long offset) {
+        final var since = Math.max(0, offset - PATTERN_REGION_SIZE);
+        final var until = Math.min(pattern.length(), offset + PATTERN_REGION_SIZE);
+
+        var region = pattern.substring((int) since, (int) until);
+        if (since > 0) {
+            region = "…" + region;
+        }
+        if (until < pattern.length()) {
+            region = region + "…";
+        }
+
+        return region;
+    }
+
+    /**
      * Get the pattern that caused the error.
      *
      * @return the pattern
@@ -87,28 +109,6 @@ public class Pcre2CompileError extends IllegalArgumentException {
      */
     public String message() {
         return message;
-    }
-
-    /**
-     * Get the region around the error in the pattern.
-     *
-     * @param pattern the pattern
-     * @param offset  the offset of the error in the pattern
-     * @return the region around the error
-     */
-    private static String getPatternRegion(String pattern, long offset) {
-        final var since = Math.max(0, offset - PATTERN_REGION_SIZE);
-        final var until = Math.min(pattern.length(), offset + PATTERN_REGION_SIZE);
-
-        var region = pattern.substring((int) since, (int) until);
-        if (since > 0) {
-            region = "…" + region;
-        }
-        if (until < pattern.length()) {
-            region = region + "…";
-        }
-
-        return region;
     }
 
 }

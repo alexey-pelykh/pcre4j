@@ -85,6 +85,9 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}
 
+      - name: Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest
+
       - name: Install PCRE
         run: sudo apt-get install -y libpcre2-8-0
 
