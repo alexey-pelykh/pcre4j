@@ -28,7 +28,7 @@ public class Pcre2MatchContext {
     /**
      * The PCRE2 API reference to use across the entire lifecycle of the object
      */
-    private final IPcre2 api;
+    /* package-private */ final IPcre2 api;
     /**
      * The cleaner to free the resources
      */
@@ -52,6 +52,24 @@ public class Pcre2MatchContext {
         this.api = api;
         this.handle = handle;
         this.cleanable = cleaner.register(this, new Pcre2MatchContext.Clean(api, handle));
+    }
+
+    /**
+     * Get the PCRE2 API backing this match context
+     *
+     * @return the PCRE2 API
+     */
+    public IPcre2 api() {
+        return api;
+    }
+
+    /**
+     * Get the handle of the match context
+     *
+     * @return the handle of the match context
+     */
+    public long handle() {
+        return handle;
     }
 
     private record Clean(IPcre2 api, long matchContext) implements Runnable {

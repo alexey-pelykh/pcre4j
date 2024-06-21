@@ -21,14 +21,17 @@ import java.lang.ref.Cleaner;
 public class Pcre2CompileContext {
 
     private static final Cleaner cleaner = Cleaner.create();
+
     /**
      * The compile context handle
      */
     /* package-private */ final long handle;
+
     /**
      * The PCRE2 API reference to use across the entire lifecycle of the object
      */
-    private final IPcre2 api;
+    /* package-private */ final IPcre2 api;
+
     /**
      * The cleaner to free the resources
      */
@@ -52,6 +55,24 @@ public class Pcre2CompileContext {
         this.api = api;
         this.handle = handle;
         this.cleanable = cleaner.register(this, new Pcre2CompileContext.Clean(api, handle));
+    }
+
+    /**
+     * Get the PCRE2 API backing this compile context
+     *
+     * @return the PCRE2 API
+     */
+    public IPcre2 api() {
+        return api;
+    }
+
+    /**
+     * Get the handle of the compile context
+     *
+     * @return the handle of the compile context
+     */
+    public long handle() {
+        return handle;
     }
 
     private record Clean(IPcre2 api, long compileContext) implements Runnable {
