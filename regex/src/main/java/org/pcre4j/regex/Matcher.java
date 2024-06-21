@@ -20,6 +20,7 @@ import org.pcre4j.Pcre4j;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.regex.MatchResult;
@@ -28,7 +29,7 @@ import java.util.regex.MatchResult;
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims
  * to have a {@link java.util.regex.Matcher}-alike API
  */
-public class Matcher implements MatchResult {
+public class Matcher implements java.util.regex.MatchResult {
 
     /**
      * The pattern that this matcher used to match the input against
@@ -60,6 +61,11 @@ public class Matcher implements MatchResult {
      */
     private Pcre2MatchData lastMatchData;
 
+    /**
+     * The current match verctor
+     */
+    private Pcre2MatchData.OffsetPair lastMatch[];
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.groupNameToIndex = pattern.namedGroups();
@@ -80,12 +86,12 @@ public class Matcher implements MatchResult {
      *
      * @return the end index of the most recent match
      */
+    @Override
     public int end() {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[0].end();
     }
 
@@ -95,6 +101,7 @@ public class Matcher implements MatchResult {
      * @param group the capturing group index
      * @return the end index of the specified capturing group in the most recent match
      */
+    @Override
     public int end(int group) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -103,7 +110,6 @@ public class Matcher implements MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[group].end();
     }
 
@@ -113,6 +119,7 @@ public class Matcher implements MatchResult {
      * @param name the capturing group name
      * @return the end index of the specified capturing group in the most recent match
      */
+    @Override
     public int end(String name) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -122,7 +129,6 @@ public class Matcher implements MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[group].end();
     }
 
@@ -134,8 +140,7 @@ public class Matcher implements MatchResult {
     public boolean find() {
         var start = 0;
 
-        if (lastMatchData != null) {
-            final var lastMatch = lastMatchData.ovector();
+        if (lastMatch != null) {
             start = lastMatch[0].end();
 
             if (start == lastMatch[0].start()) {
@@ -149,6 +154,7 @@ public class Matcher implements MatchResult {
 
         if (start >= regionEnd) {
             lastMatchData = null;
+            lastMatch = null;
             return false;
         }
 
@@ -174,12 +180,12 @@ public class Matcher implements MatchResult {
      *
      * @return the input subsequence captured by the given group in the most recent match
      */
+    @Override
     public String group() {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return input.subSequence(lastMatch[0].start(), lastMatch[0].end()).toString();
     }
 
@@ -189,6 +195,7 @@ public class Matcher implements MatchResult {
      * @param group the capturing group index
      * @return the input subsequence captured by the given group in the most recent match
      */
+    @Override
     public String group(int group) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -197,7 +204,6 @@ public class Matcher implements MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return input.subSequence(lastMatch[group].start(), lastMatch[group].end()).toString();
     }
 
@@ -207,6 +213,7 @@ public class Matcher implements MatchResult {
      * @param name the capturing group name
      * @return the input subsequence captured by the given group in the most recent match
      */
+    @Override
     public String group(String name) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -216,7 +223,6 @@ public class Matcher implements MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return input.subSequence(lastMatch[group].start(), lastMatch[group].end()).toString();
     }
 
@@ -225,6 +231,7 @@ public class Matcher implements MatchResult {
      *
      * @return the number of capturing groups in this matcher's pattern
      */
+    @Override
     public int groupCount() {
         return pattern.code.captureCount();
     }
@@ -236,8 +243,9 @@ public class Matcher implements MatchResult {
      *
      * @return {@code true} if the matcher has found a match, otherwise {@code false}
      */
+    @Override
     public boolean hasMatch() {
-        return lastMatchData != null;
+        return lastMatch != null;
     }
 
     // TODO: hasTransparentBounds()
@@ -268,6 +276,7 @@ public class Matcher implements MatchResult {
         }
 
         this.lastMatchData = matchData;
+        this.lastMatch = matchData.ovector();
 
         return true;
     }
@@ -296,6 +305,7 @@ public class Matcher implements MatchResult {
         }
 
         this.lastMatchData = matchData;
+        this.lastMatch = matchData.ovector();
 
         return true;
     }
@@ -305,6 +315,7 @@ public class Matcher implements MatchResult {
      *
      * @return the map of named groups in the pattern
      */
+    @Override
     public Map<String, Integer> namedGroups() {
         return groupNameToIndex;
     }
@@ -377,6 +388,7 @@ public class Matcher implements MatchResult {
         regionStart = 0;
         regionEnd = input.length();
         lastMatchData = null;
+        lastMatch = null;
         return this;
     }
 
@@ -398,12 +410,12 @@ public class Matcher implements MatchResult {
      *
      * @return the start index of the most recent match
      */
+    @Override
     public int start() {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[0].start();
     }
 
@@ -413,6 +425,7 @@ public class Matcher implements MatchResult {
      * @param group the capturing group index
      * @return the start index of the specified capturing group in the most recent match
      */
+    @Override
     public int start(int group) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -421,7 +434,6 @@ public class Matcher implements MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[group].start();
     }
 
@@ -431,6 +443,7 @@ public class Matcher implements MatchResult {
      * @param name the capturing group name
      * @return the start index of the specified capturing group in the most recent match
      */
+    @Override
     public int start(String name) {
         if (!hasMatch()) {
             throw new IllegalStateException("No match found");
@@ -440,18 +453,36 @@ public class Matcher implements MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        final var lastMatch = lastMatchData.ovector();
         return lastMatch[group].start();
     }
 
-    // TODO: toMatchResult()
+    /**
+     * Returns a {@link MatchResult} with the frozen current state of the matcher will be detached from the matcher
+     *
+     * @return an immutable {@link MatchResult} with the frozen current state of the matcher
+     */
+    public MatchResult toMatchResult() {
+        if (!hasMatch()) {
+            return new MatchResult(
+                    null,
+                    null,
+                    groupNameToIndex
+            );
+        }
+
+        return new MatchResult(
+                input.subSequence(lastMatch[0].start(), lastMatch[0].end()).toString(),
+                Arrays.copyOf(lastMatch, lastMatch.length),
+                groupNameToIndex
+        );
+    }
 
     @Override
     public String toString() {
         return Matcher.class.getName() +
                 "[pattern=" + pattern +
                 " region=" + regionStart + ',' + regionEnd +
-                " lastMatchData=" + lastMatchData +
+                " lastMatch=" + Arrays.toString(lastMatch) +
                 "]";
     }
 
@@ -500,7 +531,150 @@ public class Matcher implements MatchResult {
         }
 
         lastMatchData = matchData;
+        lastMatch = matchData.ovector();
 
         return true;
+    }
+
+    /**
+     * An immutable match result
+     */
+    public static class MatchResult implements java.util.regex.MatchResult {
+
+        private final CharSequence subsequence;
+        private final Pcre2MatchData.OffsetPair match[];
+        private final Map<String, Integer> groupNameToIndex;
+
+        /* package-private */ MatchResult(
+                CharSequence subsequence,
+                Pcre2MatchData.OffsetPair match[],
+                Map<String, Integer> groupNameToIndex
+        ) {
+            this.subsequence = subsequence;
+            this.match = match;
+            this.groupNameToIndex = groupNameToIndex;
+        }
+
+        @Override
+        public int start() {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+
+            return match[0].start();
+        }
+
+        @Override
+        public int start(int group) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            if (group < 0 || group > groupCount()) {
+                throw new IndexOutOfBoundsException("No such group: " + group);
+            }
+
+            return match[group].start();
+        }
+
+        @Override
+        public int start(String name) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            final var group = groupNameToIndex.get(name);
+            if (group == null) {
+                throw new IllegalArgumentException("No group with name <" + name + ">");
+            }
+
+            return match[group].start();
+        }
+
+        @Override
+        public int end() {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+
+            return match[0].end();
+        }
+
+        @Override
+        public int end(int group) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            if (group < 0 || group > groupCount()) {
+                throw new IndexOutOfBoundsException("No such group: " + group);
+            }
+
+            return match[group].end();
+        }
+
+        @Override
+        public int end(String name) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            final var group = groupNameToIndex.get(name);
+            if (group == null) {
+                throw new IllegalArgumentException("No group with name <" + name + ">");
+            }
+
+            return match[group].end();
+        }
+
+        @Override
+        public String group() {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+
+            return subsequence.toString();
+        }
+
+        @Override
+        public String group(int group) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            if (group < 0 || group > groupCount()) {
+                throw new IndexOutOfBoundsException("No such group: " + group);
+            }
+
+            final var offset = match[0].start();
+            return subsequence.subSequence(match[group].start() - offset, match[group].end() - offset).toString();
+        }
+
+        @Override
+        public String group(String name) {
+            if (!hasMatch()) {
+                throw new IllegalStateException("No match found");
+            }
+            final var group = groupNameToIndex.get(name);
+            if (group == null) {
+                throw new IllegalArgumentException("No group with name <" + name + ">");
+            }
+
+            final var offset = match[0].start();
+            return subsequence.subSequence(match[group].start() - offset, match[group].end() - offset).toString();
+        }
+
+        @Override
+        public int groupCount() {
+            if (match == null) {
+                return 0;
+            }
+            return match.length - 1;
+        }
+
+        @Override
+        public Map<String, Integer> namedGroups() {
+            return Map.copyOf(groupNameToIndex);
+        }
+
+        @Override
+        public boolean hasMatch() {
+            return match != null;
+        }
     }
 }
