@@ -27,14 +27,14 @@ Add the following dependencies to your `pom.xml` file:
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>regex</artifactId>
-        <version>0.0.0</version>
+        <version>0.1.0</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.0.0</version>
+        <version>0.1.0</version>
     </dependency>
 </dependencies>
 ```
@@ -76,14 +76,14 @@ Add the following dependencies to your `pom.xml` file:
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>lib</artifactId>
-        <version>0.0.0</version>
+        <version>0.1.0</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.0.0</version>
+        <version>0.1.0</version>
     </dependency>
 </dependencies>
 ```
@@ -136,7 +136,7 @@ Add the following dependencies to your `pom.xml` file:
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.0.0</version>
+        <version>0.1.0</version>
     </dependency>
 </dependencies>
 ```
