@@ -187,3 +187,7 @@ system and be visible via `java.library.path`.
 
 Note that `--enable-preview` must be passed to the Java compiler to enable the preview features for this backend to be
 used.
+
+### Javadoc
+
+Please see [the Javadoc Index](./javadoc/index.md) for the detailed API documentation.
