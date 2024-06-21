@@ -1,38 +1,26 @@
 name: Release
 
 on:
-  release:
-    types:
-      - published
+  push:
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
-  build:
-    strategy:
-      matrix:
-        os: [ ubuntu-latest ]
-        java-distribution:
-          - temurin
-          - zulu
-          - adopt-hotspot
-          - adopt-openj9
-          - liberica
-          - microsoft
-          - corretto
-          - semeru
-          - oracle
-          - dragonwell
-      fail-fast: false
+  package:
+    runs-on: ubuntu-latest
 
-    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up "${{ matrix.java-distribution }}" JDK 21
+      - name: Set up temurin-jdk-21
         uses: actions/setup-java@v4
         with:
-          distribution: ${{ matrix.java-distribution }}
+          distribution: temurin
           java-version: 21
 
       - name: Cache Gradle packages
@@ -44,43 +32,20 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}
 
-      - name: Install PCRE (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+      - name: Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest
+
+      - name: Install PCRE
         run: sudo apt-get install -y libpcre2-8-0
 
-      - name: Build with Gradle (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: ./gradlew build -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
+      - name: Build artifacts
+        run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
 
-      - name: Run tests (Ubuntu)
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: ./gradlew test -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
-
-  publish:
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-
-    needs:
-      - build
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 21
-
-      - name: Publish
+      - name: Publish artifacts
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
           OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-        run: ./gradlew publish -Ppcre4j.version=${{ github.event.release.tag_name }}
+        run: ./gradlew publish -Ppcre4j.version=${{ github.ref_name }}
