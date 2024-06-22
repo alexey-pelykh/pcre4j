@@ -31,6 +31,25 @@ public class MatcherTests {
     }
 
     @Test
+    void unicode() {
+        var javaMatcher = java.util.regex.Pattern.compile("Ї").matcher("Ї");
+        var pcre4jMatcher = Pattern.compile("Ї").matcher("Ї");
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    @Test
     void matchesTrue() {
         var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42");
         var pcre4jMatcher = Pattern.compile("42").matcher("42");

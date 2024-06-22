@@ -85,21 +85,42 @@ public final class Pcre4jUtils {
      * {@code null}
      */
     public static String[] getMatchGroups(Pcre2Code code, String subject, Pcre2MatchData matchData) {
+        if (matchData == null) {
+            throw new IllegalArgumentException("matchData must not be null");
+        }
+
+        return getMatchGroups(code, subject, matchData.ovector());
+    }
+
+    /**
+     * Get the match groups
+     *
+     * @param code    the compiled pattern the match was performed with
+     * @param subject the subject string the match was performed against
+     * @param ovector an array of offset pairs corresponding to the match results
+     * @return an array of strings where the index is the group number and the value is the matched group or
+     * {@code null}
+     */
+    public static String[] getMatchGroups(Pcre2Code code, String subject, long[] ovector) {
         if (code == null) {
             throw new IllegalArgumentException("code must not be null");
         }
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
         }
-        if (matchData == null) {
-            throw new IllegalArgumentException("matchData must not be null");
+        if (ovector == null) {
+            throw new IllegalArgumentException("ovector must not be null");
         }
 
-        final var ovector = matchData.ovector();
-        final var matchGroups = new String[ovector.length];
-        for (var matchIndex = 0; matchIndex < ovector.length; matchIndex++) {
-            final var match = ovector[matchIndex];
-            matchGroups[matchIndex] = subject.substring(match.start(), match.end());
+        final var stringIndices = convertOvectorToStringIndices(subject, ovector);
+
+        final var matchGroupsCount = ovector.length / 2;
+        final var matchGroups = new String[matchGroupsCount];
+        for (var matchIndex = 0; matchIndex < matchGroupsCount; matchIndex++) {
+            matchGroups[matchIndex] = subject.substring(
+                    stringIndices[matchIndex * 2],
+                    stringIndices[matchIndex * 2 + 1]
+            );
         }
         return matchGroups;
     }
@@ -113,26 +134,109 @@ public final class Pcre4jUtils {
      * @return a map of group names to the matched group or {@code null}
      */
     public static Map<String, String> getNamedMatchGroups(Pcre2Code code, String subject, Pcre2MatchData matchData) {
+        if (matchData == null) {
+            throw new IllegalArgumentException("matchData must not be null");
+        }
+
+        return getNamedMatchGroups(code, subject, matchData.ovector());
+    }
+
+    /**
+     * Get the match named groups
+     *
+     * @param code    the compiled pattern the match was performed with
+     * @param subject the subject string the match was performed against
+     * @param ovector an array of offset pairs corresponding to the match results
+     * @return a map of group names to the matched group or {@code null}
+     */
+    public static Map<String, String> getNamedMatchGroups(Pcre2Code code, String subject, long[] ovector) {
         if (code == null) {
             throw new IllegalArgumentException("code must not be null");
         }
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
         }
-        if (matchData == null) {
-            throw new IllegalArgumentException("matchData must not be null");
+        if (ovector == null) {
+            throw new IllegalArgumentException("ovector must not be null");
         }
 
+        final var stringIndices = convertOvectorToStringIndices(subject, ovector);
+
         final var groupNames = getGroupNames(code);
-        final var ovector = matchData.ovector();
         final var matchGroups = new HashMap<String, String>();
         for (var matchIndex = 1; matchIndex < ovector.length; matchIndex++) {
-            final var match = ovector[matchIndex];
             final var groupName = groupNames[matchIndex - 1];
             if (groupName != null) {
-                matchGroups.put(groupName, subject.substring(match.start(), match.end()));
+                matchGroups.put(groupName, subject.substring(
+                        stringIndices[matchIndex * 2],
+                        stringIndices[matchIndex * 2 + 1]
+                ));
             }
         }
         return matchGroups;
+    }
+
+    /**
+     * Convert the byte-based ovector offset pairs to string index pairs
+     *
+     * @param subject the string to which the ovector values correspond
+     * @param ovector the byte-based ovector offset pairs
+     * @return a string index pairs
+     */
+    public static int[] convertOvectorToStringIndices(String subject, long[] ovector) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+
+        return convertOvectorToStringIndices(subject.getBytes(StandardCharsets.UTF_8), ovector);
+    }
+
+    /**
+     * Convert the byte-based ovector offset pairs to string index pairs
+     *
+     * @param subject the UTF-8 bytes of the string to which the ovector values correspond
+     * @param ovector the byte-based ovector offset pairs
+     * @return a string index pairs
+     */
+    public static int[] convertOvectorToStringIndices(byte[] subject, long[] ovector) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (ovector == null) {
+            throw new IllegalArgumentException("ovector must not be null");
+        }
+        if (ovector.length < 2) {
+            throw new IllegalArgumentException("ovector must have at least 2 elements");
+        }
+        if (ovector.length % 2 != 0) {
+            throw new IllegalArgumentException("ovector must have an even number of elements");
+        }
+        if (ovector[0] > ovector[1]) {
+            throw new IllegalArgumentException("ovector start must be less than or equal to ovector end");
+        }
+
+        // Match regiob size in bytes is determined by the first offset pair in the ovector
+        final var matchSizeInBytes = ovector[1] - ovector[0];
+
+        // Calculate the mapping of byte offsets to string indices for the relevant subject region of the match
+        var stringIndex = 0;
+        final var byteOffsetToStringIndex = new int[(int) matchSizeInBytes + 1];
+        for (var byteIndex = 0; byteIndex < ovector[1]; byteIndex++) {
+            if (byteIndex >= ovector[0]) {
+                byteOffsetToStringIndex[(int) (byteIndex - ovector[0])] = stringIndex;
+            }
+            if ((subject[byteIndex] & 0xC0) != 0x80) {
+                stringIndex++;
+            }
+        }
+        byteOffsetToStringIndex[(int) matchSizeInBytes] = stringIndex;
+
+        // Convert byte offsets to string indices
+        final var stringIndices = new int[ovector.length];
+        for (var valueIndex = 0; valueIndex < ovector.length; valueIndex++) {
+            stringIndices[valueIndex] = byteOffsetToStringIndex[(int) (ovector[valueIndex] - ovector[0])];
+        }
+
+        return stringIndices;
     }
 }

@@ -109,32 +109,15 @@ public class Pcre2MatchData {
     }
 
     /**
-     * Get the output vector offset pairs
+     * Get the output vector composed of offset pairs, each offset pair represents the start and end of the match. The
+     * value of the offset is the index of the byte where the character starts, not the charcater index.
      *
-     * @return the output vector offset pairs
+     * @return the output vector
      */
-    public OffsetPair[] ovector() {
-        final var count = ovectorCount();
-        final var offsets = new long[count * 2];
-        api.getOvector(handle, offsets);
-
-        final var ovector = new OffsetPair[count];
-        for (int pairIndex = 0; pairIndex < count; pairIndex++) {
-            ovector[pairIndex] = new OffsetPair(
-                    (int) offsets[pairIndex * 2],
-                    (int) offsets[pairIndex * 2 + 1]
-            );
-        }
+    public long[] ovector() {
+        final var ovector = new long[api.getOvectorCount(handle) * 2];
+        api.getOvector(handle, ovector);
         return ovector;
-    }
-
-    /**
-     * The output vector offset pair
-     *
-     * @param start the start offset in the subject string
-     * @param end   the end offset in the subject string
-     */
-    public record OffsetPair(int start, int end) {
     }
 
     private record Clean(IPcre2 api, long matchData) implements Runnable {

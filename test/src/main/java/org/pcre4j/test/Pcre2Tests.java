@@ -46,9 +46,7 @@ public abstract class Pcre2Tests {
         assertEquals(1, result);
 
         final var ovector = matchData.ovector();
-        assertArrayEquals(new Pcre2MatchData.OffsetPair[]{
-                new Pcre2MatchData.OffsetPair(0, 2),
-        }, ovector);
+        assertArrayEquals(new long[]{0, 2}, ovector);
     }
 
     @Test
@@ -70,9 +68,7 @@ public abstract class Pcre2Tests {
         assertEquals(1, result);
 
         final var ovector = matchData.ovector();
-        assertArrayEquals(new Pcre2MatchData.OffsetPair[]{
-                new Pcre2MatchData.OffsetPair(0, 2),
-        }, ovector);
+        assertArrayEquals(new long[]{0, 2}, ovector);
     }
 
     @Test
@@ -94,10 +90,7 @@ public abstract class Pcre2Tests {
         assertEquals(2, result);
 
         final var ovector = matchData.ovector();
-        assertArrayEquals(new Pcre2MatchData.OffsetPair[]{
-                new Pcre2MatchData.OffsetPair(0, 2),
-                new Pcre2MatchData.OffsetPair(0, 2),
-        }, ovector);
+        assertArrayEquals(new long[]{0, 2, 0, 2}, ovector);
     }
 
     @Test
@@ -119,10 +112,95 @@ public abstract class Pcre2Tests {
         assertEquals(2, result);
 
         final var ovector = matchData.ovector();
-        assertArrayEquals(new Pcre2MatchData.OffsetPair[]{
-                new Pcre2MatchData.OffsetPair(0, 2),
-                new Pcre2MatchData.OffsetPair(0, 2),
-        }, ovector);
+        assertArrayEquals(new long[]{0, 2, 0, 2}, ovector);
+    }
+
+    @Test
+    public void unicodeStringMatch() {
+        final var code = new Pcre2Code(
+                "🌐",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "🌐",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var ovector = matchData.ovector();
+        assertArrayEquals(new long[]{0, 4}, ovector);
+    }
+
+    @Test
+    public void unicodeStringMatchNoCapture() {
+        final var code = new Pcre2Code(
+                "(?:🌐)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "🌐",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var ovector = matchData.ovector();
+        assertArrayEquals(new long[]{0, 4}, ovector);
+    }
+
+    @Test
+    public void unicodeStringMatchCapture() {
+        final var code = new Pcre2Code(
+                "(🌐)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "🌐",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var ovector = matchData.ovector();
+        assertArrayEquals(new long[]{0, 4, 0, 4}, ovector);
+    }
+
+    @Test
+    public void unicodeStringMatchNamedCapture() {
+        final var code = new Pcre2Code(
+                "(?P<group>🌐)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "🌐",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var ovector = matchData.ovector();
+        assertArrayEquals(new long[]{0, 4, 0, 4}, ovector);
     }
 
     @Test
