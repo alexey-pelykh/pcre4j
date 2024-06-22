@@ -281,7 +281,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
 
         return true;
     }
@@ -310,7 +310,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
 
         return true;
     }
@@ -537,7 +537,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
 
         return true;
     }
