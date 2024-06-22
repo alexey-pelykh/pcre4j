@@ -31,9 +31,11 @@ public class MatcherTests {
     }
 
     @Test
-    void unicode() {
-        var javaMatcher = java.util.regex.Pattern.compile("Ї").matcher("Ї");
-        var pcre4jMatcher = Pattern.compile("Ї").matcher("Ї");
+    void unicodeOneByte() {
+        var regex = "Å";
+        var input = "Å";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -50,9 +52,94 @@ public class MatcherTests {
     }
 
     @Test
+    void unicodeTwoBytes() {
+        var regex = "Ǎ";
+        var input = "Ǎ";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    @Test
+    void unicodeThreeBytes() {
+        var regex = "•";
+        var input = "•";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    @Test
+    void unicodeFourBytes() {
+        var regex = "\uD83C\uDF0D";
+        var input = "\uD83C\uDF0D";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    @Test
+    void unicode() {
+        var regex = "ÅǍ•\uD83C\uDF0D!";
+        var input = "ÅǍ•\uD83C\uDF0D!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+    @Test
     void matchesTrue() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42");
+        var regex = "42";
+        var input = "42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -70,8 +157,10 @@ public class MatcherTests {
 
     @Test
     void matchesFalse() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!");
+        var regex = "42";
+        var input = "42!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -95,8 +184,10 @@ public class MatcherTests {
 
     @Test
     void matchesTrueInRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[42]");
-        var pcre4jMatcher = Pattern.compile("42").matcher("[42]");
+        var regex = "42";
+        var input = "[42]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 3);
         pcre4jMatcher.region(1, 3);
@@ -117,8 +208,10 @@ public class MatcherTests {
 
     @Test
     void matchesFalseRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[42!]");
-        var pcre4jMatcher = Pattern.compile("42").matcher("[42!]");
+        var regex = "42";
+        var input = "[42!]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -145,8 +238,10 @@ public class MatcherTests {
 
     @Test
     void lookingAtTrue() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!");
+        var regex = "42";
+        var input = "42!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -164,8 +259,10 @@ public class MatcherTests {
 
     @Test
     void lookingAtFalse() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("!42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("!42");
+        var regex = "42";
+        var input = "!42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -189,8 +286,10 @@ public class MatcherTests {
 
     @Test
     void lookingAtTrueInRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[42!]");
-        var pcre4jMatcher = Pattern.compile("42").matcher("[42!]");
+        var regex = "42";
+        var input = "[42!]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -211,8 +310,10 @@ public class MatcherTests {
 
     @Test
     void lookingAtFalseRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[!42]");
-        var pcre4jMatcher = Pattern.compile("42").matcher("[!42]");
+        var regex = "42";
+        var input = "[!42]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -239,8 +340,10 @@ public class MatcherTests {
 
     @Test
     void findTrue() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!");
+        var regex = "42";
+        var input = "42!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -258,8 +361,10 @@ public class MatcherTests {
 
     @Test
     void findFalse() {
-        var javaMatcher = java.util.regex.Pattern.compile("42!").matcher("42");
-        var pcre4jMatcher = Pattern.compile("42!").matcher("42");
+        var regex = "42!";
+        var input = "42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -283,8 +388,10 @@ public class MatcherTests {
 
     @Test
     void findTrueInRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("[42]");
-        var pcre4jMatcher = Pattern.compile("42").matcher("[42]");
+        var regex = "42";
+        var input = "[42]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 3);
 
@@ -304,8 +411,10 @@ public class MatcherTests {
 
     @Test
     void findFalseInRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42!").matcher("[42]");
-        var pcre4jMatcher = Pattern.compile("42!").matcher("[42]");
+        var regex = "42!";
+        var input = "[42]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(1, 3);
 
@@ -331,8 +440,10 @@ public class MatcherTests {
 
     @Test
     void findTrueAtOffset() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("!!42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("!!42");
+        var regex = "42";
+        var input = "!!42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -350,8 +461,10 @@ public class MatcherTests {
 
     @Test
     void findFalseAtOffset() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("!!test");
-        var pcre4jMatcher = Pattern.compile("42").matcher("!!test");
+        var regex = "42";
+        var input = "!!test";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -375,8 +488,10 @@ public class MatcherTests {
 
     @Test
     void findMultiple() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!42");
+        var regex = "42";
+        var input = "42!42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -407,8 +522,10 @@ public class MatcherTests {
 
     @Test
     void findMultipleWithinRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!42!42!42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!42!42!42");
+        var regex = "42";
+        var input = "42!42!42!42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(2, 8);
         pcre4jMatcher.region(2, 8);
@@ -442,8 +559,10 @@ public class MatcherTests {
 
     @Test
     void findMultipleOutsideRegion() {
-        var javaMatcher = java.util.regex.Pattern.compile("42").matcher("42!__!__!42");
-        var pcre4jMatcher = Pattern.compile("42").matcher("42!__!__!42");
+        var regex = "42";
+        var input = "42!__!__!42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         javaMatcher.region(2, 8);
         pcre4jMatcher.region(2, 8);
@@ -470,8 +589,10 @@ public class MatcherTests {
 
     @Test
     void captureGroups() {
-        var javaMatcher = java.util.regex.Pattern.compile("(?<four>4)(.*)(?<two>2)").matcher("4test2");
-        var pcre4jMatcher = Pattern.compile("(?<four>4)(.*)(?<two>2)").matcher("4test2");
+        var regex = "(?<four>4)(.*)(?<two>2)";
+        var input = "4test2";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
 
@@ -496,4 +617,5 @@ public class MatcherTests {
         assertEquals(javaMatcher.end("four"), pcre4jMatcher.end("four"));
         assertEquals(javaMatcher.end("two"), pcre4jMatcher.end("two"));
     }
+
 }

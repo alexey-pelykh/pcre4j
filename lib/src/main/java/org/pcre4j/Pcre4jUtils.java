@@ -188,19 +188,22 @@ public final class Pcre4jUtils {
             throw new IllegalArgumentException("subject must not be null");
         }
 
-        return convertOvectorToStringIndices(subject.getBytes(StandardCharsets.UTF_8), ovector);
+        return convertOvectorToStringIndices(subject, subject.getBytes(StandardCharsets.UTF_8), ovector);
     }
 
     /**
      * Convert the byte-based ovector offset pairs to string index pairs
      *
-     * @param subject the UTF-8 bytes of the string to which the ovector values correspond
+     * @param subject the string to which the ovector values correspond
      * @param ovector the byte-based ovector offset pairs
      * @return a string index pairs
      */
-    public static int[] convertOvectorToStringIndices(byte[] subject, long[] ovector) {
+    public static int[] convertOvectorToStringIndices(String subject, byte[] subjectUtf8, long[] ovector) {
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
+        }
+        if (subjectUtf8 == null) {
+            throw new IllegalArgumentException("subjectUtf8 must not be null");
         }
         if (ovector == null) {
             throw new IllegalArgumentException("ovector must not be null");
@@ -215,19 +218,38 @@ public final class Pcre4jUtils {
             throw new IllegalArgumentException("ovector start must be less than or equal to ovector end");
         }
 
-        // Match regiob size in bytes is determined by the first offset pair in the ovector
+        // Match region size in bytes is determined by the first offset pair in the ovector
         final var matchSizeInBytes = ovector[1] - ovector[0];
 
         // Calculate the mapping of byte offsets to string indices for the relevant subject region of the match
         var stringIndex = 0;
         final var byteOffsetToStringIndex = new int[(int) matchSizeInBytes + 1];
-        for (var byteIndex = 0; byteIndex < ovector[1]; byteIndex++) {
+        for (var byteIndex = 0; byteIndex < ovector[1]; ) {
             if (byteIndex >= ovector[0]) {
                 byteOffsetToStringIndex[(int) (byteIndex - ovector[0])] = stringIndex;
             }
-            if ((subject[byteIndex] & 0xC0) != 0x80) {
-                stringIndex++;
+
+            final var subjectChar = subject.charAt(stringIndex);
+
+            final int subjectCharByteLength;
+            if (subjectChar <= 0x7F) {
+                subjectCharByteLength = 1;
+            } else if (subjectChar <= 0x7FF) {
+                subjectCharByteLength = 2;
+            } else if (Character.isHighSurrogate(subjectChar) || Character.isLowSurrogate(subjectChar)) {
+                subjectCharByteLength = 2;
+            } else {
+                subjectCharByteLength = 3;
             }
+
+            for (var subjectCharByteIndex = 0; subjectCharByteIndex < subjectCharByteLength; subjectCharByteIndex++) {
+                if (byteIndex >= ovector[0]) {
+                    byteOffsetToStringIndex[(int) (byteIndex - ovector[0])] = stringIndex;
+                }
+                byteIndex += 1;
+            }
+
+            stringIndex++;
         }
         byteOffsetToStringIndex[(int) matchSizeInBytes] = stringIndex;
 
