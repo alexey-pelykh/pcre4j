@@ -22,6 +22,9 @@ import java.util.EnumSet;
 
 import org.pcre4j.api.IPcre2;
 
+/**
+ * A compiled pattern.
+ */
 public class Pcre2Code {
 
     private static final Cleaner cleaner = Cleaner.create();
@@ -45,10 +48,22 @@ public class Pcre2Code {
      * Constructor for Pcre2Code
      *
      * @param pattern        the pattern to compile
-     * @param options        the flags to compile the pattern with, see {@link Pcre2CompileOption}
+     * @param options        the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
+     *                       options
      * @param compileContext the compile context to use or null
      */
-    public Pcre2Code(String pattern, EnumSet<Pcre2CompileOption> options, Pcre2CompileContext compileContext) {
+    public Pcre2Code(
+            String pattern,
+            EnumSet<Pcre2CompileOption> options,
+            Pcre2CompileContext compileContext
+    ) {
+        if (pattern == null) {
+            throw new IllegalArgumentException("pattern cannot be null");
+        }
+        if (options == null) {
+            options = EnumSet.noneOf(Pcre2CompileOption.class);
+        }
+
         final var api = Pcre4j.api();
 
         final var errorcode = new int[1];
@@ -413,25 +428,10 @@ public class Pcre2Code {
             throw new IllegalArgumentException("matchData must not be null");
         }
 
-        // For the UTF-8, convert the startOffset from characters to bytes
-        var startOffsetInBytes = 0;
-        for (var charIndex = 0; charIndex < startOffset; charIndex++) {
-            final var theChar = subject.charAt(charIndex);
-            if (theChar <= 0x007F) {
-                startOffsetInBytes += 1;
-            } else if (theChar <= 0x07FF) {
-                startOffsetInBytes += 2;
-            } else if (Character.isHighSurrogate(theChar) || Character.isLowSurrogate(theChar)) {
-                startOffsetInBytes += 2;
-            } else {
-                startOffsetInBytes += 3;
-            }
-        }
-
         return api.match(
                 handle,
                 subject,
-                startOffsetInBytes,
+                Pcre4jUtils.convertCharacterIndexToByteOffset(subject, startOffset),
                 options
                         .stream()
                         .mapToInt(Pcre2MatchOption::value)

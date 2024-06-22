@@ -45,6 +45,9 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_get_error_message;
     private final MethodHandle pcre2_pattern_info;
 
+    private final MethodHandle pcre2_jit_compile;
+    private final MethodHandle pcre2_jit_match;
+
     private final MethodHandle pcre2_match_data_create;
     private final MethodHandle pcre2_match_data_create_from_pattern;
     private final MethodHandle pcre2_match_data_free;
@@ -175,6 +178,27 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // pcre2_code*
                         ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS // void*
+                )
+        );
+
+        pcre2_jit_compile = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_compile" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.JAVA_INT // int
+                )
+        );
+
+        pcre2_jit_match = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_match" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS, // PCRE2_SPTR
+                        ValueLayout.ADDRESS, // PCRE2_SIZE
+                        ValueLayout.ADDRESS, // PCRE2_SIZE
+                        ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.ADDRESS // pcre2_match_context*
                 )
         );
 
@@ -564,6 +588,48 @@ public class Pcre2 implements IPcre2 {
             MemorySegment.ofBuffer(where).copyFrom(pTable);
 
             return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int jitCompile(long code, int options) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+
+            return (int) pcre2_jit_compile.invokeExact(
+                    pCode,
+                    options
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int jitMatch(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pszSubject = arena.allocateUtf8String(subject);
+            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var startOffset = MemorySegment.ofAddress(startoffset);
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pMatchContext = MemorySegment.ofAddress(mcontext);
+
+            return (int) pcre2_jit_match.invokeExact(
+                    pCode,
+                    pszSubject,
+                    subjectLength,
+                    startOffset,
+                    options,
+                    pMatchData,
+                    pMatchContext
+            );
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

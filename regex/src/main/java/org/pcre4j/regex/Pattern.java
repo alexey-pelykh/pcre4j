@@ -14,9 +14,7 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.Pcre2Code;
-import org.pcre4j.Pcre2CompileError;
-import org.pcre4j.Pcre2CompileOption;
+import org.pcre4j.*;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -62,6 +60,8 @@ public class Pattern {
     // TODO: public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
 
     /* package-private */ final Pcre2Code code;
+    /* package-private */ final Pcre2Code matchingCode;
+    /* package-private */ final Pcre2Code lookingAtCode;
     private final Map<String, Integer> namedGroups;
     private final String regex;
     private final int flags;
@@ -70,28 +70,62 @@ public class Pattern {
         this.regex = regex;
         this.flags = flags;
 
-        final var options = EnumSet.of(Pcre2CompileOption.UTF);
+        final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
         if ((flags & CASE_INSENSITIVE) != 0) {
-            options.add(Pcre2CompileOption.CASELESS);
+            compileOptions.add(Pcre2CompileOption.CASELESS);
         }
         if ((flags & DOTALL) != 0) {
-            options.add(Pcre2CompileOption.DOTALL);
+            compileOptions.add(Pcre2CompileOption.DOTALL);
         }
         if ((flags & LITERAL) != 0) {
-            options.add(Pcre2CompileOption.LITERAL);
+            compileOptions.add(Pcre2CompileOption.LITERAL);
         }
         if ((flags & MULTILINE) != 0) {
-            options.add(Pcre2CompileOption.MULTILINE);
+            compileOptions.add(Pcre2CompileOption.MULTILINE);
         }
 
         try {
-            this.code = new Pcre2Code(regex, options, null);
+            if (Pcre4jUtils.isJitSupported(Pcre4j.api())) {
+                this.code = new Pcre2JitCode(
+                        regex,
+                        compileOptions,
+                        EnumSet.of(Pcre2JitOption.COMPLETE),
+                        null
+                );
+
+                final var matchingCompileOptions = EnumSet.copyOf(compileOptions);
+                matchingCompileOptions.add(Pcre2CompileOption.ANCHORED);
+                matchingCompileOptions.add(Pcre2CompileOption.ENDANCHORED);
+                this.matchingCode = new Pcre2JitCode(
+                        regex,
+                        matchingCompileOptions,
+                        EnumSet.of(Pcre2JitOption.COMPLETE),
+                        null
+                );
+
+                final var lookingAtCompileOptions = EnumSet.copyOf(compileOptions);
+                lookingAtCompileOptions.add(Pcre2CompileOption.ANCHORED);
+                this.lookingAtCode = new Pcre2JitCode(
+                        regex,
+                        lookingAtCompileOptions,
+                        EnumSet.of(Pcre2JitOption.COMPLETE),
+                        null
+                );
+            } else {
+                this.code = new Pcre2Code(
+                        regex,
+                        compileOptions,
+                        null
+                );
+                this.matchingCode = null;
+                this.lookingAtCode = null;
+            }
         } catch (Pcre2CompileError e) {
             throw new PatternSyntaxException(e.message(), e.pattern(), (int) e.offset());
         }
 
         namedGroups = new HashMap<>();
-        for (var nameTableEntry : code.nameTable()) {
+        for (var nameTableEntry : this.code.nameTable()) {
             namedGroups.put(nameTableEntry.name(), nameTableEntry.group());
         }
     }

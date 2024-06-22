@@ -239,6 +239,30 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int jitCompile(long code, int options) {
+        return library.pcre2_jit_compile(new Pointer(code), options);
+    }
+
+    @Override
+    public int jitMatch(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+
+        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+
+        return library.pcre2_jit_match(
+                new Pointer(code),
+                pszSubject,
+                pszSubject.length,
+                startoffset,
+                options,
+                new Pointer(matchData),
+                new Pointer(mcontext)
+        );
+    }
+
+    @Override
     public long matchDataCreate(int ovecsize, long gcontext) {
         Pointer matchData = library.pcre2_match_data_create(ovecsize, new Pointer(gcontext));
         return Pointer.nativeValue(matchData);
@@ -335,6 +359,18 @@ public class Pcre2 implements IPcre2 {
         int pcre2_get_error_message(int errorcode, Pointer buffer, long bufferSize);
 
         int pcre2_pattern_info(Pointer code, int what, Pointer where);
+
+        int pcre2_jit_compile(Pointer code, int options);
+
+        int pcre2_jit_match(
+                Pointer code,
+                byte[] subject,
+                long length,
+                long startoffset,
+                int options,
+                Pointer matchData,
+                Pointer mcontext
+        );
 
         Pointer pcre2_match_data_create(int ovecsize, Pointer gcontext);
 
