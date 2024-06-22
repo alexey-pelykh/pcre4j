@@ -390,8 +390,8 @@ public class Pcre2Code {
      * @param options      the options, see {@link Pcre2MatchOption}
      * @param matchData    the match data to store the results in
      * @param matchContext the match context to use or null
-     * @return the number of captures plus one, zero if the {@code matchData} is too small, or a negative value if there
-     * was no match or an actual error occurred
+     * @return the number of captures plus one, zero if the {@param matchData} is too small, or a negative value if
+     * there was no match or an actual error occurred
      */
     public int match(
             String subject,

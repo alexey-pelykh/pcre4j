@@ -134,6 +134,7 @@ public class MatcherTests {
         assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
+
     @Test
     void matchesTrue() {
         var regex = "42";
