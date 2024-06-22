@@ -628,6 +628,48 @@ public interface IPcre2 {
     public static final int CONFIG_TABLES_LENGTH = 15;
 
     /**
+     * Get the amount of memory needed to store the information referred to by {@param what} about the optional features
+     * of the PCRE2 library.
+     * <p>
+     * Suitable for any information except:
+     * {@link #CONFIG_JITTARGET} Target architecture for the JIT compiler
+     * {@link #CONFIG_UNICODE_VERSION} Unicode version
+     * {@link #CONFIG_VERSION} PCRE2 version
+     *
+     * @param what the information to query the memory requirements for
+     * @return the amount of memory needed to store the information referred to by {@param what}.
+     */
+    public int config(int what);
+
+    /**
+     * Get the information referred to by {@param what} about the optional features of the PCRE2 library.
+     * <p>
+     * Suitable for any information except:
+     * {@link #CONFIG_JITTARGET} Target architecture for the JIT compiler
+     * {@link #CONFIG_UNICODE_VERSION} Unicode version
+     * {@link #CONFIG_VERSION} PCRE2 version
+     *
+     * @param what  the information to query
+     * @param where the array to store the information
+     * @return Non-negative value on success, otherwise a negative error code.
+     */
+    public int config(int what, int[] where);
+
+    /**
+     * Get the information referred to by {@param what} about the optional features of the PCRE2 library.
+     * <p>
+     * Suitable only for the following information:
+     * {@link #CONFIG_JITTARGET} Target architecture for the JIT compiler
+     * {@link #CONFIG_UNICODE_VERSION} Unicode version
+     * {@link #CONFIG_VERSION} PCRE2 version
+     *
+     * @param what  the information to query
+     * @param where a buffer to store the information
+     * @return Non-negative value on success, otherwise a negative error code.
+     */
+    public int config(int what, ByteBuffer where);
+
+    /**
      * Create a new general context.
      *
      * @param privateMalloc the private malloc function or 0 to use the system function

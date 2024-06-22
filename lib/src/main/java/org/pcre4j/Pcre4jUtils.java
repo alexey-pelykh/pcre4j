@@ -30,6 +30,304 @@ public final class Pcre4jUtils {
     }
 
     /**
+     * Get the PCRE2 version.
+     *
+     * @param api the PCRE2 API
+     * @return the PCRE2 version
+     */
+    public static String getVersion(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var versionSize = api.config(IPcre2.CONFIG_VERSION);
+        if (versionSize < 0) {
+            throw new IllegalStateException(getErrorMessage(api, versionSize));
+        }
+
+        final var versionBuffer = ByteBuffer.allocateDirect(versionSize);
+        final var versionCopyResult = api.config(IPcre2.CONFIG_VERSION, versionBuffer);
+        if (versionCopyResult < 0) {
+            throw new IllegalStateException(getErrorMessage(api, versionCopyResult));
+        }
+
+        return StandardCharsets.UTF_8.decode(versionBuffer.limit(versionSize - 1)).toString();
+    }
+
+    /**
+     * Get the Unicode version.
+     *
+     * @param api the PCRE2 API
+     * @return the Unicode version
+     */
+    public static String getUnicodeVersion(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var versionSize = api.config(IPcre2.CONFIG_UNICODE_VERSION);
+        if (versionSize < 0) {
+            throw new IllegalStateException(getErrorMessage(api, versionSize));
+        }
+
+        final var versionBuffer = ByteBuffer.allocateDirect(versionSize);
+        final var versionCopyResult = api.config(IPcre2.CONFIG_UNICODE_VERSION, versionBuffer);
+        if (versionCopyResult < 0) {
+            throw new IllegalStateException(getErrorMessage(api, versionCopyResult));
+        }
+
+        return StandardCharsets.UTF_8.decode(versionBuffer.limit(versionSize - 1)).toString();
+    }
+
+    /**
+     * Check if Unicode is supported.
+     *
+     * @param api the PCRE2 API
+     * @return {@code true} if Unicode is supported, {@code false} otherwise
+     */
+    public static boolean isUnicodeSupported(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var unicodeSupported = new int[1];
+        final var result = api.config(IPcre2.CONFIG_UNICODE, unicodeSupported);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return unicodeSupported[0] == 1;
+    }
+
+    /**
+     * Get the default parentheses nesting limit.
+     *
+     * @param api the PCRE2 API
+     * @return the default parentheses nesting limit
+     */
+    public static int getDefaultParenthesesNestingLimit(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var parensLimit = new int[1];
+        final var result = api.config(IPcre2.CONFIG_PARENSLIMIT, parensLimit);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return parensLimit[0];
+    }
+
+    /**
+     * Get the default newline sequence.
+     *
+     * @param api the PCRE2 API
+     * @return the default newline sequence
+     */
+    public static Pcre2Newline getDefaultNewline(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var newline = new int[1];
+        final var result = api.config(IPcre2.CONFIG_NEWLINE, newline);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return Pcre2Newline.valueOf(newline[0]).orElseThrow();
+    }
+
+    /**
+     * Check if the \C is disabled.
+     *
+     * @param api the PCRE2 API
+     * @return {@code true} if the \C is disabled, {@code false} otherwise
+     */
+    public static boolean isBackslashCDisabled(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var backslashCDisabled = new int[1];
+        final var result = api.config(IPcre2.CONFIG_BSR, backslashCDisabled);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return backslashCDisabled[0] == 1;
+    }
+
+    /**
+     * Get the default match limit.
+     *
+     * @param api the PCRE2 API
+     * @return the default match limit
+     */
+    public static int getDefaultMatchLimit(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var matchLimit = new int[1];
+        final var result = api.config(IPcre2.CONFIG_MATCHLIMIT, matchLimit);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return matchLimit[0];
+    }
+
+    /**
+     * Get the internal link size.
+     *
+     * @param api the PCRE2 API
+     * @return the internal link size
+     */
+    public static int getInternalLinkSize(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var internalLinkSize = new int[1];
+        final var result = api.config(IPcre2.CONFIG_LINKSIZE, internalLinkSize);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return internalLinkSize[0];
+    }
+
+    /**
+     * Get the JIT target.
+     *
+     * @param api the PCRE2 API
+     * @return the JIT target or {@code null} if JIT is not supported
+     */
+    public static String getJitTarget(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var targetSize = api.config(IPcre2.CONFIG_JITTARGET);
+        if (targetSize < 0) {
+            if (targetSize == IPcre2.ERROR_BADOPTION) {
+                return null;
+            }
+            throw new IllegalStateException(getErrorMessage(api, targetSize));
+        }
+
+        final var targetBuffer = ByteBuffer.allocateDirect(targetSize);
+        final var targetCopyResult = api.config(IPcre2.CONFIG_JITTARGET, targetBuffer);
+        if (targetCopyResult < 0) {
+            throw new IllegalStateException(getErrorMessage(api, targetCopyResult));
+        }
+
+        return StandardCharsets.UTF_8.decode(targetBuffer.limit(targetSize - 1)).toString();
+    }
+
+    /**
+     * Check if JIT is supported.
+     *
+     * @param api the PCRE2 API
+     * @return {@code true} if JIT is supported, {@code false} otherwise
+     */
+    public static boolean isJitSupported(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var jitSupported = new int[1];
+        final var result = api.config(IPcre2.CONFIG_JIT, jitSupported);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return jitSupported[0] == 1;
+    }
+
+    /**
+     * Get the default heap memory limit.
+     *
+     * @param api the PCRE2 API
+     * @return the default heap memory limit
+     */
+    public static int getDefaultHeapLimit(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var heapLimit = new int[1];
+        final var result = api.config(IPcre2.CONFIG_HEAPLIMIT, heapLimit);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return heapLimit[0];
+    }
+
+    /**
+     * Get the default backtracking depth limit.
+     *
+     * @param api the PCRE2 API
+     * @return the default backtracking depth limit
+     */
+    public static int getDefaultDepthLimit(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var depthLimit = new int[1];
+        final var result = api.config(IPcre2.CONFIG_DEPTHLIMIT, depthLimit);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return depthLimit[0];
+    }
+
+    /**
+     * Get which of the character width is compiled.
+     *
+     * @param api the PCRE2 API
+     * @return the compiled character width (8, 16, or 32)
+     */
+    public static int getCompiledWidth(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var width = new int[1];
+        final var result = api.config(IPcre2.CONFIG_COMPILED_WIDTHS, width);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return width[0];
+    }
+
+    /**
+     * Get what \R matches by default.
+     *
+     * @param api the PCRE2 API
+     * @return the default \R match
+     */
+    public static Pcre2Bsr getDefaultBsr(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var bsr = new int[1];
+        final var result = api.config(IPcre2.CONFIG_BSR, bsr);
+        if (result < 0) {
+            throw new IllegalStateException(getErrorMessage(api, result));
+        }
+
+        return Pcre2Bsr.valueOf(bsr[0]).orElseThrow();
+    }
+
+    /**
      * Get the error message for the given error code.
      *
      * @param api       the PCRE2 API
