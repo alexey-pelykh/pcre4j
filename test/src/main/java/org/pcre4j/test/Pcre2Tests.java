@@ -15,10 +15,7 @@
 package org.pcre4j.test;
 
 import org.junit.jupiter.api.Test;
-import org.pcre4j.Pcre2Code;
-import org.pcre4j.Pcre2CompileOption;
-import org.pcre4j.Pcre2MatchData;
-import org.pcre4j.Pcre2MatchOption;
+import org.pcre4j.*;
 
 import java.util.EnumSet;
 
@@ -26,6 +23,25 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public abstract class Pcre2Tests {
+
+    @Test
+    public void config() {
+        final var api = Pcre4j.api();
+        Pcre4jUtils.getVersion(api);
+        Pcre4jUtils.getUnicodeVersion(api);
+        Pcre4jUtils.isUnicodeSupported(api);
+        Pcre4jUtils.getDefaultParenthesesNestingLimit(api);
+        Pcre4jUtils.getDefaultNewline(api);
+        Pcre4jUtils.isBackslashCDisabled(api);
+        Pcre4jUtils.getDefaultMatchLimit(api);
+        Pcre4jUtils.getInternalLinkSize(api);
+        Pcre4jUtils.getJitTarget(api);
+        Pcre4jUtils.isJitSupported(api);
+        Pcre4jUtils.getDefaultHeapLimit(api);
+        Pcre4jUtils.getDefaultDepthLimit(api);
+        Pcre4jUtils.getCompiledWidth(api);
+        Pcre4jUtils.getDefaultBsr(api);
+    }
 
     @Test
     public void plainStringMatch() {

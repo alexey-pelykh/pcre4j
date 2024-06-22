@@ -61,6 +61,39 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int config(int what) {
+        return library.pcre2_config(what, Pointer.NULL);
+    }
+
+    @Override
+    public int config(int what, int[] where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (where.length != 1) {
+            throw new IllegalArgumentException("where must be an array of length 1");
+        }
+
+        IntByReference whereRef = new IntByReference();
+        int result = library.pcre2_config(what, whereRef.getPointer());
+        where[0] = whereRef.getValue();
+        return result;
+    }
+
+    @Override
+    public int config(int what, ByteBuffer where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (!where.isDirect()) {
+            throw new IllegalArgumentException("where must be a direct buffer");
+        }
+
+        Pointer pWhere = Native.getDirectBufferPointer(where);
+        return library.pcre2_config(what, pWhere);
+    }
+
+    @Override
     public long generalContextCreate(long privateMalloc, long privateFree, long memoryData) {
         Pointer gContext = library.pcre2_general_context_create(
                 new Pointer(privateMalloc),
@@ -100,6 +133,16 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long compile(String pattern, int options, int[] errorcode, long[] erroroffset, long ccontext) {
+        if (pattern == null) {
+            throw new IllegalArgumentException("pattern must not be null");
+        }
+        if (errorcode == null || errorcode.length < 1) {
+            throw new IllegalArgumentException("errorcode must be an array of length 1");
+        }
+        if (erroroffset == null || erroroffset.length < 1) {
+            throw new IllegalArgumentException("erroroffset must be an array of length 1");
+        }
+
         IntByReference errorCodeRef = new IntByReference();
         LongByReference errorOffsetRef = new LongByReference();
 
@@ -127,6 +170,13 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int getErrorMessage(int errorcode, ByteBuffer buffer) {
+        if (buffer == null) {
+            throw new IllegalArgumentException("buffer must not be null");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer must be direct");
+        }
+
         Pointer pszBuffer = Native.getDirectBufferPointer(buffer);
         return library.pcre2_get_error_message(errorcode, pszBuffer, buffer.capacity());
     }
@@ -138,6 +188,13 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int patternInfo(long code, int what, int[] where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (where.length != 1) {
+            throw new IllegalArgumentException("where must be an array of length 1");
+        }
+
         IntByReference whereRef = new IntByReference();
         int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
         where[0] = whereRef.getValue();
@@ -146,6 +203,13 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int patternInfo(long code, int what, long[] where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (where.length != 1) {
+            throw new IllegalArgumentException("where must be an array of length 1");
+        }
+
         LongByReference whereRef = new LongByReference();
         int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
         where[0] = whereRef.getValue();
@@ -154,6 +218,10 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int patternInfo(long code, int what, ByteBuffer where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+
         PointerByReference whereRef = new PointerByReference();
         int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
         where.put(whereRef.getValue().getByteArray(0, where.capacity()));
@@ -196,6 +264,10 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+
         final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
 
         return library.pcre2_match(
@@ -216,11 +288,17 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void getOvector(long matchData, long[] ovector) {
+        if (ovector == null) {
+            throw new IllegalArgumentException("ovector must not be null");
+        }
+
         Pointer pOvector = library.pcre2_get_ovector_pointer(new Pointer(matchData));
         pOvector.read(0, ovector, 0, ovector.length);
     }
 
     private interface Library extends com.sun.jna.Library {
+        int pcre2_config(int what, Pointer where);
+
         Pointer pcre2_general_context_create(Pointer malloc, Pointer free, Pointer memoryData);
 
         Pointer pcre2_general_context_copy(Pointer gcontext);

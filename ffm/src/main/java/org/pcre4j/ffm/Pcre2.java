@@ -29,6 +29,8 @@ public class Pcre2 implements IPcre2 {
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup();
 
+    private final MethodHandle pcre2_config;
+
     private final MethodHandle pcre2_general_context_create;
     private final MethodHandle pcre2_general_context_copy;
     private final MethodHandle pcre2_general_context_free;
@@ -75,6 +77,14 @@ public class Pcre2 implements IPcre2 {
         } else {
             System.loadLibrary(library);
         }
+
+        pcre2_config = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_config" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS // void*
+                )
+        );
 
         pcre2_general_context_create = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_general_context_create" + suffix).orElseThrow(),
@@ -230,6 +240,66 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int config(int what) {
+        try (var arena = Arena.ofConfined()) {
+            final var pWhat = MemorySegment.ofAddress(0);
+
+            return (int) pcre2_config.invokeExact(
+                    what,
+                    pWhat
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int config(int what, int[] where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (where.length != 1) {
+            throw new IllegalArgumentException("where must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pWhere = arena.allocateArray(ValueLayout.JAVA_INT, 1);
+
+            final var result = (int) pcre2_config.invokeExact(
+                    what,
+                    pWhere
+            );
+
+            where[0] = pWhere.get(ValueLayout.JAVA_INT, 0);
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int config(int what, ByteBuffer where) {
+        if (where == null) {
+            throw new IllegalArgumentException("where must not be null");
+        }
+        if (!where.isDirect()) {
+            throw new IllegalArgumentException("where must be direct");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pWhere = MemorySegment.ofBuffer(where);
+
+            return (int) pcre2_config.invokeExact(
+                    what,
+                    pWhere
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
     public long generalContextCreate(long privateMalloc, long privateFree, long memoryData) {
         try (var arena = Arena.ofConfined()) {
             final var pPrivateMalloc = MemorySegment.ofAddress(privateMalloc);
@@ -322,6 +392,9 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long compile(String pattern, int options, int[] errorcode, long[] erroroffset, long ccontext) {
+        if (pattern == null) {
+            throw new IllegalArgumentException("pattern must not be null");
+        }
         if (errorcode == null || errorcode.length < 1) {
             throw new IllegalArgumentException("errorcode must be an array of length 1");
         }
@@ -576,6 +649,10 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
             final var pszSubject = arena.allocateUtf8String(subject);
@@ -613,6 +690,10 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void getOvector(long matchData, long[] ovector) {
+        if (ovector == null) {
+            throw new IllegalArgumentException("ovector must not be null");
+        }
+
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
