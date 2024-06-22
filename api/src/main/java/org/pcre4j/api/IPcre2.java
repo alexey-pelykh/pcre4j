@@ -702,7 +702,7 @@ public interface IPcre2 {
      * @param errorcode the error code
      * @param buffer    the buffer to store the error message
      * @return the length of the error message or {@link #ERROR_NOMEMORY} if the buffer is too small and if
-     * {@code errorcode} is not a valid error code, {@link #ERROR_BADDATA} is returned
+     * {@param errorcode} is not a valid error code, {@link #ERROR_BADDATA} is returned
      * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_error_message.html">pcre2_get_error_message</a>
      */
     public int getErrorMessage(int errorcode, ByteBuffer buffer);
@@ -715,7 +715,7 @@ public interface IPcre2 {
      * @return Size of the information, otherwise an error code:
      * {@link #ERROR_NULL} the argument code is 0
      * {@link #ERROR_BADMAGIC} the "magic number" was not found
-     * {@link #ERROR_BADOPTION} the value of {@code what} is invalid
+     * {@link #ERROR_BADOPTION} the value of {@param what} is invalid
      * {@link #ERROR_BADMODE} the pattern was compiled in the wrong mode
      * {@link #ERROR_UNSET} the requested information is not set
      */
@@ -738,7 +738,7 @@ public interface IPcre2 {
      * @return Zero on success, otherwise an error code:
      * {@link #ERROR_NULL} the argument code is 0
      * {@link #ERROR_BADMAGIC} the "magic number" was not found
-     * {@link #ERROR_BADOPTION} the value of {@code what} is invalid
+     * {@link #ERROR_BADOPTION} the value of {@param what} is invalid
      * {@link #ERROR_BADMODE} the pattern was compiled in the wrong mode
      * {@link #ERROR_UNSET} the requested information is not set
      */
@@ -758,7 +758,7 @@ public interface IPcre2 {
      * @return Zero on success, otherwise an error code:
      * {@link #ERROR_NULL} the argument code is 0
      * {@link #ERROR_BADMAGIC} the "magic number" was not found
-     * {@link #ERROR_BADOPTION} the value of {@code what} is invalid
+     * {@link #ERROR_BADOPTION} the value of {@param what} is invalid
      * {@link #ERROR_BADMODE} the pattern was compiled in the wrong mode
      * {@link #ERROR_UNSET} the requested information is not set
      */
@@ -776,7 +776,7 @@ public interface IPcre2 {
      * @return Zero on success, otherwise an error code:
      * {@link #ERROR_NULL} the argument code is 0
      * {@link #ERROR_BADMAGIC} the "magic number" was not found
-     * {@link #ERROR_BADOPTION} the value of {@code what} is invalid
+     * {@link #ERROR_BADOPTION} the value of {@param what} is invalid
      * {@link #ERROR_BADMODE} the pattern was compiled in the wrong mode
      * {@link #ERROR_UNSET} the requested information is not set
      */
