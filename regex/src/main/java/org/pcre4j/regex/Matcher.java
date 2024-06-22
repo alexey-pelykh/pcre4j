@@ -14,9 +14,7 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.Pcre2MatchData;
-import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre4jUtils;
+import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
 import java.nio.charset.StandardCharsets;
@@ -263,11 +261,21 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return {@code true} if the input sequence region starts with the pattern, otherwise {@code false}
      */
     public boolean lookingAt() {
-        final var matchData = new Pcre2MatchData(pattern.code);
-        final var result = pattern.code.match(
+        final EnumSet<Pcre2MatchOption> matchOptions;
+        final Pcre2Code lookingAtCode;
+        if (pattern.lookingAtCode != null) {
+            lookingAtCode = pattern.lookingAtCode;
+            matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
+        } else {
+            lookingAtCode = pattern.code;
+            matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED);
+        }
+
+        final var matchData = new Pcre2MatchData(lookingAtCode);
+        final var result = lookingAtCode.match(
                 input.subSequence(0, regionEnd).toString(),
                 regionStart,
-                EnumSet.of(Pcre2MatchOption.ANCHORED),
+                matchOptions,
                 matchData,
                 null
         );
@@ -276,7 +284,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.lookingAtCode.api(), result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
@@ -292,11 +300,21 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return {@code true} if the entire input sequence region matches the pattern, otherwise {@code false}
      */
     public boolean matches() {
-        final var matchData = new Pcre2MatchData(pattern.code);
-        final var result = pattern.code.match(
+        final Pcre2Code matchingCode;
+        final EnumSet<Pcre2MatchOption> matchOptions;
+        if (pattern.matchingCode != null) {
+            matchingCode = pattern.matchingCode;
+            matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
+        } else {
+            matchingCode = pattern.code;
+            matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
+        }
+
+        final var matchData = new Pcre2MatchData(matchingCode);
+        final var result = matchingCode.match(
                 input.subSequence(0, regionEnd).toString(),
                 regionStart,
-                EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED),
+                matchOptions,
                 matchData,
                 null
         );
@@ -305,7 +323,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.matchingCode.api(), result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 

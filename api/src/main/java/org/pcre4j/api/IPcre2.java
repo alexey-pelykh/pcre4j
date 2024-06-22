@@ -825,6 +825,29 @@ public interface IPcre2 {
     public int patternInfo(long code, int what, ByteBuffer where);
 
     /**
+     * JIT-compile a compiled pattern.
+     *
+     * @param code    the compiled pattern handle
+     * @param options option bits
+     * @return 0 on success, otherwise a negative error code
+     */
+    public int jitCompile(long code, int options);
+
+    /**
+     * Match a compiled pattern against a subject string.
+     *
+     * @param code        the compiled pattern handle
+     * @param subject     the subject string
+     * @param startoffset the starting offset in the subject string
+     * @param options     option bits
+     * @param matchData   the match data handle
+     * @param mcontext    the match context handle
+     * @return the number of captures plus one, zero if the {@code matchData} is too small, or a negative value if there
+     * was no match or an actual error occurred
+     */
+    public int jitMatch(long code, String subject, int startoffset, int options, long matchData, long mcontext);
+
+    /**
      * Create a new match data block.
      *
      * @param ovecsize the size of the ovector

@@ -91,12 +91,7 @@ Add the following dependencies to your `pom.xml` file:
 Proceed using the PCRE4J library in your Java code:
 
 ```java
-import org.pcre4j.Pcre2Code;
-import org.pcre4j.Pcre2CompileOption;
-import org.pcre4j.Pcre2MatchData;
-import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre4j;
-import org.pcre4j.Pcre4jUtils;
+import org.pcre4j.*;
 // TODO: Select one of the following imports for the backend you want to use:
 import org.pcre4j.jna.Pcre2;
 // import org.pcre4j.ffm.Pcre2;
@@ -107,11 +102,21 @@ public class Usage {
     }
 
     public static String[] example(String pattern, String subject) {
-        final var code = new Pcre2Code(
-                pattern,
-                EnumSet.noneOf(Pcre2CompileOption.class),
-                null
-        );
+        final Pcre2Code code;
+        if (Pcre4jUtils.isJitSupported(Pcre4j.api())) {
+            code = new Pcre2JitCode(
+                    pattern,
+                    EnumSet.noneOf(Pcre2CompileOption.class),
+                    null,
+                    null
+            );
+        } else {
+            code = new Pcre2Code(
+                    pattern,
+                    EnumSet.noneOf(Pcre2CompileOption.class),
+                    null
+            );
+        }
         final var matchData = new Pcre2MatchData(code);
         code.match(
                 subject,
@@ -175,8 +180,8 @@ The PCRE4J library supports several backends to invoke the `pcre2` API.
 ### `jna`
 
 The `jna` backend uses the [Java Native Access](https://github.com/java-native-access/jna) library to invoke the `pcre2`
-shared library. For this backend to work, the `pcre2` shared library must be installed on the system and be visible to
-the JNA.
+shared library. For this backend to work, the `pcre2` shared library must be installed on the system and be visible via
+`jna.library.path`.
 
 ### `ffm`
 

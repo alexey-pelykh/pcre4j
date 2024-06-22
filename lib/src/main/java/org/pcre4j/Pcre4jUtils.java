@@ -320,6 +320,41 @@ public final class Pcre4jUtils {
     }
 
     /**
+     * Convert a character index to a byte offset.
+     *
+     * @param input the input string
+     * @param index the character index
+     * @return the byte offset
+     */
+    public static int convertCharacterIndexToByteOffset(String input, int index) {
+        if (input == null) {
+            throw new IllegalArgumentException("input must not be null");
+        }
+        if (index < 0) {
+            throw new IllegalArgumentException("index must be non-negative");
+        }
+        if (index >= input.length()) {
+            throw new IllegalArgumentException("index must be within the bounds of the input string");
+        }
+
+        var offset = 0;
+        for (var charIndex = 0; charIndex < index; charIndex++) {
+            final var theChar = input.charAt(charIndex);
+            if (theChar <= 0x007F) {
+                offset += 1;
+            } else if (theChar <= 0x07FF) {
+                offset += 2;
+            } else if (Character.isHighSurrogate(theChar) || Character.isLowSurrogate(theChar)) {
+                offset += 2;
+            } else {
+                offset += 3;
+            }
+        }
+
+        return offset;
+    }
+
+    /**
      * Get what \R matches by default.
      *
      * @param api the PCRE2 API
