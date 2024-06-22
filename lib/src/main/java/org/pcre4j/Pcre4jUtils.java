@@ -257,7 +257,15 @@ public final class Pcre4jUtils {
         // Convert byte offsets to string indices
         final var stringIndices = new int[ovector.length];
         for (var valueIndex = 0; valueIndex < ovector.length; valueIndex++) {
-            stringIndices[valueIndex] = byteOffsetToStringIndex[(int) (ovector[valueIndex] - ovector[0])];
+            final var byteIndex = ovector[valueIndex];
+
+            // Handle case when group was not matched
+            if (byteIndex == -1) {
+                stringIndices[valueIndex] = -1;
+                continue;
+            }
+
+            stringIndices[valueIndex] = byteOffsetToStringIndex[(int) (byteIndex - ovector[0])];
         }
 
         return stringIndices;
