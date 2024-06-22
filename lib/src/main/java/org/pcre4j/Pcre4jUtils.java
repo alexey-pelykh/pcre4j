@@ -194,8 +194,9 @@ public final class Pcre4jUtils {
     /**
      * Convert the byte-based ovector offset pairs to string index pairs
      *
-     * @param subject the string to which the ovector values correspond
-     * @param ovector the byte-based ovector offset pairs
+     * @param subject     the string to which the ovector values correspond
+     * @param subjectUtf8 the {@param subject} string encoded as UTF-8 {@code byte[]}
+     * @param ovector     the byte-based ovector offset pairs
      * @return a string index pairs
      */
     public static int[] convertOvectorToStringIndices(String subject, byte[] subjectUtf8, long[] ovector) {
