@@ -56,7 +56,7 @@ public class Pcre2CompileError extends IllegalArgumentException {
      * @param cause   the cause of the error
      */
     public Pcre2CompileError(String pattern, long offset, String message, Throwable cause) {
-        super("Error in pattern at %d (%s): %s".formatted(offset, getPatternRegion(pattern, offset), message), cause);
+        super("Error in pattern at %d \"%s\": %s".formatted(offset, getPatternRegion(pattern, offset), message), cause);
         this.pattern = pattern;
         this.offset = offset;
         this.message = message;

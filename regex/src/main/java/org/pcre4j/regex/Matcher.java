@@ -19,6 +19,7 @@ import org.pcre4j.Pcre2MatchOption;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
@@ -40,9 +41,14 @@ public class Matcher implements java.util.regex.MatchResult {
     private Map<String, Integer> groupNameToIndex;
 
     /**
-     * The input character sequence that this matcher uses to match against the pattern
+     * The input string that this matcher uses to match against the pattern
      */
-    private CharSequence input;
+    private String input;
+
+    /**
+     * The input character sequence encoded in UTF-8
+     */
+    private byte[] inputBytes;
 
     /**
      * The start index of the region (inclusive) that this matcher uses to match against the pattern
@@ -60,14 +66,15 @@ public class Matcher implements java.util.regex.MatchResult {
     private Pcre2MatchData lastMatchData;
 
     /**
-     * The current match verctor
+     * The current match string index pairs
      */
-    private Pcre2MatchData.OffsetPair lastMatch[];
+    private int[] lastMatchIndices;
 
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.groupNameToIndex = pattern.namedGroups();
-        this.input = input;
+        this.input = input.toString();
+        this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
         reset();
     }
 
@@ -90,7 +97,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalStateException("No match found");
         }
 
-        return lastMatch[0].end();
+        return lastMatchIndices[1];
     }
 
     /**
@@ -108,7 +115,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        return lastMatch[group].end();
+        return lastMatchIndices[group * 2 + 1];
     }
 
     /**
@@ -127,7 +134,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        return lastMatch[group].end();
+        return lastMatchIndices[group * 2 + 1];
     }
 
     /**
@@ -138,10 +145,10 @@ public class Matcher implements java.util.regex.MatchResult {
     public boolean find() {
         var start = 0;
 
-        if (lastMatch != null) {
-            start = lastMatch[0].end();
+        if (lastMatchIndices != null) {
+            start = lastMatchIndices[1];
 
-            if (start == lastMatch[0].start()) {
+            if (start == lastMatchIndices[0]) {
                 start += 1;
             }
         }
@@ -152,7 +159,7 @@ public class Matcher implements java.util.regex.MatchResult {
 
         if (start >= regionEnd) {
             lastMatchData = null;
-            lastMatch = null;
+            lastMatchIndices = null;
             return false;
         }
 
@@ -184,7 +191,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalStateException("No match found");
         }
 
-        return input.subSequence(lastMatch[0].start(), lastMatch[0].end()).toString();
+        return input.substring(lastMatchIndices[0], lastMatchIndices[1]);
     }
 
     /**
@@ -202,7 +209,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        return input.subSequence(lastMatch[group].start(), lastMatch[group].end()).toString();
+        return input.substring(lastMatchIndices[group * 2], lastMatchIndices[group * 2 + 1]);
     }
 
     /**
@@ -221,7 +228,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        return input.subSequence(lastMatch[group].start(), lastMatch[group].end()).toString();
+        return input.substring(lastMatchIndices[group * 2], lastMatchIndices[group * 2 + 1]);
     }
 
     /**
@@ -243,7 +250,7 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     @Override
     public boolean hasMatch() {
-        return lastMatch != null;
+        return lastMatchData != null;
     }
 
     // TODO: hasTransparentBounds()
@@ -273,8 +280,8 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        this.lastMatchData = matchData;
-        this.lastMatch = matchData.ovector();
+        lastMatchData = matchData;
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
 
         return true;
     }
@@ -302,8 +309,8 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        this.lastMatchData = matchData;
-        this.lastMatch = matchData.ovector();
+        lastMatchData = matchData;
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
 
         return true;
     }
@@ -386,7 +393,7 @@ public class Matcher implements java.util.regex.MatchResult {
         regionStart = 0;
         regionEnd = input.length();
         lastMatchData = null;
-        lastMatch = null;
+        lastMatchIndices = null;
         return this;
     }
 
@@ -397,7 +404,8 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return this matcher
      */
     public Matcher reset(CharSequence input) {
-        this.input = input;
+        this.input = input.toString();
+        this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
         return reset();
     }
 
@@ -414,7 +422,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalStateException("No match found");
         }
 
-        return lastMatch[0].start();
+        return lastMatchIndices[0];
     }
 
     /**
@@ -432,7 +440,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        return lastMatch[group].start();
+        return lastMatchIndices[group * 2];
     }
 
     /**
@@ -451,7 +459,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        return lastMatch[group].start();
+        return lastMatchIndices[group * 2];
     }
 
     /**
@@ -469,8 +477,8 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         return new MatchResult(
-                input.subSequence(lastMatch[0].start(), lastMatch[0].end()).toString(),
-                Arrays.copyOf(lastMatch, lastMatch.length),
+                input.substring(lastMatchIndices[0], lastMatchIndices[1]),
+                Arrays.copyOf(lastMatchIndices, lastMatchIndices.length),
                 groupNameToIndex
         );
     }
@@ -480,7 +488,7 @@ public class Matcher implements java.util.regex.MatchResult {
         return Matcher.class.getName() +
                 "[pattern=" + pattern +
                 " region=" + regionStart + ',' + regionEnd +
-                " lastMatch=" + Arrays.toString(lastMatch) +
+                " lastMatchIndices=" + Arrays.toString(lastMatchIndices) +
                 "]";
     }
 
@@ -529,7 +537,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         lastMatchData = matchData;
-        lastMatch = matchData.ovector();
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(inputBytes, matchData.ovector());
 
         return true;
     }
@@ -539,17 +547,13 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public static class MatchResult implements java.util.regex.MatchResult {
 
-        private final CharSequence subsequence;
-        private final Pcre2MatchData.OffsetPair match[];
+        private final String substring;
+        private final int[] matchIndices;
         private final Map<String, Integer> groupNameToIndex;
 
-        /* package-private */ MatchResult(
-                CharSequence subsequence,
-                Pcre2MatchData.OffsetPair match[],
-                Map<String, Integer> groupNameToIndex
-        ) {
-            this.subsequence = subsequence;
-            this.match = match;
+        /* package-private */ MatchResult(String substring, int[] matchIndices, Map<String, Integer> groupNameToIndex) {
+            this.substring = substring;
+            this.matchIndices = matchIndices;
             this.groupNameToIndex = groupNameToIndex;
         }
 
@@ -559,7 +563,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalStateException("No match found");
             }
 
-            return match[0].start();
+            return matchIndices[0];
         }
 
         @Override
@@ -571,7 +575,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IndexOutOfBoundsException("No such group: " + group);
             }
 
-            return match[group].start();
+            return matchIndices[group * 2];
         }
 
         @Override
@@ -584,7 +588,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalArgumentException("No group with name <" + name + ">");
             }
 
-            return match[group].start();
+            return matchIndices[group * 2];
         }
 
         @Override
@@ -593,7 +597,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalStateException("No match found");
             }
 
-            return match[0].end();
+            return matchIndices[1];
         }
 
         @Override
@@ -605,7 +609,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IndexOutOfBoundsException("No such group: " + group);
             }
 
-            return match[group].end();
+            return matchIndices[group * 2 + 1];
         }
 
         @Override
@@ -618,7 +622,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalArgumentException("No group with name <" + name + ">");
             }
 
-            return match[group].end();
+            return matchIndices[group * 2 + 1];
         }
 
         @Override
@@ -627,7 +631,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalStateException("No match found");
             }
 
-            return subsequence.toString();
+            return substring;
         }
 
         @Override
@@ -639,8 +643,10 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IndexOutOfBoundsException("No such group: " + group);
             }
 
-            final var offset = match[0].start();
-            return subsequence.subSequence(match[group].start() - offset, match[group].end() - offset).toString();
+            return substring.substring(
+                    matchIndices[group * 2] - matchIndices[0],
+                    matchIndices[group * 2 + 1] - matchIndices[0]
+            );
         }
 
         @Override
@@ -653,16 +659,18 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalArgumentException("No group with name <" + name + ">");
             }
 
-            final var offset = match[0].start();
-            return subsequence.subSequence(match[group].start() - offset, match[group].end() - offset).toString();
+            return substring.substring(
+                    matchIndices[group * 2] - matchIndices[0],
+                    matchIndices[group * 2 + 1] - matchIndices[0]
+            );
         }
 
         @Override
         public int groupCount() {
-            if (match == null) {
+            if (matchIndices == null) {
                 return 0;
             }
-            return match.length - 1;
+            return matchIndices.length / 2 - 1;
         }
 
         @Override
@@ -672,7 +680,7 @@ public class Matcher implements java.util.regex.MatchResult {
 
         @Override
         public boolean hasMatch() {
-            return match != null;
+            return matchIndices != null;
         }
     }
 }

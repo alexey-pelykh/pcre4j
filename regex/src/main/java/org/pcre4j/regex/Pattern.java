@@ -70,7 +70,7 @@ public class Pattern {
         this.regex = regex;
         this.flags = flags;
 
-        final var options = EnumSet.noneOf(Pcre2CompileOption.class);
+        final var options = EnumSet.of(Pcre2CompileOption.UTF);
         if ((flags & CASE_INSENSITIVE) != 0) {
             options.add(Pcre2CompileOption.CASELESS);
         }

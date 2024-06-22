@@ -25,6 +25,7 @@ import org.pcre4j.api.IPcre2;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 /**
@@ -102,9 +103,11 @@ public class Pcre2 implements IPcre2 {
         IntByReference errorCodeRef = new IntByReference();
         LongByReference errorOffsetRef = new LongByReference();
 
+        final var pszPattern = pattern.getBytes(StandardCharsets.UTF_8);
+
         Pointer code = library.pcre2_compile(
-                pattern,
-                pattern.length(),
+                pszPattern,
+                pszPattern.length,
                 options,
                 errorCodeRef,
                 errorOffsetRef,
@@ -193,10 +196,12 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
+        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+
         return library.pcre2_match(
                 new Pointer(code),
-                subject,
-                subject.length(),
+                pszSubject,
+                pszSubject.length,
                 startoffset,
                 options,
                 new Pointer(matchData),
@@ -229,8 +234,8 @@ public class Pcre2 implements IPcre2 {
         void pcre2_compile_context_free(Pointer ccontext);
 
         Pointer pcre2_compile(
-                String pattern,
-                long patternLength,
+                byte[] pattern,
+                long length,
                 int options,
                 IntByReference errorcode,
                 LongByReference erroroffset,
@@ -257,9 +262,9 @@ public class Pcre2 implements IPcre2 {
 
         int pcre2_match(
                 Pointer code,
-                String subject,
+                byte[] subject,
                 long length,
-                long startOffset,
+                long startoffset,
                 int options,
                 Pointer matchData,
                 Pointer mcontext
