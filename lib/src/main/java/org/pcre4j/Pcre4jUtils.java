@@ -18,6 +18,7 @@ import org.pcre4j.api.IPcre2;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -288,23 +289,34 @@ public final class Pcre4jUtils {
     }
 
     /**
-     * Get which of the character width is compiled.
+     * Get which of the character widths the PCRE2 library was compiled with.
      *
      * @param api the PCRE2 API
      * @return the compiled character width (8, 16, or 32)
      */
-    public static int getCompiledWidth(IPcre2 api) {
+    public static EnumSet<Pcre2UtfWidth> getCompiledWidths(IPcre2 api) {
         if (api == null) {
             throw new IllegalArgumentException("api must not be null");
         }
 
-        final var width = new int[1];
-        final var result = api.config(IPcre2.CONFIG_COMPILED_WIDTHS, width);
+        final var widthsMask = new int[1];
+        final var result = api.config(IPcre2.CONFIG_COMPILED_WIDTHS, widthsMask);
         if (result < 0) {
             throw new IllegalStateException(getErrorMessage(api, result));
         }
 
-        return width[0];
+        final var widths = EnumSet.noneOf(Pcre2UtfWidth.class);
+        if ((widthsMask[0] & Pcre2UtfWidth.UTF8.value()) != 0) {
+            widths.add(Pcre2UtfWidth.UTF8);
+        }
+        if ((widthsMask[0] & Pcre2UtfWidth.UTF16.value()) != 0) {
+            widths.add(Pcre2UtfWidth.UTF16);
+        }
+        if ((widthsMask[0] & Pcre2UtfWidth.UTF32.value()) != 0) {
+            widths.add(Pcre2UtfWidth.UTF32);
+        }
+
+        return widths;
     }
 
     /**

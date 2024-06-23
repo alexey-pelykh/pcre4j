@@ -39,7 +39,7 @@ public abstract class Pcre2Tests {
         Pcre4jUtils.isJitSupported(api);
         Pcre4jUtils.getDefaultHeapLimit(api);
         Pcre4jUtils.getDefaultDepthLimit(api);
-        Pcre4jUtils.getCompiledWidth(api);
+        Pcre4jUtils.getCompiledWidths(api);
         Pcre4jUtils.getDefaultBsr(api);
     }
 
