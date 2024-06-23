@@ -49,4 +49,16 @@ public class PatternTests {
         assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
         assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
     }
+
+    @Test
+    void unicodeSplit() {
+        var javaPattern = java.util.regex.Pattern.compile("\\D+");
+        var pcre4jPattern = Pattern.compile("\\D+");
+
+        var input = "0 ⇾ 1 ⇾ 1 ⇾ 2 ⇾ 3 ⇾ 5 ⇾ 8 ⇾ … ⇾ 144 ⇾ …";
+
+        assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
+        assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
+        assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
+    }
 }
