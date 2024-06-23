@@ -14,10 +14,8 @@
  */
 package org.pcre4j.ffm;
 
-import org.pcre4j.Pcre4j;
-
 public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
-    static {
-        Pcre4j.setup(new Pcre2());
+    public Pcre2Tests() {
+        super(new Pcre2());
     }
 }

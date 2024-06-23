@@ -16,17 +16,30 @@ package org.pcre4j.test;
 
 import org.junit.jupiter.api.Test;
 import org.pcre4j.*;
+import org.pcre4j.api.IPcre2;
 
 import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/**
+ * {@link IPcre2} implementation tests.
+ */
 public abstract class Pcre2Tests {
+
+    protected final IPcre2 api;
+
+    protected Pcre2Tests(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        this.api = api;
+    }
 
     @Test
     public void config() {
-        final var api = Pcre4j.api();
         Pcre4jUtils.getVersion(api);
         Pcre4jUtils.getUnicodeVersion(api);
         Pcre4jUtils.isUnicodeSupported(api);
@@ -46,6 +59,7 @@ public abstract class Pcre2Tests {
     @Test
     public void plainStringMatch() {
         final var code = new Pcre2Code(
+                api,
                 "42",
                 EnumSet.noneOf(Pcre2CompileOption.class),
                 null
@@ -68,6 +82,7 @@ public abstract class Pcre2Tests {
     @Test
     public void plainStringMatchNoCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(?:42)",
                 EnumSet.noneOf(Pcre2CompileOption.class),
                 null
@@ -90,6 +105,7 @@ public abstract class Pcre2Tests {
     @Test
     public void plainStringMatchCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(42)",
                 EnumSet.noneOf(Pcre2CompileOption.class),
                 null
@@ -112,6 +128,7 @@ public abstract class Pcre2Tests {
     @Test
     public void plainStringMatchNamedCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(?P<group>42)",
                 EnumSet.noneOf(Pcre2CompileOption.class),
                 null
@@ -134,6 +151,7 @@ public abstract class Pcre2Tests {
     @Test
     public void unicodeStringMatch() {
         final var code = new Pcre2Code(
+                api,
                 "🌐",
                 EnumSet.of(Pcre2CompileOption.UTF),
                 null
@@ -156,6 +174,7 @@ public abstract class Pcre2Tests {
     @Test
     public void unicodeStringMatchNoCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(?:🌐)",
                 EnumSet.of(Pcre2CompileOption.UTF),
                 null
@@ -178,6 +197,7 @@ public abstract class Pcre2Tests {
     @Test
     public void unicodeStringMatchCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(🌐)",
                 EnumSet.of(Pcre2CompileOption.UTF),
                 null
@@ -200,6 +220,7 @@ public abstract class Pcre2Tests {
     @Test
     public void unicodeStringMatchNamedCapture() {
         final var code = new Pcre2Code(
+                api,
                 "(?P<group>🌐)",
                 EnumSet.of(Pcre2CompileOption.UTF),
                 null
@@ -222,6 +243,7 @@ public abstract class Pcre2Tests {
     @Test
     public void nameTable() {
         final var code = new Pcre2Code(
+                api,
                 "(?<number>42)",
                 EnumSet.noneOf(Pcre2CompileOption.class),
                 null
