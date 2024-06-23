@@ -62,7 +62,7 @@ tasks.withType<JavaCompile> {
     options.compilerArgs.add("--enable-preview")
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-preview")
     systemProperty(

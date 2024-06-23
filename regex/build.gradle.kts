@@ -29,8 +29,9 @@ repositories {
 dependencies {
     api(project(":api"))
     api(project(":lib"))
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(project(":jna"))
+    testImplementation(project(":ffm"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -60,7 +61,24 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("--enable-preview")
+    systemProperty(
+        "jna.library.path", listOf(
+            System.getProperty("pcre2.library.path"),
+            System.getProperty("jna.library.path")
+        ).joinToString(":")
+    )
+    systemProperty(
+        "java.library.path", listOf(
+            System.getProperty("pcre2.library.path"),
+            System.getProperty("java.library.path")
+        ).joinToString(":")
+    )
     finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgs.add("--enable-preview")
 }
 
 tasks.jacocoTestReport {

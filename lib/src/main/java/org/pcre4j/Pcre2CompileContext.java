@@ -43,7 +43,19 @@ public class Pcre2CompileContext {
      * @param generalContext the general context to use or {@code null} to use the default context
      */
     public Pcre2CompileContext(Pcre2GeneralContext generalContext) {
-        final var api = Pcre4j.api();
+        this(Pcre4j.api(), generalContext);
+    }
+
+    /**
+     * Create a new compile context
+     *
+     * @param api            the PCRE2 API to use
+     * @param generalContext the general context to use or {@code null} to use the default context
+     */
+    public Pcre2CompileContext(IPcre2 api, Pcre2GeneralContext generalContext) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
 
         final var handle = api.compileContextCreate(
                 generalContext != null ? generalContext.handle : 0

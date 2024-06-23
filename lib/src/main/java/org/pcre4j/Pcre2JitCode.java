@@ -1,5 +1,7 @@
 package org.pcre4j;
 
+import org.pcre4j.api.IPcre2;
+
 import java.util.EnumSet;
 
 /**
@@ -20,15 +22,6 @@ public class Pcre2JitCode extends Pcre2Code {
     );
 
     /**
-     * Get the supported match options for JIT-compiled patterns.
-     *
-     * @return the supported match options
-     */
-    public static EnumSet<Pcre2MatchOption> getSupportedMatchOptions() {
-        return EnumSet.copyOf(SUPPORTED_MATCH_OPTIONS);
-    }
-
-    /**
      * Constructor for Pcre2JitCode
      *
      * @param pattern        the pattern to compile
@@ -44,7 +37,28 @@ public class Pcre2JitCode extends Pcre2Code {
             EnumSet<Pcre2JitOption> jitOptions,
             Pcre2CompileContext compileContext
     ) {
-        super(pattern, options, compileContext);
+        this(Pcre4j.api(), pattern, options, jitOptions, compileContext);
+    }
+
+    /**
+     * Constructor for Pcre2JitCode
+     *
+     * @param api            the PCRE2 API to use
+     * @param pattern        the pattern to compile
+     * @param options        the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
+     *                       options
+     * @param jitOptions     the flags to compile the pattern with JIT, see {@link Pcre2JitOption} or null for default
+     *                       options
+     * @param compileContext the compile context to use or null
+     */
+    public Pcre2JitCode(
+            IPcre2 api,
+            String pattern,
+            EnumSet<Pcre2CompileOption> options,
+            EnumSet<Pcre2JitOption> jitOptions,
+            Pcre2CompileContext compileContext
+    ) {
+        super(api, pattern, options, compileContext);
 
         if (jitOptions == null) {
             jitOptions = EnumSet.of(
@@ -63,6 +77,15 @@ public class Pcre2JitCode extends Pcre2Code {
         if (jitResult != 0) {
             throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, jitResult));
         }
+    }
+
+    /**
+     * Get the supported match options for JIT-compiled patterns.
+     *
+     * @return the supported match options
+     */
+    public static EnumSet<Pcre2MatchOption> getSupportedMatchOptions() {
+        return EnumSet.copyOf(SUPPORTED_MATCH_OPTIONS);
     }
 
     @Override

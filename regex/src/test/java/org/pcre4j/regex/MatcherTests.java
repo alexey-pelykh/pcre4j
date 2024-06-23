@@ -14,9 +14,12 @@
  */
 package org.pcre4j.regex;
 
-import org.junit.jupiter.api.Test;
-import org.pcre4j.Pcre4j;
-import org.pcre4j.jna.Pcre2;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.pcre4j.api.IPcre2;
+
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,16 +29,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  */
 public class MatcherTests {
 
-    static {
-        Pcre4j.setup(new Pcre2());
+    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
+    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
+
+    private static Stream<Arguments> parameters() {
+        return Stream.of(
+                Arguments.of(JNA_PCRE2),
+                Arguments.of(FFM_PCRE2)
+        );
     }
 
-    @Test
-    void unicodeOneByte() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeOneByte(IPcre2 api) {
         var regex = "Å";
         var input = "Å";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -51,12 +61,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void unicodeTwoBytes() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeTwoBytes(IPcre2 api) {
         var regex = "Ǎ";
         var input = "Ǎ";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -72,12 +83,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void unicodeThreeBytes() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeThreeBytes(IPcre2 api) {
         var regex = "•";
         var input = "•";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -93,12 +105,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void unicodeFourBytes() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeFourBytes(IPcre2 api) {
         var regex = "\uD83C\uDF0D";
         var input = "\uD83C\uDF0D";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -114,12 +127,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void unicode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicode(IPcre2 api) {
         var regex = "ÅǍ•\uD83C\uDF0D!";
         var input = "ÅǍ•\uD83C\uDF0D!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -135,12 +149,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void unicodeRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeRegion(IPcre2 api) {
         var regex = "\uD83C\uDF0D";
         var input = "ÅǍ•\uD83C\uDF0D!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(3, 5);
         pcre4jMatcher.region(3, 5);
@@ -159,12 +174,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void matchesTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesTrue(IPcre2 api) {
         var regex = "42";
         var input = "42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -180,12 +196,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void matchesFalse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesFalse(IPcre2 api) {
         var regex = "42";
         var input = "42!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -207,12 +224,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void matchesTrueInRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 3);
         pcre4jMatcher.region(1, 3);
@@ -231,12 +249,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void matchesFalseRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesFalseRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42!]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -261,12 +280,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void lookingAtTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void lookingAtTrue(IPcre2 api) {
         var regex = "42";
         var input = "42!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -282,12 +302,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void lookingAtFalse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void lookingAtFalse(IPcre2 api) {
         var regex = "42";
         var input = "!42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -309,12 +330,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void lookingAtTrueInRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void lookingAtTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42!]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -333,12 +355,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void lookingAtFalseRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void lookingAtFalseRegion(IPcre2 api) {
         var regex = "42";
         var input = "[!42]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 4);
         pcre4jMatcher.region(1, 4);
@@ -363,12 +386,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findTrue() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findTrue(IPcre2 api) {
         var regex = "42";
         var input = "42!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -384,12 +408,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findFalse() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findFalse(IPcre2 api) {
         var regex = "42!";
         var input = "42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -411,12 +436,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findTrueInRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 3);
 
@@ -434,12 +460,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findFalseInRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findFalseInRegion(IPcre2 api) {
         var regex = "42!";
         var input = "[42]";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(1, 3);
 
@@ -463,12 +490,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findTrueAtOffset() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findTrueAtOffset(IPcre2 api) {
         var regex = "42";
         var input = "!!42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -484,12 +512,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findFalseAtOffset() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findFalseAtOffset(IPcre2 api) {
         var regex = "42";
         var input = "!!test";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
         assertThrows(IllegalStateException.class, javaMatcher::start);
@@ -511,12 +540,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void findMultiple() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findMultiple(IPcre2 api) {
         var regex = "42";
         var input = "42!42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
@@ -545,12 +575,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult1.groupCount(), pcre4jMatchResult1.groupCount());
     }
 
-    @Test
-    void findMultipleWithinRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findMultipleWithinRegion(IPcre2 api) {
         var regex = "42";
         var input = "42!42!42!42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(2, 8);
         pcre4jMatcher.region(2, 8);
@@ -582,12 +613,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult1.groupCount(), pcre4jMatchResult1.groupCount());
     }
 
-    @Test
-    void findMultipleOutsideRegion() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findMultipleOutsideRegion(IPcre2 api) {
         var regex = "42";
         var input = "42!__!__!42";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         javaMatcher.region(2, 8);
         pcre4jMatcher.region(2, 8);
@@ -612,12 +644,13 @@ public class MatcherTests {
         assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
     }
 
-    @Test
-    void captureGroups() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void captureGroups(IPcre2 api) {
         var regex = "(?<four>4)(.*)(?<two>2)";
         var input = "4test2";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
 
@@ -643,12 +676,13 @@ public class MatcherTests {
         assertEquals(javaMatcher.end("two"), pcre4jMatcher.end("two"));
     }
 
-    @Test
-    void unmatchedGroups() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unmatchedGroups(IPcre2 api) {
         var regex = "42((?<exclamation>!)|(?<question>\\?))";
         var input = "42!";
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
-        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
 

@@ -38,7 +38,19 @@ public class Pcre2GeneralContext {
      * Create a new general context using system default memory management functions
      */
     public Pcre2GeneralContext() {
-        final var api = Pcre4j.api();
+        this(Pcre4j.api());
+    }
+
+
+    /**
+     * Create a new general context using system default memory management functions
+     *
+     * @param api the PCRE2 API to use
+     */
+    public Pcre2GeneralContext(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
 
         final var handle = api.generalContextCreate(0, 0, 0);
         if (handle == 0) {

@@ -45,7 +45,19 @@ public class Pcre2MatchData {
      * @param ovecsize the size of the output vector
      */
     public Pcre2MatchData(int ovecsize) {
-        final var api = Pcre4j.api();
+        this(Pcre4j.api(), ovecsize);
+    }
+
+    /**
+     * Create a new match data object
+     *
+     * @param api      the PCRE2 API to use
+     * @param ovecsize the size of the output vector
+     */
+    public Pcre2MatchData(IPcre2 api, int ovecsize) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
 
         final var handle = api.matchDataCreate(
                 ovecsize,
@@ -66,9 +78,11 @@ public class Pcre2MatchData {
      * @param code the compiled pattern to create the match data for
      */
     public Pcre2MatchData(Pcre2Code code) {
-        final var api = Pcre4j.api();
+        if (code == null) {
+            throw new IllegalArgumentException("code cannot be null");
+        }
 
-        final var handle = api.matchDataCreateFromPattern(
+        final var handle = code.api.matchDataCreateFromPattern(
                 code.handle,
                 0
         );
@@ -76,7 +90,7 @@ public class Pcre2MatchData {
             throw new IllegalStateException("Failed to create match data from pattern");
         }
 
-        this.api = api;
+        this.api = code.api;
         this.handle = handle;
         this.cleanable = cleaner.register(this, new Pcre2MatchData.Clean(api, handle));
     }

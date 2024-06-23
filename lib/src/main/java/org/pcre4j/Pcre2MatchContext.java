@@ -40,7 +40,19 @@ public class Pcre2MatchContext {
      * @param generalContext the general context to use or {@code null} to use the default context
      */
     public Pcre2MatchContext(Pcre2GeneralContext generalContext) {
-        final var api = Pcre4j.api();
+        this(Pcre4j.api(), generalContext);
+    }
+
+    /**
+     * Create a new match context
+     *
+     * @param api            the PCRE2 API to use
+     * @param generalContext the general context to use or {@code null} to use the default context
+     */
+    public Pcre2MatchContext(IPcre2 api, Pcre2GeneralContext generalContext) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
 
         final var handle = api.matchContextCreate(
                 generalContext != null ? generalContext.handle : 0

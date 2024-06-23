@@ -15,6 +15,7 @@
 package org.pcre4j.regex;
 
 import org.pcre4j.*;
+import org.pcre4j.api.IPcre2;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
@@ -58,15 +59,30 @@ public class Pattern {
     // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
     // TODO: public static final int UNICODE_CHARACTER_CLASS = java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;
     // TODO: public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
-
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
     /* package-private */ final Pcre2Code lookingAtCode;
-    private final Map<String, Integer> namedGroups;
+    private final IPcre2 api;
     private final String regex;
     private final int flags;
+    private final Map<String, Integer> namedGroups;
 
-    private Pattern(String regex, int flags) {
+    /**
+     * Create a new {@link Pattern} using the given regular expression and flags.
+     *
+     * @param api   the PCRE API to use
+     * @param regex the regular expression to compile
+     * @param flags the flags to use when compiling the pattern
+     */
+    private Pattern(IPcre2 api, String regex, int flags) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
+        if (regex == null) {
+            throw new IllegalArgumentException("regex cannot be null");
+        }
+
+        this.api = api;
         this.regex = regex;
         this.flags = flags;
 
@@ -85,8 +101,9 @@ public class Pattern {
         }
 
         try {
-            if (Pcre4jUtils.isJitSupported(Pcre4j.api())) {
+            if (Pcre4jUtils.isJitSupported(api)) {
                 this.code = new Pcre2JitCode(
+                        api,
                         regex,
                         compileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
@@ -97,6 +114,7 @@ public class Pattern {
                 matchingCompileOptions.add(Pcre2CompileOption.ANCHORED);
                 matchingCompileOptions.add(Pcre2CompileOption.ENDANCHORED);
                 this.matchingCode = new Pcre2JitCode(
+                        api,
                         regex,
                         matchingCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
@@ -106,6 +124,7 @@ public class Pattern {
                 final var lookingAtCompileOptions = EnumSet.copyOf(compileOptions);
                 lookingAtCompileOptions.add(Pcre2CompileOption.ANCHORED);
                 this.lookingAtCode = new Pcre2JitCode(
+                        api,
                         regex,
                         lookingAtCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
@@ -113,6 +132,7 @@ public class Pattern {
                 );
             } else {
                 this.code = new Pcre2Code(
+                        api,
                         regex,
                         compileOptions,
                         null
@@ -137,7 +157,18 @@ public class Pattern {
      * @return the compiled pattern
      */
     public static Pattern compile(String regex) {
-        return new Pattern(regex, 0);
+        return compile(Pcre4j.api(), regex);
+    }
+
+    /**
+     * Compiles the given regular expression into a PCRE pattern.
+     *
+     * @param api   the PCRE API to use
+     * @param regex the regular expression to compile
+     * @return the compiled pattern
+     */
+    public static Pattern compile(IPcre2 api, String regex) {
+        return compile(api, regex, 0);
     }
 
     /**
@@ -148,7 +179,19 @@ public class Pattern {
      * @return the compiled pattern
      */
     public static Pattern compile(String regex, int flags) {
-        return new Pattern(regex, flags);
+        return compile(Pcre4j.api(), regex, flags);
+    }
+
+    /**
+     * Compiles the given regular expression into a PCRE pattern using the given flags.
+     *
+     * @param api   the PCRE API to use
+     * @param regex the regular expression to compile
+     * @param flags the flags to use when compiling the pattern
+     * @return the compiled pattern
+     */
+    public static Pattern compile(IPcre2 api, String regex, int flags) {
+        return new Pattern(api, regex, flags);
     }
 
     /**
@@ -159,7 +202,19 @@ public class Pattern {
      * @return {@code true} if the input matches the pattern, otherwise {@code false}
      */
     public static boolean matches(String regex, CharSequence input) {
-        return Pattern.compile(regex).matcher(input).matches();
+        return matches(Pcre4j.api(), regex, input);
+    }
+
+    /**
+     * Compiles the given regular expression and matches the given input against it.
+     *
+     * @param api   the PCRE API to use
+     * @param regex the regular expression to compile
+     * @param input the input to match against the compiled pattern
+     * @return {@code true} if the input matches the pattern, otherwise {@code false}
+     */
+    public static boolean matches(IPcre2 api, String regex, CharSequence input) {
+        return Pattern.compile(api, regex).matcher(input).matches();
     }
 
     /**

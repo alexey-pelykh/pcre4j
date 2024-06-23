@@ -14,13 +14,13 @@
  */
 package org.pcre4j;
 
+import org.pcre4j.api.IPcre2;
+
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
-
-import org.pcre4j.api.IPcre2;
 
 /**
  * A compiled pattern.
@@ -45,7 +45,30 @@ public class Pcre2Code {
     private final Cleaner.Cleanable cleanable;
 
     /**
-     * Constructor for Pcre2Code
+     * Create a compiled pattern from a pattern string
+     *
+     * @param pattern the pattern to compile
+     */
+    public Pcre2Code(String pattern) {
+        this(pattern, null, null);
+    }
+
+    /**
+     * Create a compiled pattern from a pattern string
+     *
+     * @param pattern the pattern to compile
+     * @param options the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
+     *                options
+     */
+    public Pcre2Code(
+            String pattern,
+            EnumSet<Pcre2CompileOption> options
+    ) {
+        this(pattern, options, null);
+    }
+
+    /**
+     * Create a compiled pattern from a pattern string
      *
      * @param pattern        the pattern to compile
      * @param options        the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
@@ -57,14 +80,62 @@ public class Pcre2Code {
             EnumSet<Pcre2CompileOption> options,
             Pcre2CompileContext compileContext
     ) {
+        this(Pcre4j.api(), pattern, options, compileContext);
+    }
+
+    /**
+     * Create a compiled pattern from a pattern string
+     *
+     * @param api     the PCRE2 API to use
+     * @param pattern the pattern to compile
+     */
+    public Pcre2Code(
+            IPcre2 api,
+            String pattern
+    ) {
+        this(api, pattern, null, null);
+    }
+
+    /**
+     * Create a compiled pattern from a pattern string
+     *
+     * @param api     the PCRE2 API to use
+     * @param pattern the pattern to compile
+     * @param options the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
+     *                options
+     */
+    public Pcre2Code(
+            IPcre2 api,
+            String pattern,
+            EnumSet<Pcre2CompileOption> options
+    ) {
+        this(api, pattern, options, null);
+    }
+
+    /**
+     * Create a compiled pattern from a pattern string
+     *
+     * @param api            the PCRE2 API to use
+     * @param pattern        the pattern to compile
+     * @param options        the flags to compile the pattern with, see {@link Pcre2CompileOption} or null for default
+     *                       options
+     * @param compileContext the compile context to use or null
+     */
+    public Pcre2Code(
+            IPcre2 api,
+            String pattern,
+            EnumSet<Pcre2CompileOption> options,
+            Pcre2CompileContext compileContext
+    ) {
+        if (api == null) {
+            throw new IllegalArgumentException("api cannot be null");
+        }
         if (pattern == null) {
             throw new IllegalArgumentException("pattern cannot be null");
         }
         if (options == null) {
             options = EnumSet.noneOf(Pcre2CompileOption.class);
         }
-
-        final var api = Pcre4j.api();
 
         final var errorcode = new int[1];
         final var erroroffset = new long[1];
