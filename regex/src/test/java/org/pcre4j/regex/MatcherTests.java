@@ -136,6 +136,30 @@ public class MatcherTests {
     }
 
     @Test
+    void unicodeRegion() {
+        var regex = "\uD83C\uDF0D";
+        var input = "ÅǍ•\uD83C\uDF0D!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(regex).matcher(input);
+
+        javaMatcher.region(3, 5);
+        pcre4jMatcher.region(3, 5);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+
+        var javaMatchResult = javaMatcher.toMatchResult();
+        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    @Test
     void matchesTrue() {
         var regex = "42";
         var input = "42";
