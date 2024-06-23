@@ -26,13 +26,18 @@ public final class Pcre4j {
     }
 
     /**
-     * Setup the Pcre4j.
+     * Set up the PCRE4J library.
      *
      * @param api the API to use
      */
     public static void setup(IPcre2 api) {
         if (api == null) {
             throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var compiledWidths = Pcre4jUtils.getCompiledWidths(api);
+        if (!compiledWidths.contains(Pcre2UtfWidth.UTF8)) {
+            throw new IllegalArgumentException("api must support UTF-8, yet it only supports " + compiledWidths);
         }
 
         synchronized (lock) {
