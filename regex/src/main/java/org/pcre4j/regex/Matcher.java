@@ -210,7 +210,12 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IndexOutOfBoundsException("No such group: " + group);
         }
 
-        return input.substring(lastMatchIndices[group * 2], lastMatchIndices[group * 2 + 1]);
+        final var since = lastMatchIndices[group * 2];
+        final var until = lastMatchIndices[group * 2 + 1];
+        if (since == -1 && until == -1) {
+            return null;
+        }
+        return input.substring(since, until);
     }
 
     /**
@@ -229,7 +234,12 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new IllegalArgumentException("No group with name <" + name + ">");
         }
 
-        return input.substring(lastMatchIndices[group * 2], lastMatchIndices[group * 2 + 1]);
+        final var since = lastMatchIndices[group * 2];
+        final var until = lastMatchIndices[group * 2 + 1];
+        if (since == -1 && until == -1) {
+            return null;
+        }
+        return input.substring(since, until);
     }
 
     /**

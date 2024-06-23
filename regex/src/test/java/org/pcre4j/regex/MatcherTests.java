@@ -656,24 +656,68 @@ public class MatcherTests {
 
         assertEquals(javaMatcher.group(), pcre4jMatcher.group());
         assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
-        assertEquals(javaMatcher.group(1), pcre4jMatcher.group(1));
-        assertEquals(javaMatcher.group(2), pcre4jMatcher.group(2));
-        assertEquals(javaMatcher.group(3), pcre4jMatcher.group(3));
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
         assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
-        assertEquals(javaMatcher.start(1), pcre4jMatcher.start(1));
-        assertEquals(javaMatcher.start(2), pcre4jMatcher.start(2));
-        assertEquals(javaMatcher.start(3), pcre4jMatcher.start(3));
-        assertEquals(javaMatcher.start("four"), pcre4jMatcher.start("four"));
-        assertEquals(javaMatcher.start("two"), pcre4jMatcher.start("two"));
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
-        assertEquals(javaMatcher.end(1), pcre4jMatcher.end(1));
-        assertEquals(javaMatcher.end(2), pcre4jMatcher.end(2));
-        assertEquals(javaMatcher.end(3), pcre4jMatcher.end(3));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+        assertEquals(javaMatcher.start("four"), pcre4jMatcher.start("four"));
+        assertEquals(javaMatcher.start("two"), pcre4jMatcher.start("two"));
         assertEquals(javaMatcher.end("four"), pcre4jMatcher.end("four"));
         assertEquals(javaMatcher.end("two"), pcre4jMatcher.end("two"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyGroup(IPcre2 api) {
+        var regex = "!*";
+        var input = "42";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void singleUnmatchedGroup(IPcre2 api) {
+        var regex = "(42)?";
+        var input = "test";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
     }
 
     @ParameterizedTest
@@ -688,19 +732,18 @@ public class MatcherTests {
 
         assertEquals(javaMatcher.group(), pcre4jMatcher.group());
         assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
-        assertEquals(javaMatcher.group(1), pcre4jMatcher.group(1));
-        assertEquals(javaMatcher.group(2), pcre4jMatcher.group(2));
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
         assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
-        assertEquals(javaMatcher.start(1), pcre4jMatcher.start(1));
-        assertEquals(javaMatcher.start(2), pcre4jMatcher.start(2));
-        assertEquals(javaMatcher.start("exclamation"), pcre4jMatcher.start("exclamation"));
-        assertEquals(javaMatcher.start("question"), pcre4jMatcher.start("question"));
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
-        assertEquals(javaMatcher.end(1), pcre4jMatcher.end(1));
-        assertEquals(javaMatcher.end(2), pcre4jMatcher.end(2));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+        assertEquals(javaMatcher.start("exclamation"), pcre4jMatcher.start("exclamation"));
+        assertEquals(javaMatcher.start("question"), pcre4jMatcher.start("question"));
         assertEquals(javaMatcher.end("exclamation"), pcre4jMatcher.end("exclamation"));
         assertEquals(javaMatcher.end("question"), pcre4jMatcher.end("question"));
     }
@@ -717,19 +760,46 @@ public class MatcherTests {
 
         assertEquals(javaMatcher.group(), pcre4jMatcher.group());
         assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
-        assertEquals(javaMatcher.group(1), pcre4jMatcher.group(1));
-        assertEquals(javaMatcher.group(2), pcre4jMatcher.group(2));
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
         assertEquals(javaMatcher.start(), pcre4jMatcher.start());
         assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
-        assertEquals(javaMatcher.start(1), pcre4jMatcher.start(1));
-        assertEquals(javaMatcher.start(2), pcre4jMatcher.start(2));
-        assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
-        assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
-        assertEquals(javaMatcher.end(1), pcre4jMatcher.end(1));
-        assertEquals(javaMatcher.end(2), pcre4jMatcher.end(2));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+        assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
+        assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
+        assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
+        assertEquals(javaMatcher.end("rWrapper"), pcre4jMatcher.end("rWrapper"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void positiveUnmatchedLookaround(IPcre2 api) {
+        var regex = "(?<=(?<lWrapper>\\W))?(\\d+)(?=(?<rWrapper>\\W))?";
+        var input = "42]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+        assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
+        assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
         assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
         assertEquals(javaMatcher.end("rWrapper"), pcre4jMatcher.end("rWrapper"));
     }
