@@ -61,6 +61,12 @@ java {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    systemProperty(
+        "jna.library.path", listOf(
+            System.getProperty("pcre2.library.path"),
+            System.getProperty("jna.library.path")
+        ).joinToString(":")
+    )
     finalizedBy(tasks.jacocoTestReport)
 }
 
