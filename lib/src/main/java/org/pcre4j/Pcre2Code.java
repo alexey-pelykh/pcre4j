@@ -14,13 +14,13 @@
  */
 package org.pcre4j;
 
-import org.pcre4j.api.IPcre2;
-
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
+
+import org.pcre4j.api.IPcre2;
 
 public class Pcre2Code {
 
@@ -386,7 +386,7 @@ public class Pcre2Code {
      * Match this compiled pattern against a given subject string.
      *
      * @param subject      the subject string to match this pattern against
-     * @param startoffset  offset in the subject at which to start matching
+     * @param startOffset  offset in the subject at which to start matching
      * @param options      the options, see {@link Pcre2MatchOption}
      * @param matchData    the match data to store the results in
      * @param matchContext the match context to use or null
@@ -395,22 +395,43 @@ public class Pcre2Code {
      */
     public int match(
             String subject,
-            int startoffset,
+            int startOffset,
             EnumSet<Pcre2MatchOption> options,
             Pcre2MatchData matchData,
             Pcre2MatchContext matchContext
     ) {
         if (subject == null) {
-            throw new IllegalArgumentException("Subject cannot be null");
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (startOffset < 0) {
+            throw new IllegalArgumentException("startOffset must be greater than or equal to zero");
+        }
+        if (startOffset >= subject.length()) {
+            throw new IllegalArgumentException("startOffset must be less than the length of the subject");
         }
         if (matchData == null) {
-            throw new IllegalArgumentException("Match data cannot be null");
+            throw new IllegalArgumentException("matchData must not be null");
+        }
+
+        // For the UTF-8, convert the startOffset from characters to bytes
+        var startOffsetInBytes = 0;
+        for (var charIndex = 0; charIndex < startOffset; charIndex++) {
+            final var theChar = subject.charAt(charIndex);
+            if (theChar <= 0x007F) {
+                startOffsetInBytes += 1;
+            } else if (theChar <= 0x07FF) {
+                startOffsetInBytes += 2;
+            } else if (Character.isHighSurrogate(theChar) || Character.isLowSurrogate(theChar)) {
+                startOffsetInBytes += 2;
+            } else {
+                startOffsetInBytes += 3;
+            }
         }
 
         return api.match(
                 handle,
                 subject,
-                startoffset,
+                startOffsetInBytes,
                 options
                         .stream()
                         .mapToInt(Pcre2MatchOption::value)
