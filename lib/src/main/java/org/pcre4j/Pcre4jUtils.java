@@ -18,6 +18,7 @@ import org.pcre4j.api.IPcre2;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
@@ -560,19 +561,17 @@ public final class Pcre4jUtils {
         if (ovector.length % 2 != 0) {
             throw new IllegalArgumentException("ovector must have an even number of elements");
         }
-        if (ovector[0] > ovector[1]) {
-            throw new IllegalArgumentException("ovector start must be less than or equal to ovector end");
-        }
 
-        // Match region size in bytes is determined by the first offset pair in the ovector
-        final var matchSizeInBytes = ovector[1] - ovector[0];
+        final var matchSince = (int) Arrays.stream(ovector).min().orElseThrow();
+        final var matchUntil = (int) Arrays.stream(ovector).max().orElseThrow();
+        final var matchSizeInBytes = matchUntil - matchSince;
 
         // Calculate the mapping of byte offsets to string indices for the relevant subject region of the match
         var stringIndex = 0;
         final var byteOffsetToStringIndex = new int[(int) matchSizeInBytes + 1];
-        for (var byteIndex = 0; byteIndex < ovector[1]; ) {
-            if (byteIndex >= ovector[0]) {
-                byteOffsetToStringIndex[(int) (byteIndex - ovector[0])] = stringIndex;
+        for (var byteIndex = 0; byteIndex < matchUntil; ) {
+            if (byteIndex >= matchSince) {
+                byteOffsetToStringIndex[byteIndex - matchSince] = stringIndex;
             }
 
             final var subjectChar = subject.charAt(stringIndex);
@@ -589,8 +588,8 @@ public final class Pcre4jUtils {
             }
 
             for (var subjectCharByteIndex = 0; subjectCharByteIndex < subjectCharByteLength; subjectCharByteIndex++) {
-                if (byteIndex >= ovector[0]) {
-                    byteOffsetToStringIndex[(int) (byteIndex - ovector[0])] = stringIndex;
+                if (byteIndex >= matchSince) {
+                    byteOffsetToStringIndex[byteIndex - matchSince] = stringIndex;
                 }
                 byteIndex += 1;
             }
@@ -602,7 +601,7 @@ public final class Pcre4jUtils {
         // Convert byte offsets to string indices
         final var stringIndices = new int[ovector.length];
         for (var valueIndex = 0; valueIndex < ovector.length; valueIndex++) {
-            final var byteIndex = ovector[valueIndex];
+            final var byteIndex = (int) ovector[valueIndex];
 
             // Handle case when group was not matched
             if (byteIndex == -1) {
@@ -610,7 +609,7 @@ public final class Pcre4jUtils {
                 continue;
             }
 
-            stringIndices[valueIndex] = byteOffsetToStringIndex[(int) (byteIndex - ovector[0])];
+            stringIndices[valueIndex] = byteOffsetToStringIndex[byteIndex - matchSince];
         }
 
         return stringIndices;
