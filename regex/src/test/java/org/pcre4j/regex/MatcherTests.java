@@ -705,4 +705,33 @@ public class MatcherTests {
         assertEquals(javaMatcher.end("question"), pcre4jMatcher.end("question"));
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void positiveLookaround(IPcre2 api) {
+        var regex = "(?<=(?<lWrapper>\\W))?(\\d+)(?=(?<rWrapper>\\W))?";
+        var input = "(42)";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
+        assertEquals(javaMatcher.group(1), pcre4jMatcher.group(1));
+        assertEquals(javaMatcher.group(2), pcre4jMatcher.group(2));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
+        assertEquals(javaMatcher.start(1), pcre4jMatcher.start(1));
+        assertEquals(javaMatcher.start(2), pcre4jMatcher.start(2));
+        assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
+        assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
+        assertEquals(javaMatcher.end(1), pcre4jMatcher.end(1));
+        assertEquals(javaMatcher.end(2), pcre4jMatcher.end(2));
+        assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
+        assertEquals(javaMatcher.end("rWrapper"), pcre4jMatcher.end("rWrapper"));
+    }
+
 }
