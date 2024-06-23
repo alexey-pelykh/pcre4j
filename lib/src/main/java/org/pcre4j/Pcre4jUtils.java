@@ -562,13 +562,26 @@ public final class Pcre4jUtils {
             throw new IllegalArgumentException("ovector must have an even number of elements");
         }
 
-        final var matchSince = (int) Arrays.stream(ovector).min().orElseThrow();
-        final var matchUntil = (int) Arrays.stream(ovector).max().orElseThrow();
+        final var ovectorMin = Arrays
+                .stream(ovector)
+                .filter(value -> value != -1)
+                .min();
+        if (ovectorMin.isEmpty()) {
+            final var result = new int[ovector.length];
+            Arrays.fill(result, -1);
+            return result;
+        }
+        final var matchSince = (int) ovectorMin.getAsLong();
+
+        final var matchUntil = (int) Arrays
+                .stream(ovector)
+                .max()
+                .orElseThrow();
         final var matchSizeInBytes = matchUntil - matchSince;
 
         // Calculate the mapping of byte offsets to string indices for the relevant subject region of the match
         var stringIndex = 0;
-        final var byteOffsetToStringIndex = new int[(int) matchSizeInBytes + 1];
+        final var byteOffsetToStringIndex = new int[matchSizeInBytes + 1];
         for (var byteIndex = 0; byteIndex < matchUntil; ) {
             if (byteIndex >= matchSince) {
                 byteOffsetToStringIndex[byteIndex - matchSince] = stringIndex;
@@ -596,7 +609,7 @@ public final class Pcre4jUtils {
 
             stringIndex++;
         }
-        byteOffsetToStringIndex[(int) matchSizeInBytes] = stringIndex;
+        byteOffsetToStringIndex[matchSizeInBytes] = stringIndex;
 
         // Convert byte offsets to string indices
         final var stringIndices = new int[ovector.length];
