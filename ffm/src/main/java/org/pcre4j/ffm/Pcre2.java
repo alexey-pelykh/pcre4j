@@ -62,16 +62,27 @@ public class Pcre2 implements IPcre2 {
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
      */
     public Pcre2() {
-        this("pcre2-8", "_8");
+        this(
+                System.getProperty("pcre2.library.name", "pcre2-8"),
+                System.getProperty("pcre2.function.suffix", "_8")
+        );
     }
 
     /**
      * Constructs a new PCRE2 API using the specified library name and function suffix.
      *
-     * @param library the library name or path to the file (e.g. "pcre2-8" or "/usr/lib/libpcre2-8.so")
+     * @param library the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
+     *                "libpcre2-8.dylib" on macOS) or an absolute path to the library file
      * @param suffix  the function suffix (e.g. "_8" as in "pcre2_compile_8")
      */
     public Pcre2(String library, String suffix) {
+        if (library == null) {
+            throw new IllegalArgumentException("library must not be null");
+        }
+        if (suffix == null) {
+            throw new IllegalArgumentException("suffix must not be null");
+        }
+
         if (new File(library).exists()) {
             System.load(library);
         } else {
