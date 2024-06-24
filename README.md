@@ -4,6 +4,7 @@
 ![GitHub branch check runs](https://img.shields.io/github/check-runs/alexey-pelykh/pcre4j/main)
 [![codecov](https://codecov.io/gh/alexey-pelykh/pcre4j/graph/badge.svg?token=7UJZ501GWT)](https://codecov.io/gh/alexey-pelykh/pcre4j)
 ![Maven Central Version](https://img.shields.io/maven-central/v/org.pcre4j/lib)
+[![javadoc](https://javadoc.io/badge2/org.pcre4j/lib/javadoc.svg)](https://javadoc.io/doc/org.pcre4j)
 
 The PCRE4J project's goal is to bring the power of the [PCRE](https://www.pcre.org) library to Java.
 
