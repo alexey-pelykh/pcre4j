@@ -47,6 +47,9 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_jit_compile;
     private final MethodHandle pcre2_jit_match;
+    private final MethodHandle pcre2_jit_stack_create;
+    private final MethodHandle pcre2_jit_stack_free;
+    private final MethodHandle pcre2_jit_stack_assign;
 
     private final MethodHandle pcre2_match_data_create;
     private final MethodHandle pcre2_match_data_create_from_pattern;
@@ -201,6 +204,31 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_match_data*
                         ValueLayout.ADDRESS // pcre2_match_context*
+                )
+        );
+
+        pcre2_jit_stack_create = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_stack_create" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_jit_stack*
+                        ValueLayout.ADDRESS, // PCRE2_SIZE
+                        ValueLayout.ADDRESS, // PCRE2_SIZE
+                        ValueLayout.ADDRESS // pcre2_general_context*
+                )
+        );
+
+        pcre2_jit_stack_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_stack_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // pcre2_jit_stack*
+                )
+        );
+
+        pcre2_jit_stack_assign = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_stack_assign" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS, // pcre2_jit_callback
+                        ValueLayout.ADDRESS // void*
                 )
         );
 
@@ -639,6 +667,55 @@ public class Pcre2 implements IPcre2 {
                     options,
                     pMatchData,
                     pMatchContext
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long jitStackCreate(long startsize, long maxsize, long gcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var startSize = MemorySegment.ofAddress(startsize);
+            final var maxSize = MemorySegment.ofAddress(maxsize);
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            final var pJitStack = (MemorySegment) pcre2_jit_stack_create.invokeExact(
+                    startSize,
+                    maxSize,
+                    pGContext
+            );
+
+            return pJitStack.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void jitStackFree(long jitStack) {
+        try (var arena = Arena.ofConfined()) {
+            final var pJitStack = MemorySegment.ofAddress(jitStack);
+
+            pcre2_jit_stack_free.invokeExact(
+                    pJitStack
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void jitStackAssign(long mcontext, long callback, long data) {
+        try (var arena = Arena.ofConfined()) {
+            final var pMContext = MemorySegment.ofAddress(mcontext);
+            final var pCallback = MemorySegment.ofAddress(callback);
+            final var pData = MemorySegment.ofAddress(data);
+
+            pcre2_jit_stack_assign.invokeExact(
+                    pMContext,
+                    pCallback,
+                    pData
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
