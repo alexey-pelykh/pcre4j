@@ -14,10 +14,7 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.Pcre2Code;
-import org.pcre4j.Pcre2MatchData;
-import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre4jUtils;
+import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
 import java.nio.charset.StandardCharsets;
@@ -31,10 +28,23 @@ import java.util.Map;
  */
 public class Matcher implements java.util.regex.MatchResult {
 
+    private final static long JIT_STACK_START_SIZE = 32 * 1024;
+    private final static long JIT_STACK_MAX_SIZE = 512 * 1024;
+
     /**
      * The pattern that this matcher used to match the input against
      */
     private Pattern pattern;
+
+    /**
+     * The match context that this matcher uses to match against the pattern
+     */
+    private Pcre2MatchContext matchContext;
+
+    /**
+     * The JIT stack that this matcher uses to match against the pattern
+     */
+    private Pcre2JitStack jitStack;
 
     /**
      * A map of group names to group indices
@@ -73,9 +83,14 @@ public class Matcher implements java.util.regex.MatchResult {
 
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
+        this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
+        this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
+        this.matchContext.assignJitStack(jitStack);
         this.groupNameToIndex = pattern.namedGroups();
+
         this.input = input.toString();
         this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
+
         reset();
     }
 
@@ -290,7 +305,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 regionStart,
                 matchOptions,
                 matchData,
-                null
+                matchContext
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
@@ -329,7 +344,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 regionStart,
                 matchOptions,
                 matchData,
-                null
+                matchContext
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
@@ -535,9 +550,15 @@ public class Matcher implements java.util.regex.MatchResult {
         if (newPattern == null) {
             throw new IllegalArgumentException("Pattern cannot be null");
         }
+
         this.pattern = newPattern;
+        this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
+        this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
+        this.matchContext.assignJitStack(jitStack);
         this.groupNameToIndex = newPattern.namedGroups();
+
         reset();
+
         return this;
     }
 
@@ -556,7 +577,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 start,
                 EnumSet.noneOf(Pcre2MatchOption.class),
                 matchData,
-                null
+                matchContext
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {

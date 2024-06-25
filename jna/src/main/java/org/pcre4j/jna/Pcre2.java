@@ -263,6 +263,22 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long jitStackCreate(long startSize, long maxSize, long gcontext) {
+        final var jitStack = library.pcre2_jit_stack_create(startSize, maxSize, new Pointer(gcontext));
+        return Pointer.nativeValue(jitStack);
+    }
+
+    @Override
+    public void jitStackFree(long stack) {
+        library.pcre2_jit_stack_free(new Pointer(stack));
+    }
+
+    @Override
+    public void jitStackAssign(long mcontext, long callback, long data) {
+        library.pcre2_jit_stack_assign(new Pointer(mcontext), new Pointer(callback), new Pointer(data));
+    }
+
+    @Override
     public long matchDataCreate(int ovecsize, long gcontext) {
         Pointer matchData = library.pcre2_match_data_create(ovecsize, new Pointer(gcontext));
         return Pointer.nativeValue(matchData);
@@ -376,6 +392,12 @@ public class Pcre2 implements IPcre2 {
                 Pointer matchData,
                 Pointer mcontext
         );
+
+        Pointer pcre2_jit_stack_create(long startSize, long maxSize, Pointer gcontext);
+
+        void pcre2_jit_stack_free(Pointer stack);
+
+        void pcre2_jit_stack_assign(Pointer mcontext, Pointer callback, Pointer data);
 
         Pointer pcre2_match_data_create(int ovecsize, Pointer gcontext);
 

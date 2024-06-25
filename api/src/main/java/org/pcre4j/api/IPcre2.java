@@ -871,6 +871,32 @@ public interface IPcre2 {
     public int jitMatch(long code, String subject, int startoffset, int options, long matchData, long mcontext);
 
     /**
+     * Create a JIT stack.
+     *
+     * @param startsize the initial stack size
+     * @param maxsize   the maximum stack size
+     * @param gcontext  the general context handle or 0
+     * @return the JIT stack handle
+     */
+    public long jitStackCreate(long startsize, long maxsize, long gcontext);
+
+    /**
+     * Free a JIT stack.
+     *
+     * @param jitStack the JIT stack handle
+     */
+    public void jitStackFree(long jitStack);
+
+    /**
+     * Assign the JIT stack to a match context.
+     *
+     * @param mcontext the match context handle
+     * @param callback a callback function handle or 0
+     * @param data     a JIT stack handle or a value to be passed to the callback function
+     */
+    public void jitStackAssign(long mcontext, long callback, long data);
+
+    /**
      * Create a new match data block.
      *
      * @param ovecsize the size of the ovector
@@ -952,7 +978,7 @@ public interface IPcre2 {
      * Set the newline convention within a compile context
      *
      * @param ccontext the compile context handle
-     * @param newline the newline convention
+     * @param newline  the newline convention
      * @return 0 on success, otherwise a negative error code
      */
     public int setNewline(long ccontext, int newline);
