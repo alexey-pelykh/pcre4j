@@ -14,9 +14,12 @@
  */
 package org.pcre4j.regex;
 
-import org.junit.jupiter.api.Test;
-import org.pcre4j.Pcre4j;
-import org.pcre4j.jna.Pcre2;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.pcre4j.api.IPcre2;
+
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,40 +29,50 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  */
 public class PatternTests {
 
-    static {
-        Pcre4j.setup(new Pcre2());
+    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
+    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
+
+    private static Stream<Arguments> parameters() {
+        return Stream.of(
+                Arguments.of(JNA_PCRE2),
+                Arguments.of(FFM_PCRE2)
+        );
     }
 
-    @Test
-    void namedGroups() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void namedGroups(IPcre2 api) {
         var regex = "(?<number>42)";
         var javaPattern = java.util.regex.Pattern.compile(regex);
-        var pcre4jPattern = Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(api, regex);
 
         assertEquals(javaPattern.namedGroups(), pcre4jPattern.namedGroups());
     }
 
-    @Test
-    void split() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void split(IPcre2 api) {
         var regex = "\\D+";
         var input = "0, 1, 1, 2, 3, 5, 8, ..., 144, ...";
         var javaPattern = java.util.regex.Pattern.compile(regex);
-        var pcre4jPattern = Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(api, regex);
 
         assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
         assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
         assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
     }
 
-    @Test
-    void unicodeSplit() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeSplit(IPcre2 api) {
         var regex = "\\D+";
         var input = "0 ⇾ 1 ⇾ 1 ⇾ 2 ⇾ 3 ⇾ 5 ⇾ 8 ⇾ … ⇾ 144 ⇾ …";
         var javaPattern = java.util.regex.Pattern.compile(regex);
-        var pcre4jPattern = Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(api, regex);
 
         assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
         assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
         assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
     }
+
 }
