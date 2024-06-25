@@ -32,18 +32,19 @@ public class PatternTests {
 
     @Test
     void namedGroups() {
-        var javaPattern = java.util.regex.Pattern.compile("(?<number>42)");
-        var pcre4jPattern = Pattern.compile("(?<number>42)");
+        var regex = "(?<number>42)";
+        var javaPattern = java.util.regex.Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(regex);
 
         assertEquals(javaPattern.namedGroups(), pcre4jPattern.namedGroups());
     }
 
     @Test
     void split() {
-        var javaPattern = java.util.regex.Pattern.compile("\\D+");
-        var pcre4jPattern = Pattern.compile("\\D+");
-
+        var regex = "\\D+";
         var input = "0, 1, 1, 2, 3, 5, 8, ..., 144, ...";
+        var javaPattern = java.util.regex.Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(regex);
 
         assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
         assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
@@ -52,10 +53,10 @@ public class PatternTests {
 
     @Test
     void unicodeSplit() {
-        var javaPattern = java.util.regex.Pattern.compile("\\D+");
-        var pcre4jPattern = Pattern.compile("\\D+");
-
+        var regex = "\\D+";
         var input = "0 ⇾ 1 ⇾ 1 ⇾ 2 ⇾ 3 ⇾ 5 ⇾ 8 ⇾ … ⇾ 144 ⇾ …";
+        var javaPattern = java.util.regex.Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(regex);
 
         assertArrayEquals(javaPattern.split(input), pcre4jPattern.split(input));
         assertArrayEquals(javaPattern.split(input, 2), pcre4jPattern.split(input, 2));
