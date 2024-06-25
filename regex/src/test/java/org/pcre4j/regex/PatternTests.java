@@ -75,4 +75,34 @@ public class PatternTests {
         assertArrayEquals(javaPattern.splitWithDelimiters(input, 0), pcre4jPattern.splitWithDelimiters(input, 0));
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void withoutUnicodeCharacterClass(IPcre2 api) {
+        var regex = "\\w";
+        var input = "Ǎ";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void withUnicodeCharacterClass(IPcre2 api) {
+        var regex = "\\w";
+        var input = "Ǎ";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.UNICODE_CHARACTER_CLASS
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.UNICODE_CHARACTER_CLASS
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+    }
+
 }

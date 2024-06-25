@@ -54,10 +54,15 @@ public class Pattern {
      */
     public static final int MULTILINE = java.util.regex.Pattern.MULTILINE;
 
+    /**
+     * A {@link java.util.regex.Pattern#UNICODE_CHARACTER_CLASS}-compatible flag implemented via
+     * {@link org.pcre4j.Pcre2CompileOption#UCP}
+     */
+    public static final int UNICODE_CHARACTER_CLASS = java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;
+
     // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
     // TODO: public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
     // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
-    // TODO: public static final int UNICODE_CHARACTER_CLASS = java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;
     // TODO: public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
@@ -98,6 +103,9 @@ public class Pattern {
         }
         if ((flags & MULTILINE) != 0) {
             compileOptions.add(Pcre2CompileOption.MULTILINE);
+        }
+        if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
+            compileOptions.add(Pcre2CompileOption.UCP);
         }
 
         try {
