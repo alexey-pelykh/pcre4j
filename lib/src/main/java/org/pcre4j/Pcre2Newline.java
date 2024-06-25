@@ -20,12 +20,35 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public enum Pcre2Newline {
-    NEWLINE_CR(IPcre2.NEWLINE_CR),
-    NEWLINE_LF(IPcre2.NEWLINE_LF),
-    NEWLINE_CRLF(IPcre2.NEWLINE_CRLF),
-    NEWLINE_ANY(IPcre2.NEWLINE_ANY),
-    NEWLINE_ANYCRLF(IPcre2.NEWLINE_ANYCRLF),
-    NEWLINE_NUL(IPcre2.NEWLINE_NUL);
+    /**
+     * Carriage return only (\r)
+     */
+    CR(IPcre2.NEWLINE_CR),
+
+    /**
+     * Linefeed only (\n)
+     */
+    LF(IPcre2.NEWLINE_LF),
+
+    /**
+     * CR followed by LF only (\r\n)
+     */
+    CRLF(IPcre2.NEWLINE_CRLF),
+
+    /**
+     * Any Unicode newline sequence
+     */
+    ANY(IPcre2.NEWLINE_ANY),
+
+    /**
+     * Any of {@link #CR}, {@link #LF}, or {@link #CRLF}
+     */
+    ANYCRLF(IPcre2.NEWLINE_ANYCRLF),
+
+    /**
+     * NUL character (\0)
+     */
+    NUL(IPcre2.NEWLINE_NUL);
 
     /**
      * The integer value

@@ -61,6 +61,8 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_get_ovector_count;
     private final MethodHandle pcre2_get_ovector_pointer;
 
+    private final MethodHandle pcre2_set_newline;
+
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
      */
@@ -270,6 +272,14 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_get_ovector_pointer" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, // PCRE2_SIZE*
                         ValueLayout.ADDRESS // pcre2_match_data*
+                )
+        );
+
+        pcre2_set_newline = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_newline" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_compile_context*
+                        ValueLayout.JAVA_INT // int
                 )
         );
     }
@@ -779,6 +789,20 @@ public class Pcre2 implements IPcre2 {
             );
 
             MemorySegment.ofArray(ovector).copyFrom(pOvector.reinterpret(ovector.length * 8));
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setNewline(long ccontext, int newline) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCContext = MemorySegment.ofAddress(ccontext);
+
+            return (int) pcre2_set_newline.invokeExact(
+                    pCContext,
+                    newline
+            );
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
