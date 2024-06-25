@@ -265,11 +265,34 @@ public interface IPcre2 {
     public static final int CONVERT_GLOB_NO_WILD_SEPARATOR = 0x00000030;
     public static final int CONVERT_GLOB_NO_STARSTAR = 0x00000050;
 
+    /**
+     * Carriage return only (\r)
+     */
     public static final int NEWLINE_CR = 1;
+
+    /**
+     * Linefeed only (\n)
+     */
     public static final int NEWLINE_LF = 2;
+
+    /**
+     * CR followed by LF only (\r\n)
+     */
     public static final int NEWLINE_CRLF = 3;
+
+    /**
+     * Any Unicode newline sequence
+     */
     public static final int NEWLINE_ANY = 4;
+
+    /**
+     * Any of {@link #NEWLINE_CR}, {@link #NEWLINE_LF}, or {@link #NEWLINE_CRLF}
+     */
     public static final int NEWLINE_ANYCRLF = 5;
+
+    /**
+     * NUL character (\0)
+     */
     public static final int NEWLINE_NUL = 6;
 
     /**
@@ -924,4 +947,13 @@ public interface IPcre2 {
      * @param ovector   the array to store the output vector
      */
     public void getOvector(long matchData, long[] ovector);
+
+    /**
+     * Set the newline convention within a compile context
+     *
+     * @param ccontext the compile context handle
+     * @param newline the newline convention
+     * @return 0 on success, otherwise a negative error code
+     */
+    public int setNewline(long ccontext, int newline);
 }

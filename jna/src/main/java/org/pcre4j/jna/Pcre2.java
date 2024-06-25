@@ -330,6 +330,11 @@ public class Pcre2 implements IPcre2 {
         pOvector.read(0, ovector, 0, ovector.length);
     }
 
+    @Override
+    public int setNewline(long ccontext, int value) {
+        return library.pcre2_set_newline(new Pointer(ccontext), value);
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -397,6 +402,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_get_ovector_count(Pointer matchData);
 
         Pointer pcre2_get_ovector_pointer(Pointer matchData);
+
+        int pcre2_set_newline(Pointer ccontext, int value);
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {

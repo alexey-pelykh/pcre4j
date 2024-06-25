@@ -87,6 +87,22 @@ public class Pcre2CompileContext {
         return handle;
     }
 
+    /**
+     * Set the newline convention
+     *
+     * @param newline the newline convention
+     */
+    public void setNewline(Pcre2Newline newline) {
+        if (newline == null) {
+            throw new IllegalArgumentException("newline cannot be null");
+        }
+        final var result = api.setNewline(handle, newline.value());
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed set the newline convention", new IllegalStateException(errorMessage));
+        }
+    }
+
     private record Clean(IPcre2 api, long compileContext) implements Runnable {
         @Override
         public void run() {

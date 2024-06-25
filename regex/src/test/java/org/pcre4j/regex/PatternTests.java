@@ -21,8 +21,7 @@ import org.pcre4j.api.IPcre2;
 
 import java.util.stream.Stream;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests to ensure API likeness of the {@link Pattern} to the {@link java.util.regex.Pattern}.
@@ -103,6 +102,45 @@ public class PatternTests {
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
         assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void withoutUnixNewline(IPcre2 api) {
+        var regex = "^A$";
+        var input = "A\u0085B";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.MULTILINE
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.MULTILINE
+        ).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void withUnixNewline(IPcre2 api) {
+        var regex = "^A$";
+        var input = "A\u0085B";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.MULTILINE | java.util.regex.Pattern.UNIX_LINES
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.MULTILINE | Pattern.UNIX_LINES
+        ).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+        assertThrows(IllegalStateException.class, javaMatcher::group);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
     }
 
 }

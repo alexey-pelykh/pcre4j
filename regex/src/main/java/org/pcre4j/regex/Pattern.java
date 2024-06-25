@@ -60,10 +60,14 @@ public class Pattern {
      */
     public static final int UNICODE_CHARACTER_CLASS = java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;
 
+    /**
+     * A {@link java.util.regex.Pattern#UNIX_LINES}-compatible flag implemented via {@link org.pcre4j.Pcre2Newline#LF}
+     */
+    public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
+
     // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
     // TODO: public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
     // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
-    // TODO: public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
     /* package-private */ final Pcre2Code lookingAtCode;
@@ -108,6 +112,13 @@ public class Pattern {
             compileOptions.add(Pcre2CompileOption.UCP);
         }
 
+        final var compileContext = new Pcre2CompileContext(api, null);
+        if ((flags & UNIX_LINES) != 0) {
+            compileContext.setNewline(Pcre2Newline.LF);
+        } else {
+            compileContext.setNewline(Pcre2Newline.ANY);
+        }
+
         try {
             if (Pcre4jUtils.isJitSupported(api)) {
                 this.code = new Pcre2JitCode(
@@ -115,7 +126,7 @@ public class Pattern {
                         regex,
                         compileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
-                        null
+                        compileContext
                 );
 
                 final var matchingCompileOptions = EnumSet.copyOf(compileOptions);
@@ -126,7 +137,7 @@ public class Pattern {
                         regex,
                         matchingCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
-                        null
+                        compileContext
                 );
 
                 final var lookingAtCompileOptions = EnumSet.copyOf(compileOptions);
@@ -136,14 +147,14 @@ public class Pattern {
                         regex,
                         lookingAtCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
-                        null
+                        compileContext
                 );
             } else {
                 this.code = new Pcre2Code(
                         api,
                         regex,
                         compileOptions,
-                        null
+                        compileContext
                 );
                 this.matchingCode = null;
                 this.lookingAtCode = null;
