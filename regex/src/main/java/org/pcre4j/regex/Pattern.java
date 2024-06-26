@@ -120,7 +120,8 @@ public class Pattern {
         }
 
         try {
-            if (Pcre4jUtils.isJitSupported(api)) {
+            final var isJitAllowed = Boolean.parseBoolean(System.getProperty("pcre2.regex.jit", "true"));
+            if (Pcre4jUtils.isJitSupported(api) && isJitAllowed) {
                 this.code = new Pcre2JitCode(
                         api,
                         regex,
