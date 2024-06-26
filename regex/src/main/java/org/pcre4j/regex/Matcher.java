@@ -84,8 +84,12 @@ public class Matcher implements java.util.regex.MatchResult {
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
-        this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
-        this.matchContext.assignJitStack(jitStack);
+        if (pattern.code.jitSize() > 0) {
+            this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
+            this.matchContext.assignJitStack(jitStack);
+        } else {
+            this.jitStack = null;
+        }
         this.groupNameToIndex = pattern.namedGroups();
 
         this.input = input.toString();
@@ -553,8 +557,12 @@ public class Matcher implements java.util.regex.MatchResult {
 
         this.pattern = newPattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
-        this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
-        this.matchContext.assignJitStack(jitStack);
+        if (pattern.code.jitSize() > 0) {
+            this.jitStack = new Pcre2JitStack(pattern.code.api(), JIT_STACK_START_SIZE, JIT_STACK_MAX_SIZE, null);
+            this.matchContext.assignJitStack(jitStack);
+        } else {
+            this.jitStack = null;
+        }
         this.groupNameToIndex = newPattern.namedGroups();
 
         reset();
