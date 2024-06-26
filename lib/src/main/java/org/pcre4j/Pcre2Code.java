@@ -186,11 +186,11 @@ public class Pcre2Code {
      * @return the size information as long
      */
     private long getPatternSizeInfo(int info) {
-        final var infoSize = api.patternInfo(handle, IPcre2.INFO_FRAMESIZE);
+        final var infoSize = api.patternInfo(handle, info);
 
         if (infoSize == 4) {
             final var where = new int[1];
-            final var error = api.patternInfo(handle, IPcre2.INFO_FRAMESIZE, where);
+            final var error = api.patternInfo(handle, info, where);
             if (error != 0) {
                 throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, error));
             }
@@ -198,7 +198,7 @@ public class Pcre2Code {
             return where[0];
         } else if (infoSize == 8) {
             final var where = new long[1];
-            final var error = api.patternInfo(handle, IPcre2.INFO_FRAMESIZE, where);
+            final var error = api.patternInfo(handle, info, where);
             if (error != 0) {
                 throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, error));
             }
@@ -206,7 +206,7 @@ public class Pcre2Code {
             return where[0];
         }
 
-        throw new Pcre2PatternInfoSizeError(Pcre2PatternInfo.valueOf(IPcre2.INFO_FRAMESIZE).orElseThrow(), infoSize);
+        throw new Pcre2PatternInfoSizeError(Pcre2PatternInfo.valueOf(info).orElseThrow(), infoSize);
     }
 
     /**
