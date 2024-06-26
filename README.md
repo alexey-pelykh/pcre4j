@@ -68,6 +68,9 @@ public class Usage {
 }
 ```
 
+By default, the JIT compilation is used in cases the platform and the library support it. To override this behavior, you
+can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
+
 ### Advanced Usage via PCRE4J API
 
 Add the following dependencies to your `pom.xml` file:
