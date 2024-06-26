@@ -84,8 +84,8 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must be an array of length 1");
         }
 
-        IntByReference whereRef = new IntByReference();
-        int result = library.pcre2_config(what, whereRef.getPointer());
+        final var whereRef = new IntByReference();
+        final var result = library.pcre2_config(what, whereRef.getPointer());
         where[0] = whereRef.getValue();
         return result;
     }
@@ -99,46 +99,54 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must be a direct buffer");
         }
 
-        Pointer pWhere = Native.getDirectBufferPointer(where);
+        final var pWhere = Native.getDirectBufferPointer(where);
         return library.pcre2_config(what, pWhere);
     }
 
     @Override
     public long generalContextCreate(long privateMalloc, long privateFree, long memoryData) {
-        Pointer gContext = library.pcre2_general_context_create(
-                new Pointer(privateMalloc),
-                new Pointer(privateFree),
-                new Pointer(memoryData)
+        final var pPrivateMalloc = new Pointer(privateMalloc);
+        final var pPrivateFree = new Pointer(privateFree);
+        final var pMemoryData = new Pointer(memoryData);
+        final var pGContext = library.pcre2_general_context_create(
+                pPrivateMalloc,
+                pPrivateFree,
+                pMemoryData
         );
-        return Pointer.nativeValue(gContext);
+        return Pointer.nativeValue(pGContext);
     }
 
     @Override
     public long generalContextCopy(long gcontext) {
-        Pointer newGContext = library.pcre2_general_context_copy(new Pointer(gcontext));
-        return Pointer.nativeValue(newGContext);
+        final var pGContext = new Pointer(gcontext);
+        final var pNewGContext = library.pcre2_general_context_copy(pGContext);
+        return Pointer.nativeValue(pNewGContext);
     }
 
     @Override
     public void generalContextFree(long gcontext) {
-        library.pcre2_general_context_free(new Pointer(gcontext));
+        final var pGContext = new Pointer(gcontext);
+        library.pcre2_general_context_free(pGContext);
     }
 
     @Override
     public long compileContextCreate(long gcontext) {
-        Pointer cContext = library.pcre2_compile_context_create(new Pointer(gcontext));
-        return Pointer.nativeValue(cContext);
+        final var pGContext = new Pointer(gcontext);
+        final var pCContext = library.pcre2_compile_context_create(pGContext);
+        return Pointer.nativeValue(pCContext);
     }
 
     @Override
     public long compileContextCopy(long ccontext) {
-        Pointer newCContext = library.pcre2_compile_context_copy(new Pointer(ccontext));
-        return Pointer.nativeValue(newCContext);
+        final var pCContext = new Pointer(ccontext);
+        final var pNewCContext = library.pcre2_compile_context_copy(pCContext);
+        return Pointer.nativeValue(pNewCContext);
     }
 
     @Override
     public void compileContextFree(long ccontext) {
-        library.pcre2_compile_context_free(new Pointer(ccontext));
+        final var pCContext = new Pointer(ccontext);
+        library.pcre2_compile_context_free(pCContext);
     }
 
     @Override
@@ -153,29 +161,31 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("erroroffset must be an array of length 1");
         }
 
-        IntByReference errorCodeRef = new IntByReference();
-        LongByReference errorOffsetRef = new LongByReference();
-
         final var pszPattern = pattern.getBytes(StandardCharsets.UTF_8);
+        final var patternSize = new Pointer(pszPattern.length);
+        final var errorCodeRef = new IntByReference();
+        final var errorOffsetRef = new LongByReference();
+        final var pCContext = new Pointer(ccontext);
 
-        Pointer code = library.pcre2_compile(
+        final var pCode = library.pcre2_compile(
                 pszPattern,
-                pszPattern.length,
+                patternSize,
                 options,
                 errorCodeRef,
                 errorOffsetRef,
-                new Pointer(ccontext)
+                pCContext
         );
 
         errorcode[0] = errorCodeRef.getValue();
         erroroffset[0] = errorOffsetRef.getValue();
 
-        return Pointer.nativeValue(code);
+        return Pointer.nativeValue(pCode);
     }
 
     @Override
     public void codeFree(long code) {
-        library.pcre2_code_free(new Pointer(code));
+        final var pCode = new Pointer(code);
+        library.pcre2_code_free(pCode);
     }
 
     @Override
@@ -187,13 +197,15 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("buffer must be direct");
         }
 
-        Pointer pszBuffer = Native.getDirectBufferPointer(buffer);
-        return library.pcre2_get_error_message(errorcode, pszBuffer, buffer.capacity());
+        final var pszBuffer = Native.getDirectBufferPointer(buffer);
+        final var bufferSize = new Pointer(buffer.capacity());
+        return library.pcre2_get_error_message(errorcode, pszBuffer, bufferSize);
     }
 
     @Override
     public int patternInfo(long code, int what) {
-        return library.pcre2_pattern_info(new Pointer(code), what, Pointer.NULL);
+        final var pCode = new Pointer(code);
+        return library.pcre2_pattern_info(pCode, what, Pointer.NULL);
     }
 
     @Override
@@ -205,8 +217,9 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must be an array of length 1");
         }
 
-        IntByReference whereRef = new IntByReference();
-        int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
+        final var pCode = new Pointer(code);
+        final var whereRef = new IntByReference();
+        final var result = library.pcre2_pattern_info(pCode, what, whereRef.getPointer());
         where[0] = whereRef.getValue();
         return result;
     }
@@ -220,8 +233,9 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must be an array of length 1");
         }
 
-        LongByReference whereRef = new LongByReference();
-        int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
+        final var pCode = new Pointer(code);
+        final var whereRef = new LongByReference();
+        final var result = library.pcre2_pattern_info(pCode, what, whereRef.getPointer());
         where[0] = whereRef.getValue();
         return result;
     }
@@ -232,15 +246,17 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must not be null");
         }
 
-        PointerByReference whereRef = new PointerByReference();
-        int result = library.pcre2_pattern_info(new Pointer(code), what, whereRef.getPointer());
+        final var pCode = new Pointer(code);
+        final var whereRef = new PointerByReference();
+        final var result = library.pcre2_pattern_info(pCode, what, whereRef.getPointer());
         where.put(whereRef.getValue().getByteArray(0, where.capacity()));
         return result;
     }
 
     @Override
     public int jitCompile(long code, int options) {
-        return library.pcre2_jit_compile(new Pointer(code), options);
+        final var pCode = new Pointer(code);
+        return library.pcre2_jit_compile(pCode, options);
     }
 
     @Override
@@ -249,67 +265,86 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("subject must not be null");
         }
 
+        final var pCode = new Pointer(code);
         final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+        final var subjectLength = new Pointer(pszSubject.length);
+        final var startOffset = new Pointer(startoffset);
+        final var pMatchData = new Pointer(matchData);
+        final var pMContext = new Pointer(mcontext);
 
         return library.pcre2_jit_match(
-                new Pointer(code),
+                pCode,
                 pszSubject,
-                pszSubject.length,
-                startoffset,
+                subjectLength,
+                startOffset,
                 options,
-                new Pointer(matchData),
-                new Pointer(mcontext)
+                pMatchData,
+                pMContext
         );
     }
 
     @Override
-    public long jitStackCreate(long startSize, long maxSize, long gcontext) {
-        final var jitStack = library.pcre2_jit_stack_create(startSize, maxSize, new Pointer(gcontext));
+    public long jitStackCreate(long startsize, long maxsize, long gcontext) {
+        final var startSize = new Pointer(startsize);
+        final var maxSize = new Pointer(maxsize);
+        final var pGContext = new Pointer(gcontext);
+        final var jitStack = library.pcre2_jit_stack_create(startSize, maxSize, pGContext);
         return Pointer.nativeValue(jitStack);
     }
 
     @Override
     public void jitStackFree(long stack) {
-        library.pcre2_jit_stack_free(new Pointer(stack));
+        final var pStack = new Pointer(stack);
+        library.pcre2_jit_stack_free(pStack);
     }
 
     @Override
     public void jitStackAssign(long mcontext, long callback, long data) {
-        library.pcre2_jit_stack_assign(new Pointer(mcontext), new Pointer(callback), new Pointer(data));
+        final var pMContext = new Pointer(mcontext);
+        final var pCallback = new Pointer(callback);
+        final var pData = new Pointer(data);
+        library.pcre2_jit_stack_assign(pMContext, pCallback, pData);
     }
 
     @Override
     public long matchDataCreate(int ovecsize, long gcontext) {
-        Pointer matchData = library.pcre2_match_data_create(ovecsize, new Pointer(gcontext));
-        return Pointer.nativeValue(matchData);
+        final var pGContext = new Pointer(gcontext);
+        final var pMatchData = library.pcre2_match_data_create(ovecsize, pGContext);
+        return Pointer.nativeValue(pMatchData);
     }
 
     @Override
     public long matchDataCreateFromPattern(long code, long gcontext) {
-        Pointer matchData = library.pcre2_match_data_create_from_pattern(new Pointer(code), new Pointer(gcontext));
-        return Pointer.nativeValue(matchData);
+        final var pCode = new Pointer(code);
+        final var pGContext = new Pointer(gcontext);
+        final var pMatchData = library.pcre2_match_data_create_from_pattern(pCode, pGContext);
+        return Pointer.nativeValue(pMatchData);
     }
 
     @Override
     public void matchDataFree(long matchData) {
-        library.pcre2_match_data_free(new Pointer(matchData));
+        final var pMatchData = new Pointer(matchData);
+        library.pcre2_match_data_free(pMatchData);
     }
 
     @Override
     public long matchContextCreate(long gcontext) {
-        Pointer matchContext = library.pcre2_match_context_create(new Pointer(gcontext));
-        return Pointer.nativeValue(matchContext);
+        final var pGContext = new Pointer(gcontext);
+        final var pMatchContext = library.pcre2_match_context_create(pGContext);
+        return Pointer.nativeValue(pMatchContext);
     }
 
     @Override
     public long matchContextCopy(long mcontext) {
-        Pointer newMatchContext = library.pcre2_match_context_copy(new Pointer(mcontext));
-        return Pointer.nativeValue(newMatchContext);
+        final var pMContext = new Pointer(mcontext);
+        final var pNewMatchContext = library.pcre2_match_context_copy(pMContext);
+        return Pointer.nativeValue(pNewMatchContext);
     }
 
     @Override
     public void matchContextFree(long mcontext) {
-        library.pcre2_match_context_free(new Pointer(mcontext));
+        final var pMContext = new Pointer(mcontext);
+        library.pcre2_match_context_free(pMContext);
     }
 
     @Override
@@ -318,22 +353,28 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("subject must not be null");
         }
 
+        final var pCode = new Pointer(code);
         final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+        final var subjectLength = new Pointer(pszSubject.length);
+        final var startOffset = new Pointer(startoffset);
+        final var pMatchData = new Pointer(matchData);
+        final var pMContext = new Pointer(mcontext);
 
         return library.pcre2_match(
-                new Pointer(code),
+                pCode,
                 pszSubject,
-                pszSubject.length,
-                startoffset,
+                subjectLength,
+                startOffset,
                 options,
-                new Pointer(matchData),
-                new Pointer(mcontext)
+                pMatchData,
+                pMContext
         );
     }
 
     @Override
     public int getOvectorCount(long matchData) {
-        return library.pcre2_get_ovector_count(new Pointer(matchData));
+        final var pMatchData = new Pointer(matchData);
+        return library.pcre2_get_ovector_count(pMatchData);
     }
 
     @Override
@@ -342,87 +383,74 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("ovector must not be null");
         }
 
-        Pointer pOvector = library.pcre2_get_ovector_pointer(new Pointer(matchData));
+        final var pMatchData = new Pointer(matchData);
+        final var pOvector = library.pcre2_get_ovector_pointer(pMatchData);
         pOvector.read(0, ovector, 0, ovector.length);
     }
 
     @Override
     public int setNewline(long ccontext, int value) {
-        return library.pcre2_set_newline(new Pointer(ccontext), value);
+        final var pCContext = new Pointer(ccontext);
+        return library.pcre2_set_newline(pCContext, value);
     }
 
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
         Pointer pcre2_general_context_create(Pointer malloc, Pointer free, Pointer memoryData);
-
         Pointer pcre2_general_context_copy(Pointer gcontext);
-
         void pcre2_general_context_free(Pointer gcontext);
 
         Pointer pcre2_compile_context_create(Pointer gcontext);
-
         Pointer pcre2_compile_context_copy(Pointer ccontext);
-
         void pcre2_compile_context_free(Pointer ccontext);
 
         Pointer pcre2_compile(
                 byte[] pattern,
-                long length,
+                Pointer length,
                 int options,
                 IntByReference errorcode,
                 LongByReference erroroffset,
                 Pointer ccontext
         );
-
         void pcre2_code_free(Pointer code);
 
-        int pcre2_get_error_message(int errorcode, Pointer buffer, long bufferSize);
-
+        int pcre2_get_error_message(int errorcode, Pointer buffer, Pointer bufferSize);
         int pcre2_pattern_info(Pointer code, int what, Pointer where);
 
         int pcre2_jit_compile(Pointer code, int options);
-
         int pcre2_jit_match(
                 Pointer code,
                 byte[] subject,
-                long length,
-                long startoffset,
+                Pointer length,
+                Pointer startoffset,
                 int options,
                 Pointer matchData,
                 Pointer mcontext
         );
-
-        Pointer pcre2_jit_stack_create(long startSize, long maxSize, Pointer gcontext);
-
+        Pointer pcre2_jit_stack_create(Pointer startSize, Pointer maxSize, Pointer gcontext);
         void pcre2_jit_stack_free(Pointer stack);
-
         void pcre2_jit_stack_assign(Pointer mcontext, Pointer callback, Pointer data);
 
         Pointer pcre2_match_data_create(int ovecsize, Pointer gcontext);
-
         Pointer pcre2_match_data_create_from_pattern(Pointer code, Pointer gcontext);
-
         void pcre2_match_data_free(Pointer matchData);
 
         Pointer pcre2_match_context_create(Pointer gcontext);
-
         Pointer pcre2_match_context_copy(Pointer mcontext);
-
         void pcre2_match_context_free(Pointer mcontext);
 
         int pcre2_match(
                 Pointer code,
                 byte[] subject,
-                long length,
-                long startoffset,
+                Pointer length,
+                Pointer startoffset,
                 int options,
                 Pointer matchData,
                 Pointer mcontext
         );
 
         int pcre2_get_ovector_count(Pointer matchData);
-
         Pointer pcre2_get_ovector_pointer(Pointer matchData);
 
         int pcre2_set_newline(Pointer ccontext, int value);
