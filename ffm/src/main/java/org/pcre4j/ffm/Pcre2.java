@@ -91,7 +91,7 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("suffix must not be null");
         }
 
-        if (new File(library).exists()) {
+        if (library.indexOf(File.separatorChar) != -1) {
             System.load(library);
         } else {
             System.loadLibrary(library);
