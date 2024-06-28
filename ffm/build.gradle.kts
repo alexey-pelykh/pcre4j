@@ -65,12 +65,24 @@ tasks.withType<JavaCompile> {
 tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-preview")
+
     systemProperty(
         "java.library.path", listOf(
             System.getProperty("pcre2.library.path"),
             System.getProperty("java.library.path")
         ).joinToString(":")
     )
+
+    val pcre2LibraryName = System.getProperty("pcre2.library.name")
+    if (pcre2LibraryName != null) {
+        systemProperty("pcre2.library.name", pcre2LibraryName)
+    }
+
+    val pcre2FunctionSuffix = System.getProperty("pcre2.function.suffix")
+    if (pcre2FunctionSuffix != null) {
+        systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
+    }
+
     finalizedBy(tasks.jacocoTestReport)
 }
 
