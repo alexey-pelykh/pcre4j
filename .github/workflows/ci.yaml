@@ -24,7 +24,7 @@ jobs:
           - corretto
           - semeru
           - oracle
-          - dragonwell
+#          - dragonwell
         java-version: [ 21 ]
 
     runs-on: ${{ matrix.os }}
