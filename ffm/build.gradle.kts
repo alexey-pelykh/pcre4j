@@ -132,7 +132,6 @@ publishing {
                         email = "alexey.pelykh@gmail.com"
                         organization = "The PCRE4J Project"
                         organizationUrl = "https://pcre4j.org"
-
                     }
                 }
                 scm {
