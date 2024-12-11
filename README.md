@@ -1,7 +1,3 @@
----
-maxwidth: 72em
----
-
 # PCRE4J: PCRE for Java
 
 [![GitHub Repo stars](https://img.shields.io/github/stars/alexey-pelykh/pcre4j?style=flat&logo=github)](https://github.com/alexey-pelykh/pcre4j)

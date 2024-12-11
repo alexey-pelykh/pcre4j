@@ -104,15 +104,15 @@ jobs:
           mkdir -p build/gh-pages
           pandoc \
             -f gfm -t html5 -s --shift-heading-level-by=-1 --lua-filter=gh-pages/filter.lua -H gh-pages/header.html \
-            -o build/gh-pages/index.html README.md
+            -o build/gh-pages/index.html gh-pages/metadata.md README.md
           pandoc \
             -f gfm -t html5 -s --shift-heading-level-by=-1 --lua-filter=gh-pages/filter.lua -H gh-pages/header.html \
-            -o build/gh-pages/pcre2-api.html PCRE2_API.md
+            -o build/gh-pages/pcre2-api.html gh-pages/metadata.md PCRE2_API.md
 
           mkdir -p build/gh-pages/javadoc
           pandoc \
             -f gfm -t html5 -s  --shift-heading-level-by=-1 --lua-filter=gh-pages/filter.lua -H gh-pages/header.html \
-            -o build/gh-pages/javadoc/index.html gh-pages/javadoc/index.md
+            -o build/gh-pages/javadoc/index.html gh-pages/metadata.md gh-pages/javadoc/index.md
           cp -a api/build/docs/javadoc/. build/gh-pages/javadoc/api
           cp -a lib/build/docs/javadoc/. build/gh-pages/javadoc/lib
           cp -a jna/build/docs/javadoc/. build/gh-pages/javadoc/jna

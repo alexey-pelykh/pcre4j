@@ -1,7 +1,3 @@
----
-maxwidth: 72em
----
-
 # PCRE2 API
 
 Here's the list of the PCRE2 API functions exposed via `org.pcre4j.api.IPcre2` and the backends:
