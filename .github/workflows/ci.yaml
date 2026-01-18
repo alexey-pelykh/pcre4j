@@ -146,7 +146,7 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: >
           ./gradlew jreleaserDeploy
-          ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
+          ${{ github.event_name == 'pull_request' && '--dryrun' || '' }}
           -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
   publish-github-pages:
