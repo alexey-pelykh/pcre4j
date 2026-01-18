@@ -105,11 +105,11 @@ Preferred format: `(type) brief description`
 Releases are created using `gh release create`, which creates both the git tag AND GitHub Release in one command:
 
 ```bash
-gh release create <version> --generate-notes
+gh release create <version> --title <version> --generate-notes
 ```
 
 **Workflow**:
-1. `gh release create <version> --generate-notes` creates tag + GitHub Release
+1. `gh release create <version> --title <version> --generate-notes` creates tag + GitHub Release (using tag as title)
 2. Tag push triggers `.github/workflows/release.yaml` for Maven Central publish via JReleaser
 3. Update README.md version references, commit, push
 
