@@ -6,6 +6,10 @@ plugins {
 
 version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
 
+jreleaser {
+    configFile = file("jreleaser.yml")
+}
+
 repositories {
     mavenCentral()
 }
