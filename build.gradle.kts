@@ -1,6 +1,10 @@
 plugins {
+    base
     `jacoco-report-aggregation`
+    id("org.jreleaser") version "1.22.0"
 }
+
+version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
 
 repositories {
     mavenCentral()

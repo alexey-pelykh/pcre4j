@@ -16,7 +16,6 @@ plugins {
     `java-library`
     checkstyle
     `maven-publish`
-    signing
     jacoco
 }
 
@@ -155,25 +154,8 @@ publishing {
         }
 
         maven {
-            name = "OSSRH"
-            url = uri(
-                if (project.version.toString().endsWith("-SNAPSHOT"))
-                    "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                else
-                    "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-            )
-            credentials {
-                username = System.getenv("OSSRH_USERNAME")
-                password = System.getenv("OSSRH_TOKEN")
-            }
+            name = "StagingDeploy"
+            url = uri(layout.buildDirectory.dir("staging-deploy"))
         }
     }
-}
-
-signing {
-    useInMemoryPgpKeys(
-        System.getenv("GPG_PRIVATE_KEY"),
-        System.getenv("GPG_PASSPHRASE")
-    )
-    sign(publishing.publications["mavenJava"])
 }

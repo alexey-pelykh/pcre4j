@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: PCRE2 Documentation
+    url: https://www.pcre.org/current/doc/html/
+    about: Official PCRE2 library documentation
+  - name: JavaDoc
+    url: https://javadoc.io/doc/org.pcre4j
+    about: PCRE4J API documentation
