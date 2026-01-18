@@ -21,7 +21,10 @@ import org.pcre4j.api.IPcre2;
 
 import java.util.stream.Stream;
 
+import java.util.EnumSet;
+
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Pcre2CodeTests {
 
@@ -40,6 +43,66 @@ public class Pcre2CodeTests {
     void badPattern(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> {
             new Pcre2Code(api, "?");
+        });
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyStringMatch(IPcre2 api) {
+        var code = new Pcre2Code(api, "^$");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result >= 0, "Empty string should match pattern ^$");
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyStringMatchJit(IPcre2 api) {
+        var code = new Pcre2JitCode(api, "^$", null, null, null);
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result >= 0, "Empty string should match pattern ^$ with JIT");
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchAtEndOfString(IPcre2 api) {
+        // Pattern $ matches at end of string, startOffset at length should work
+        var code = new Pcre2Code(api, "$");
+        var matchData = new Pcre2MatchData(code);
+        var subject = "abc";
+        var result = code.match(subject, subject.length(), EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result >= 0, "Pattern $ should match at end of string");
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchAtEndOfStringJit(IPcre2 api) {
+        // Pattern $ matches at end of string, startOffset at length should work with JIT
+        var code = new Pcre2JitCode(api, "$", null, null, null);
+        var matchData = new Pcre2MatchData(code);
+        var subject = "abc";
+        var result = code.match(subject, subject.length(), EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result >= 0, "Pattern $ should match at end of string with JIT");
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void startOffsetPastEndThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, ".");
+        var matchData = new Pcre2MatchData(code);
+        assertThrows(IllegalArgumentException.class, () -> {
+            code.match("abc", 4, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        });
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void startOffsetPastEndThrowsJit(IPcre2 api) {
+        var code = new Pcre2JitCode(api, ".", null, null, null);
+        var matchData = new Pcre2MatchData(code);
+        assertThrows(IllegalArgumentException.class, () -> {
+            code.match("abc", 4, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
         });
     }
 

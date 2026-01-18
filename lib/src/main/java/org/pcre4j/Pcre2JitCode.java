@@ -102,8 +102,8 @@ public class Pcre2JitCode extends Pcre2Code {
         if (startOffset < 0) {
             throw new IllegalArgumentException("startOffset must be greater than or equal to zero");
         }
-        if (startOffset >= subject.length()) {
-            throw new IllegalArgumentException("startOffset must be less than the length of the subject");
+        if (startOffset > subject.length()) {
+            throw new IllegalArgumentException("startOffset must be less than or equal to the length of the subject");
         }
         if (matchData == null) {
             throw new IllegalArgumentException("matchData must not be null");

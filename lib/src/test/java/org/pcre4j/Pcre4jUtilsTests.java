@@ -17,6 +17,8 @@ package org.pcre4j;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * {@link Pcre4jUtils} tests.
@@ -39,6 +41,34 @@ public class Pcre4jUtilsTests {
                 new int[]{-1, -1, 0, 10},
                 Pcre4jUtils.convertOvectorToStringIndices(subject, new long[]{-1, -1, 0, 10})
         );
+    }
+
+    @Test
+    void convertCharacterIndexToByteOffsetEmptyString() {
+        // Empty string with index 0 should return 0
+        assertEquals(0, Pcre4jUtils.convertCharacterIndexToByteOffset("", 0));
+    }
+
+    @Test
+    void convertCharacterIndexToByteOffsetAtEnd() {
+        // Index at end of string should return byte length
+        assertEquals(10, Pcre4jUtils.convertCharacterIndexToByteOffset("0123456789", 10));
+    }
+
+    @Test
+    void convertCharacterIndexToByteOffsetOutOfBounds() {
+        // Index past end should throw
+        assertThrows(IllegalArgumentException.class, () -> {
+            Pcre4jUtils.convertCharacterIndexToByteOffset("abc", 4);
+        });
+    }
+
+    @Test
+    void convertCharacterIndexToByteOffsetEmptyStringOutOfBounds() {
+        // Index 1 on empty string should throw
+        assertThrows(IllegalArgumentException.class, () -> {
+            Pcre4jUtils.convertCharacterIndexToByteOffset("", 1);
+        });
     }
 
 }
