@@ -334,7 +334,7 @@ public final class Pcre4jUtils {
         if (index < 0) {
             throw new IllegalArgumentException("index must be non-negative");
         }
-        if (index >= input.length()) {
+        if (index > input.length()) {
             throw new IllegalArgumentException("index must be within the bounds of the input string");
         }
 

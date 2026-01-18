@@ -22,7 +22,9 @@ import org.pcre4j.api.IPcre2;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests to ensure API likeness of the {@link Matcher} to the {@link java.util.regex.Matcher}.
@@ -802,6 +804,105 @@ public class MatcherTests {
         assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
         assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
         assertEquals(javaMatcher.end("rWrapper"), pcre4jMatcher.end("rWrapper"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyStringMatches(IPcre2 api) {
+        var regex = "^$";
+        var input = "";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyStringFind(IPcre2 api) {
+        var regex = "^$";
+        var input = "";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.group(0), pcre4jMatcher.group(0));
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.start(0), pcre4jMatcher.start(0));
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findAtEndOfString(IPcre2 api) {
+        var regex = "$";
+        var input = "abc";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // find(start) at end of string should work for $ pattern
+        assertEquals(javaMatcher.find(input.length()), pcre4jMatcher.find(input.length()));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findExhaustedInRegion(IPcre2 api) {
+        // Test find() behavior when iterating through all matches in a region
+        var regex = "a";
+        var input = "aaa";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // Set region to first two characters only
+        javaMatcher.region(0, 2);
+        pcre4jMatcher.region(0, 2);
+
+        // First find() should succeed (matches 'a' at position 0)
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        // Second find() should succeed (matches 'a' at position 1)
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        // Third find() should fail - no more matches in region
+        assertFalse(javaMatcher.find());
+        assertFalse(pcre4jMatcher.find());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void findWithZeroWidthMatchExhaustsRegion(IPcre2 api) {
+        // Test that after a zero-width match at regionEnd, the next find() returns false
+        // This exercises the start > regionEnd branch in find():
+        // After zero-width match at [1,1], start becomes 1, but since start == lastMatchIndices[0],
+        // it's incremented to 2. If regionEnd is 1, then start (2) > regionEnd (1) is true.
+        var regex = "$";  // Zero-width match at end
+        var input = "ab";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // Set region to just "a" (positions 0-1)
+        javaMatcher.region(0, 1);
+        pcre4jMatcher.region(0, 1);
+
+        // First find() matches $ at position 1 (end of region) - zero-width match at [1,1]
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+        assertEquals(1, javaMatcher.start());
+        assertEquals(1, pcre4jMatcher.start());
+        assertEquals(1, javaMatcher.end());
+        assertEquals(1, pcre4jMatcher.end());
+
+        // Second find(): lastMatchIndices = [1,1], so start = 1
+        // Since start (1) == lastMatchIndices[0] (1), start is incremented to 2
+        // Now start (2) > regionEnd (1) is TRUE, triggering the early return
+        assertFalse(javaMatcher.find());
+        assertFalse(pcre4jMatcher.find());
     }
 
 }

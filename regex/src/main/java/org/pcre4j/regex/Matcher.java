@@ -177,7 +177,7 @@ public class Matcher implements java.util.regex.MatchResult {
             start = regionStart;
         }
 
-        if (start >= regionEnd) {
+        if (start > regionEnd) {
             lastMatchData = null;
             lastMatchIndices = null;
             return false;
