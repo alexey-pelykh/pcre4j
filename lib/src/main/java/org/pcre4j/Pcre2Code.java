@@ -374,7 +374,7 @@ public class Pcre2Code {
      * @return the match limit
      */
     public int matchLimit() {
-        final var matchLimit = getPatternIntInfo(IPcre2.INFO_DEPTHLIMIT);
+        final var matchLimit = getPatternIntInfo(IPcre2.INFO_MATCHLIMIT);
         if (matchLimit == IPcre2.ERROR_UNSET) {
             throw new IllegalStateException("Match limit is not set");
         }

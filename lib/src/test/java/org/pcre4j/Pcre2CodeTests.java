@@ -106,4 +106,18 @@ public class Pcre2CodeTests {
         });
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchLimitThrowsWhenUnset(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        assertThrows(IllegalStateException.class, code::matchLimit);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void depthLimitThrowsWhenUnset(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        assertThrows(IllegalStateException.class, code::depthLimit);
+    }
+
 }
