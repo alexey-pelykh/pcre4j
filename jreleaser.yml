@@ -16,6 +16,7 @@
 project:
   name: pcre4j
   description: PCRE4J - PCRE2 bindings for Java
+  versionPattern: CUSTOM
   links:
     homepage: https://pcre4j.org
   authors:
