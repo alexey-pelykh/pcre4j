@@ -61,7 +61,6 @@ jobs:
 
     permissions:
       contents: read
-      packages: write
 
     needs:
       - compatibility
@@ -134,7 +133,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
         run: >
           ./gradlew publishAllPublicationsToStagingDeployRepository
-          -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}', github.event.pull_request.number) || github.ref_name }}-SNAPSHOT
+          -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
       - name: Publish snapshots to Maven Central
         if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
@@ -148,7 +147,7 @@ jobs:
         run: >
           ./gradlew jreleaserDeploy
           ${{ github.event_name == 'pull_request' && '--dry-run' || '' }}
-          -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}', github.event.pull_request.number) || github.ref_name }}-SNAPSHOT
+          -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
   publish-github-pages:
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}

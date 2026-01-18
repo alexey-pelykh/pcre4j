@@ -115,6 +115,18 @@ gh release create <version> --title <version> --generate-notes
 
 **Note**: `skipRelease: true` in jreleaser.yml exists because the GitHub Release is already created by `gh release create` before JReleaser runs.
 
+## Snapshot Publishing
+
+Snapshots are published to Maven Central Snapshots repository (not GitHub Packages).
+
+**Version formats**:
+- Main branch: `main-SNAPSHOT`
+- Pull requests: `PR-{number}-SNAPSHOT` (dry-run only)
+
+**Why not GitHub Packages**: GitHub Packages has a known limitation where SNAPSHOT versions don't update when republished - it always returns the first uploaded artifact. This makes it unsuitable for snapshot publishing. See [GitHub Community Discussion #24658](https://github.com/orgs/community/discussions/24658).
+
+**JReleaser configuration**: Uses `versionPattern: CUSTOM` to allow non-semver snapshot version formats.
+
 **Release Notes Style**:
 - Format: `## What's Changed` header with bullet list of PRs
 - Content: Include only `(fix)` and `(feat)` changes; omit `(chore)` and `(docs)`
