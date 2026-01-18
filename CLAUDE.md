@@ -115,6 +115,12 @@ gh release create <version> --generate-notes
 
 **Note**: `skipRelease: true` in jreleaser.yml exists because the GitHub Release is already created by `gh release create` before JReleaser runs.
 
+**Release Notes Style**:
+- Format: `## What's Changed` header with bullet list of PRs
+- Content: Include only `(fix)` and `(feat)` changes; omit `(chore)` and `(docs)`
+- PR format: `* (type) description by @username in <PR-URL>`
+- Footer: `**Full Changelog**: <compare-URL>`
+
 ## Task Tracking
 
 GitHub Issues: https://github.com/alexey-pelykh/pcre4j/issues
