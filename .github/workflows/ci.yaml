@@ -130,15 +130,11 @@ jobs:
         with:
           path: build/gh-pages
 
-      - name: Publish artifacts
+      - name: Publish snapshots to GitHub Packages
         if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          OSSRH_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-        run: ./gradlew publish -Ppcre4j.version=${{ github.ref_name }}-SNAPSHOT
+        run: ./gradlew publishAllPublicationsToGitHubPackagesRepository -Ppcre4j.version=${{ github.ref_name }}-SNAPSHOT
 
   publish-github-pages:
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
