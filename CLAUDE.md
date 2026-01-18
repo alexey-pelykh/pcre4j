@@ -100,6 +100,21 @@ Preferred format: `(type) brief description`
 - Examples: `(chore) gradle 8.12`, `(feat) JIT stack`, `(fix) regex: handle edge case`
 - Reverts use Git default: `Revert "(type) original message"`
 
+## Release Process
+
+Releases are created using `gh release create`, which creates both the git tag AND GitHub Release in one command:
+
+```bash
+gh release create <version> --generate-notes
+```
+
+**Workflow**:
+1. `gh release create <version> --generate-notes` creates tag + GitHub Release
+2. Tag push triggers `.github/workflows/release.yaml` for Maven Central publish via JReleaser
+3. Update README.md version references, commit, push
+
+**Note**: `skipRelease: true` in jreleaser.yml exists because the GitHub Release is already created by `gh release create` before JReleaser runs.
+
 ## Task Tracking
 
 GitHub Issues: https://github.com/alexey-pelykh/pcre4j/issues
