@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -982,4 +982,32 @@ public interface IPcre2 {
      * @return 0 on success, otherwise a negative error code
      */
     public int setNewline(long ccontext, int newline);
+
+    /**
+     * Match a compiled pattern against a subject string and perform substitution.
+     *
+     * @param code          the compiled pattern handle
+     * @param subject       the subject string
+     * @param startoffset   the starting offset in the subject string
+     * @param options       option bits
+     * @param matchData     the match data handle or 0
+     * @param mcontext      the match context handle or 0
+     * @param replacement   the replacement string
+     * @param outputbuffer  the buffer to store the result
+     * @param outputlength  an array of length 1 to receive the output length (in bytes); on input, should contain
+     *                      the buffer size
+     * @return the number of substitutions made, or a negative error code
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substitute.html">pcre2_substitute</a>
+     */
+    public int substitute(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            String replacement,
+            ByteBuffer outputbuffer,
+            long[] outputlength
+    );
 }

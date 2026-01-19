@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -510,6 +510,93 @@ public class Pcre2Code {
                 matchData.handle,
                 matchContext != null ? matchContext.handle : 0
         );
+    }
+
+    /**
+     * Substitute matches of this compiled pattern in the given subject string.
+     *
+     * @param subject      the subject string to perform substitution on
+     * @param startOffset  offset in the subject at which to start matching
+     * @param options      the options, see {@link Pcre2SubstituteOption}
+     * @param matchData    the match data to use or null
+     * @param matchContext the match context to use or null
+     * @param replacement  the replacement string (supports backreferences like $1, ${name})
+     * @return the result string after substitution
+     * @throws Pcre2SubstituteError if an error occurs during substitution
+     */
+    public String substitute(
+            String subject,
+            int startOffset,
+            EnumSet<Pcre2SubstituteOption> options,
+            Pcre2MatchData matchData,
+            Pcre2MatchContext matchContext,
+            String replacement
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (startOffset < 0) {
+            throw new IllegalArgumentException("startOffset must be greater than or equal to zero");
+        }
+        if (startOffset > subject.length()) {
+            throw new IllegalArgumentException("startOffset must be less than or equal to the length of the subject");
+        }
+        if (replacement == null) {
+            throw new IllegalArgumentException("replacement must not be null");
+        }
+        if (options == null) {
+            options = EnumSet.noneOf(Pcre2SubstituteOption.class);
+        }
+
+        final var optionBits = options
+                .stream()
+                .mapToInt(Pcre2SubstituteOption::value)
+                .sum();
+
+        // First, try with a reasonable initial buffer size
+        var bufferSize = Math.max(subject.length() * 2 + replacement.length(), 256);
+        var outputBuffer = ByteBuffer.allocateDirect(bufferSize);
+        var outputLength = new long[]{bufferSize};
+
+        var result = api.substitute(
+                handle,
+                subject,
+                Pcre4jUtils.convertCharacterIndexToByteOffset(subject, startOffset),
+                optionBits | IPcre2.SUBSTITUTE_OVERFLOW_LENGTH,
+                matchData != null ? matchData.handle : 0,
+                matchContext != null ? matchContext.handle : 0,
+                replacement,
+                outputBuffer,
+                outputLength
+        );
+
+        // If buffer was too small, reallocate and retry
+        if (result == IPcre2.ERROR_NOMEMORY) {
+            bufferSize = (int) outputLength[0] + 1; // +1 for null terminator
+            outputBuffer = ByteBuffer.allocateDirect(bufferSize);
+            outputLength[0] = bufferSize;
+
+            result = api.substitute(
+                    handle,
+                    subject,
+                    Pcre4jUtils.convertCharacterIndexToByteOffset(subject, startOffset),
+                    optionBits,
+                    matchData != null ? matchData.handle : 0,
+                    matchContext != null ? matchContext.handle : 0,
+                    replacement,
+                    outputBuffer,
+                    outputLength
+            );
+        }
+
+        if (result < 0) {
+            throw new Pcre2SubstituteError(Pcre4jUtils.getErrorMessage(api, result));
+        }
+
+        // Extract the result string from the buffer
+        final var resultBytes = new byte[(int) outputLength[0]];
+        outputBuffer.get(resultBytes);
+        return new String(resultBytes, StandardCharsets.UTF_8);
     }
 
     /**
