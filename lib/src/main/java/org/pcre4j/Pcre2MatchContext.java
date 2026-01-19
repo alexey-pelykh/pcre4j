@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -97,6 +97,23 @@ public class Pcre2MatchContext {
             throw new IllegalArgumentException("jitStack must not be null");
         }
         api.jitStackAssign(handle, 0, jitStack.handle);
+    }
+
+    /**
+     * Set the match limit for this match context.
+     * <p>
+     * The match limit is used to limit the amount of backtracking during a match.
+     * If the limit is reached, the match attempt fails with a match limit error.
+     *
+     * @param limit the match limit value (must be non-negative)
+     * @throws IllegalArgumentException if the limit is negative
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_match_limit.html">pcre2_set_match_limit</a>
+     */
+    public void setMatchLimit(int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("limit must be non-negative");
+        }
+        api.setMatchLimit(handle, limit);
     }
 
     private record Clean(IPcre2 api, long matchContext) implements Runnable {

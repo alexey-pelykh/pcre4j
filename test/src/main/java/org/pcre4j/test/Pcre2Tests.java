@@ -922,4 +922,96 @@ public abstract class Pcre2Tests {
         assertEquals(1, groupNumber);
     }
 
+    @Test
+    public void setMatchLimitNegativeThrows() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        assertThrows(IllegalArgumentException.class, () -> matchContext.setMatchLimit(-1));
+    }
+
+    @Test
+    public void setMatchLimitZeroAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setMatchLimit(0);
+    }
+
+    @Test
+    public void setMatchLimitPositiveAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setMatchLimit(1000);
+    }
+
+    @Test
+    public void matchWithEmbeddedLimitCausesMatchLimitError() {
+        // Use a pattern with embedded match limit and disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        // (*NO_AUTO_POSSESS) and (*NO_START_OPT) disable optimizations that
+        // would normally make the match efficient.
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_MATCH=100)(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces exponential backtracking as PCRE2 tries all possible groupings
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        // The match should fail with MATCHLIMIT error due to excessive backtracking
+        assertEquals(IPcre2.ERROR_MATCHLIMIT, result);
+    }
+
+    @Test
+    public void matchWithContextLimitCausesMatchLimitError() {
+        // A pattern that requires extensive backtracking - disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        final var code = new Pcre2Code(
+                api,
+                "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+        final var matchContext = new Pcre2MatchContext(api, null);
+
+        // Set a match limit via the match context
+        matchContext.setMatchLimit(100);
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces exponential backtracking as PCRE2 tries all possible groupings
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext
+        );
+
+        // The match should fail with MATCHLIMIT error due to excessive backtracking
+        assertEquals(IPcre2.ERROR_MATCHLIMIT, result);
+    }
+
+    @Test
+    public void matchLimitFromPattern() {
+        // A pattern with embedded match limit
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_MATCH=5000)test",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        // The match limit should be readable from the compiled pattern
+        assertEquals(5000, code.matchLimit());
+    }
+
 }
