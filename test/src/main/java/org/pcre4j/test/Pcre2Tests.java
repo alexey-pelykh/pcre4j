@@ -1014,4 +1014,96 @@ public abstract class Pcre2Tests {
         assertEquals(5000, code.matchLimit());
     }
 
+    @Test
+    public void setDepthLimitNegativeThrows() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        assertThrows(IllegalArgumentException.class, () -> matchContext.setDepthLimit(-1));
+    }
+
+    @Test
+    public void setDepthLimitZeroAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setDepthLimit(0);
+    }
+
+    @Test
+    public void setDepthLimitPositiveAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setDepthLimit(1000);
+    }
+
+    @Test
+    public void matchWithEmbeddedDepthLimitCausesDepthLimitError() {
+        // Use a pattern with embedded depth limit and disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        // (*NO_AUTO_POSSESS) and (*NO_START_OPT) disable optimizations that
+        // would normally make the match efficient.
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_DEPTH=10)(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces recursive backtracking as PCRE2 tries all possible groupings
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        // The match should fail with DEPTHLIMIT error due to deep recursion
+        assertEquals(IPcre2.ERROR_DEPTHLIMIT, result);
+    }
+
+    @Test
+    public void matchWithContextDepthLimitCausesDepthLimitError() {
+        // A pattern that requires extensive backtracking - disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        final var code = new Pcre2Code(
+                api,
+                "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+        final var matchContext = new Pcre2MatchContext(api, null);
+
+        // Set a depth limit via the match context
+        matchContext.setDepthLimit(10);
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces recursive backtracking as PCRE2 tries all possible groupings
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext
+        );
+
+        // The match should fail with DEPTHLIMIT error due to deep recursion
+        assertEquals(IPcre2.ERROR_DEPTHLIMIT, result);
+    }
+
+    @Test
+    public void depthLimitFromPattern() {
+        // A pattern with embedded depth limit
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_DEPTH=5000)test",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        // The depth limit should be readable from the compiled pattern
+        assertEquals(5000, code.depthLimit());
+    }
+
 }
