@@ -997,6 +997,19 @@ public interface IPcre2 {
     public int setMatchLimit(long mcontext, int limit);
 
     /**
+     * Set the backtracking depth limit within a match context.
+     * <p>
+     * The depth limit is used to limit the amount of backtracking depth during a match.
+     * If the limit is reached, the match attempt fails with {@link #ERROR_DEPTHLIMIT}.
+     *
+     * @param mcontext the match context handle
+     * @param limit    the depth limit value
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_depth_limit.html">pcre2_set_depth_limit</a>
+     */
+    public int setDepthLimit(long mcontext, int limit);
+
+    /**
      * Match a compiled pattern against a subject string and perform substitution.
      *
      * @param code          the compiled pattern handle

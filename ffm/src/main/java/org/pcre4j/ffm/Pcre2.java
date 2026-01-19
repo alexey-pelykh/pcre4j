@@ -66,6 +66,7 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_set_newline;
     private final MethodHandle pcre2_set_match_limit;
+    private final MethodHandle pcre2_set_depth_limit;
 
     private final MethodHandle pcre2_substitute;
 
@@ -321,6 +322,14 @@ public class Pcre2 implements IPcre2 {
 
         pcre2_set_match_limit = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_set_match_limit" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_context*
+                        ValueLayout.JAVA_INT // uint32_t
+                )
+        );
+
+        pcre2_set_depth_limit = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_depth_limit" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_match_context*
                         ValueLayout.JAVA_INT // uint32_t
@@ -959,6 +968,20 @@ public class Pcre2 implements IPcre2 {
             final var pMContext = MemorySegment.ofAddress(mcontext);
 
             return (int) pcre2_set_match_limit.invokeExact(
+                    pMContext,
+                    limit
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setDepthLimit(long mcontext, int limit) {
+        try (var arena = Arena.ofConfined()) {
+            final var pMContext = MemorySegment.ofAddress(mcontext);
+
+            return (int) pcre2_set_depth_limit.invokeExact(
                     pMContext,
                     limit
             );
