@@ -664,4 +664,172 @@ public abstract class Pcre2Tests {
         assertThrows(IllegalStateException.class, () -> matchData.getSubstring(2));
     }
 
+    @Test
+    public void getSubstringByNameSimple() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var substring = matchData.getSubstring("word");
+        assertEquals("hello", new String(substring, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringByNameMultipleGroups() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>\\w+) (?<second>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        final var first = matchData.getSubstring("first");
+        assertEquals("hello", new String(first, StandardCharsets.UTF_8));
+
+        final var second = matchData.getSubstring("second");
+        assertEquals("world", new String(second, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringByNameUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<emoji>🌐+)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello 🌐🌐🌐 world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var emoji = matchData.getSubstring("emoji");
+        assertEquals("🌐🌐🌐", new String(emoji, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringByNameNull() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.getSubstring((String) null));
+    }
+
+    @Test
+    public void getSubstringByNameInvalid() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstring("nonexistent"));
+    }
+
+    @Test
+    public void getSubstringByNameUnsetGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>a)|(?<second>b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var first = matchData.getSubstring("first");
+        assertEquals("a", new String(first, StandardCharsets.UTF_8));
+
+        // Group "second" did not participate in the match
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstring("second"));
+    }
+
+    @Test
+    public void getSubstringByNameDuplicateNames() {
+        // DUPNAMES option allows duplicate named groups
+        final var code = new Pcre2Code(
+                api,
+                "(?<num>\\d+)|(?<num>\\w+)",
+                EnumSet.of(Pcre2CompileOption.DUPNAMES),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Match letters (second alternative)
+        // Pattern has group 0 (entire match), group 1 (first num), group 2 (second num)
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        final var num = matchData.getSubstring("num");
+        assertEquals("hello", new String(num, StandardCharsets.UTF_8));
+    }
+
 }
