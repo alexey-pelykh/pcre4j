@@ -117,15 +117,35 @@ gh release create <version> --title <version> --generate-notes
 
 ## Snapshot Publishing
 
-Snapshots are published to Maven Central Snapshots repository (not GitHub Packages).
+Snapshots are published to Maven Central Snapshots repository (not GitHub Packages due to SNAPSHOT update limitations).
 
 **Version formats**:
 - Main branch: `main-SNAPSHOT`
 - Pull requests: `PR-{number}-SNAPSHOT` (dry-run only)
 
-**Why not GitHub Packages**: GitHub Packages has a known limitation where SNAPSHOT versions don't update when republished - it always returns the first uploaded artifact. This makes it unsuitable for snapshot publishing. See [GitHub Community Discussion #24658](https://github.com/orgs/community/discussions/24658).
+**Maven Central Snapshot URL**: `https://central.sonatype.com/repository/maven-snapshots/`
 
-**JReleaser configuration**: Uses `versionPattern: CUSTOM` to allow non-semver snapshot version formats.
+## JReleaser Configuration
+
+**Project-specific YAML settings** (`jreleaser.yml`):
+
+```yaml
+project:
+  versionPattern: CUSTOM  # Required for main-SNAPSHOT versioning
+  languages:
+    java:
+      groupId: org.pcre4j
+      version: 21
+```
+
+**Environment Variables**:
+```bash
+JRELEASER_NEXUS2_SNAPSHOTS_USERNAME  # Maven Central username
+JRELEASER_NEXUS2_SNAPSHOTS_PASSWORD  # Maven Central password
+JRELEASER_GPG_PASSPHRASE             # GPG key passphrase
+JRELEASER_GPG_PUBLIC_KEY             # GPG public key
+JRELEASER_GPG_SECRET_KEY             # GPG private key
+```
 
 **Release Notes Style**:
 - Format: `## What's Changed` header with bullet list of PRs
