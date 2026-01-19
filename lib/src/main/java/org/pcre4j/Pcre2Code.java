@@ -469,6 +469,38 @@ public class Pcre2Code {
     }
 
     /**
+     * Convert a named capturing group to its group number.
+     * <p>
+     * This method is useful for pre-resolving named group references before a matching loop,
+     * avoiding repeated name lookups during matching.
+     *
+     * @param name the name of the capturing group
+     * @return the group number (1-based index)
+     * @throws IllegalArgumentException if name is null
+     * @throws Pcre2NoSubstringError if the name does not correspond to any capturing group
+     * @throws Pcre2NoUniqueSubstringError if the name is not unique (when using the {@code (?J)} option
+     *                                     for duplicate names)
+     */
+    public int groupNumberFromName(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final var result = api.substringNumberFromName(handle, name);
+        if (result == IPcre2.ERROR_NOSUBSTRING) {
+            throw new Pcre2NoSubstringError("Named group '" + name + "' does not exist");
+        }
+        if (result == IPcre2.ERROR_NOUNIQUESUBSTRING) {
+            throw new Pcre2NoUniqueSubstringError("Named group '" + name + "' is not unique");
+        }
+        if (result < 0) {
+            throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, result));
+        }
+
+        return result;
+    }
+
+    /**
      * Match this compiled pattern against a given subject string.
      *
      * @param subject      the subject string to match this pattern against

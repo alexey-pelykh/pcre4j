@@ -71,6 +71,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_get_bynumber;
     private final MethodHandle pcre2_substring_get_byname;
     private final MethodHandle pcre2_substring_free;
+    private final MethodHandle pcre2_substring_number_from_name;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -358,6 +359,14 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_substring_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // PCRE2_UCHAR* buffer
+                )
+        );
+
+        pcre2_substring_number_from_name = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_number_from_name" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS  // PCRE2_SPTR name
                 )
         );
     }
@@ -1069,6 +1078,25 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_substring_free.invokeExact(
                     pBuffer
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substringNumberFromName(long code, String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pszName = arena.allocateUtf8String(name);
+
+            return (int) pcre2_substring_number_from_name.invokeExact(
+                    pCode,
+                    pszName
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

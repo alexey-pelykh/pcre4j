@@ -1052,6 +1052,19 @@ public interface IPcre2 {
     public void substringFree(long buffer);
 
     /**
+     * Convert a named capturing group to its group number.
+     *
+     * @param code the compiled pattern handle
+     * @param name the name of the capturing group
+     * @return the group number on success, otherwise a negative error code:
+     * {@link #ERROR_NOSUBSTRING} the name is not a valid capturing group name
+     * {@link #ERROR_NOUNIQUESUBSTRING} the name is not unique (multiple groups with the same name when using
+     *                                  the {@code (?J)} option)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_number_from_name.html">pcre2_substring_number_from_name</a>
+     */
+    public int substringNumberFromName(long code, String name);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.
