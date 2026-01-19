@@ -1010,6 +1010,19 @@ public interface IPcre2 {
     public int setDepthLimit(long mcontext, int limit);
 
     /**
+     * Set the heap memory limit within a match context.
+     * <p>
+     * The heap limit is used to limit the amount of heap memory used during a match.
+     * If the limit is reached, the match attempt fails with {@link #ERROR_HEAPLIMIT}.
+     *
+     * @param mcontext the match context handle
+     * @param limit    the heap limit value in kibibytes (1024 bytes)
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_heap_limit.html">pcre2_set_heap_limit</a>
+     */
+    public int setHeapLimit(long mcontext, int limit);
+
+    /**
      * Match a compiled pattern against a subject string and perform substitution.
      *
      * @param code          the compiled pattern handle

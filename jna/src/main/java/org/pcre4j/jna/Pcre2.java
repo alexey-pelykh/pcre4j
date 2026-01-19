@@ -407,6 +407,12 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setHeapLimit(long mcontext, int limit) {
+        final var pMContext = new Pointer(mcontext);
+        return library.pcre2_set_heap_limit(pMContext, limit);
+    }
+
+    @Override
     public int substitute(
             long code,
             String subject,
@@ -623,6 +629,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_match_limit(Pointer mcontext, int value);
 
         int pcre2_set_depth_limit(Pointer mcontext, int value);
+
+        int pcre2_set_heap_limit(Pointer mcontext, int value);
 
         int pcre2_substitute(
                 Pointer code,
