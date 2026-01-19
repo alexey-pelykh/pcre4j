@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -65,6 +65,8 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_get_ovector_pointer;
 
     private final MethodHandle pcre2_set_newline;
+
+    private final MethodHandle pcre2_substitute;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -308,6 +310,23 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_compile_context*
                         ValueLayout.JAVA_INT // int
+                )
+        );
+
+        pcre2_substitute = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substitute" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS, // PCRE2_SPTR subject
+                        ValueLayout.ADDRESS, // PCRE2_SIZE length
+                        ValueLayout.ADDRESS, // PCRE2_SIZE startoffset
+                        ValueLayout.JAVA_INT, // uint32_t options
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.ADDRESS, // pcre2_match_context*
+                        ValueLayout.ADDRESS, // PCRE2_SPTR replacement
+                        ValueLayout.ADDRESS, // PCRE2_SIZE rlength
+                        ValueLayout.ADDRESS, // PCRE2_UCHAR* outputbuffer
+                        ValueLayout.ADDRESS  // PCRE2_SIZE* outlengthptr
                 )
         );
     }
@@ -880,6 +899,69 @@ public class Pcre2 implements IPcre2 {
                     pCContext,
                     newline
             );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substitute(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            String replacement,
+            ByteBuffer outputbuffer,
+            long[] outputlength
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (replacement == null) {
+            throw new IllegalArgumentException("replacement must not be null");
+        }
+        if (outputbuffer == null) {
+            throw new IllegalArgumentException("outputbuffer must not be null");
+        }
+        if (!outputbuffer.isDirect()) {
+            throw new IllegalArgumentException("outputbuffer must be direct");
+        }
+        if (outputlength == null || outputlength.length < 1) {
+            throw new IllegalArgumentException("outputlength must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pszSubject = arena.allocateUtf8String(subject);
+            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var startOffset = MemorySegment.ofAddress(startoffset);
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pMatchContext = MemorySegment.ofAddress(mcontext);
+            final var pszReplacement = arena.allocateUtf8String(replacement);
+            final var replacementLength = MemorySegment.ofAddress(pszReplacement.byteSize() - 1);
+            final var pOutputBuffer = MemorySegment.ofBuffer(outputbuffer);
+            final var pOutputLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            pOutputLength.set(ValueLayout.JAVA_LONG, 0, outputlength[0]);
+
+            final var result = (int) pcre2_substitute.invokeExact(
+                    pCode,
+                    pszSubject,
+                    subjectLength,
+                    startOffset,
+                    options,
+                    pMatchData,
+                    pMatchContext,
+                    pszReplacement,
+                    replacementLength,
+                    pOutputBuffer,
+                    pOutputLength
+            );
+
+            outputlength[0] = pOutputLength.get(ValueLayout.JAVA_LONG, 0);
+
+            return result;
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

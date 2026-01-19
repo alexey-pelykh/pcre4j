@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -394,6 +394,64 @@ public class Pcre2 implements IPcre2 {
         return library.pcre2_set_newline(pCContext, value);
     }
 
+    @Override
+    public int substitute(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            String replacement,
+            ByteBuffer outputbuffer,
+            long[] outputlength
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (replacement == null) {
+            throw new IllegalArgumentException("replacement must not be null");
+        }
+        if (outputbuffer == null) {
+            throw new IllegalArgumentException("outputbuffer must not be null");
+        }
+        if (!outputbuffer.isDirect()) {
+            throw new IllegalArgumentException("outputbuffer must be direct");
+        }
+        if (outputlength == null || outputlength.length < 1) {
+            throw new IllegalArgumentException("outputlength must be an array of length 1");
+        }
+
+        final var pCode = new Pointer(code);
+        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+        final var subjectLength = new Pointer(pszSubject.length);
+        final var startOffset = new Pointer(startoffset);
+        final var pMatchData = new Pointer(matchData);
+        final var pMContext = new Pointer(mcontext);
+        final var pszReplacement = replacement.getBytes(StandardCharsets.UTF_8);
+        final var replacementLength = new Pointer(pszReplacement.length);
+        final var pOutputBuffer = Native.getDirectBufferPointer(outputbuffer);
+        final var outputLengthRef = new LongByReference(outputlength[0]);
+
+        final var result = library.pcre2_substitute(
+                pCode,
+                pszSubject,
+                subjectLength,
+                startOffset,
+                options,
+                pMatchData,
+                pMContext,
+                pszReplacement,
+                replacementLength,
+                pOutputBuffer,
+                outputLengthRef
+        );
+
+        outputlength[0] = outputLengthRef.getValue();
+
+        return result;
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -454,6 +512,20 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_get_ovector_pointer(Pointer matchData);
 
         int pcre2_set_newline(Pointer ccontext, int value);
+
+        int pcre2_substitute(
+                Pointer code,
+                byte[] subject,
+                Pointer length,
+                Pointer startoffset,
+                int options,
+                Pointer matchData,
+                Pointer mcontext,
+                byte[] replacement,
+                Pointer rlength,
+                Pointer outputbuffer,
+                LongByReference outlengthptr
+        );
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {

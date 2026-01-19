@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -251,6 +251,266 @@ public abstract class Pcre2Tests {
         final var nameTable = code.nameTable();
         assertEquals(1, nameTable.length);
         assertEquals(new Pcre2Code.NameTableEntry(1, "number"), nameTable[0]);
+    }
+
+    @Test
+    public void substituteBasic() {
+        final var code = new Pcre2Code(
+                api,
+                "world",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                "universe"
+        );
+        assertEquals("hello universe", result);
+    }
+
+    @Test
+    public void substituteGlobal() {
+        final var code = new Pcre2Code(
+                api,
+                "o",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL),
+                null,
+                null,
+                "0"
+        );
+        assertEquals("hell0 w0rld", result);
+    }
+
+    @Test
+    public void substituteWithCapture() {
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.EXTENDED),
+                null,
+                null,
+                "$2 $1"
+        );
+        assertEquals("world hello", result);
+    }
+
+    @Test
+    public void substituteWithNamedCapture() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>\\w+) (?<second>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.EXTENDED),
+                null,
+                null,
+                "${second} ${first}"
+        );
+        assertEquals("world hello", result);
+    }
+
+    @Test
+    public void substituteUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "🌐",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello 🌐 world",
+                0,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                "🌍"
+        );
+        assertEquals("hello 🌍 world", result);
+    }
+
+    @Test
+    public void substituteUnicodeGlobal() {
+        final var code = new Pcre2Code(
+                api,
+                "🌐",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+
+        final var result = code.substitute(
+                "🌐 hello 🌐 world 🌐",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL),
+                null,
+                null,
+                "🌍"
+        );
+        assertEquals("🌍 hello 🌍 world 🌍", result);
+    }
+
+    @Test
+    public void substituteReplacementOnly() {
+        final var code = new Pcre2Code(
+                api,
+                "world",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.REPLACEMENT_ONLY),
+                null,
+                null,
+                "universe"
+        );
+        assertEquals("universe", result);
+    }
+
+    @Test
+    public void substituteLiteral() {
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello",
+                0,
+                EnumSet.of(Pcre2SubstituteOption.LITERAL),
+                null,
+                null,
+                "$1"
+        );
+        assertEquals("$1", result);
+    }
+
+    @Test
+    public void substituteNoMatch() {
+        final var code = new Pcre2Code(
+                api,
+                "xyz",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                "replacement"
+        );
+        assertEquals("hello world", result);
+    }
+
+    @Test
+    public void substituteEmptySubject() {
+        final var code = new Pcre2Code(
+                api,
+                "world",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "",
+                0,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                "universe"
+        );
+        assertEquals("", result);
+    }
+
+    @Test
+    public void substituteEmptyReplacement() {
+        final var code = new Pcre2Code(
+                api,
+                "world",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                ""
+        );
+        assertEquals("hello ", result);
+    }
+
+    @Test
+    public void substituteWithStartOffset() {
+        final var code = new Pcre2Code(
+                api,
+                "o",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                5,
+                EnumSet.noneOf(Pcre2SubstituteOption.class),
+                null,
+                null,
+                "0"
+        );
+        assertEquals("hello w0rld", result);
+    }
+
+    @Test
+    public void substituteGlobalWithStartOffset() {
+        final var code = new Pcre2Code(
+                api,
+                "o",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var result = code.substitute(
+                "hello world",
+                5,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL),
+                null,
+                null,
+                "0"
+        );
+        assertEquals("hello w0rld", result);
     }
 
 }
