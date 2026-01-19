@@ -1106,4 +1106,38 @@ public abstract class Pcre2Tests {
         assertEquals(5000, code.depthLimit());
     }
 
+    @Test
+    public void setHeapLimitNegativeThrows() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        assertThrows(IllegalArgumentException.class, () -> matchContext.setHeapLimit(-1));
+    }
+
+    @Test
+    public void setHeapLimitZeroAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setHeapLimit(0);
+    }
+
+    @Test
+    public void setHeapLimitPositiveAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setHeapLimit(1000);
+    }
+
+    @Test
+    public void heapLimitFromPattern() {
+        // A pattern with embedded heap limit
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_HEAP=5000)test",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        // The heap limit should be readable from the compiled pattern
+        assertEquals(5000, code.heapLimit());
+    }
+
 }

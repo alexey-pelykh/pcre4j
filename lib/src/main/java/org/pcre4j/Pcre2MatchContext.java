@@ -133,6 +133,23 @@ public class Pcre2MatchContext {
         api.setDepthLimit(handle, limit);
     }
 
+    /**
+     * Set the heap memory limit for this match context.
+     * <p>
+     * The heap limit is used to limit the amount of heap memory used during a match.
+     * If the limit is reached, the match attempt fails with a heap limit error.
+     *
+     * @param limit the heap limit value in kibibytes (1024 bytes) (must be non-negative)
+     * @throws IllegalArgumentException if the limit is negative
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_heap_limit.html">pcre2_set_heap_limit</a>
+     */
+    public void setHeapLimit(int limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("limit must be non-negative");
+        }
+        api.setHeapLimit(handle, limit);
+    }
+
     private record Clean(IPcre2 api, long matchContext) implements Runnable {
         @Override
         public void run() {
