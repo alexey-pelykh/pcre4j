@@ -905,4 +905,406 @@ public class MatcherTests {
         assertFalse(pcre4jMatcher.find());
     }
 
+    // ========================================================================
+    // Replacement method tests
+    // ========================================================================
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void quoteReplacement(IPcre2 api) {
+        // Test basic string without special characters
+        assertEquals(
+                java.util.regex.Matcher.quoteReplacement("hello"),
+                Matcher.quoteReplacement("hello")
+        );
+
+        // Test string with backslash
+        assertEquals(
+                java.util.regex.Matcher.quoteReplacement("hello\\world"),
+                Matcher.quoteReplacement("hello\\world")
+        );
+
+        // Test string with dollar sign
+        assertEquals(
+                java.util.regex.Matcher.quoteReplacement("price: $100"),
+                Matcher.quoteReplacement("price: $100")
+        );
+
+        // Test string with both special characters
+        assertEquals(
+                java.util.regex.Matcher.quoteReplacement("$100 \\ $200"),
+                Matcher.quoteReplacement("$100 \\ $200")
+        );
+
+        // Test empty string
+        assertEquals(
+                java.util.regex.Matcher.quoteReplacement(""),
+                Matcher.quoteReplacement("")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllBasic(IPcre2 api) {
+        var regex = "world";
+        var input = "hello world";
+        var replacement = "universe";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllMultiple(IPcre2 api) {
+        var regex = "o";
+        var input = "hello world";
+        var replacement = "0";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllWithGroupReference(IPcre2 api) {
+        var regex = "(\\w+) (\\w+)";
+        var input = "hello world";
+        var replacement = "$2 $1";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllWithNamedGroupReference(IPcre2 api) {
+        var regex = "(?<first>\\w+) (?<second>\\w+)";
+        var input = "hello world";
+        var replacement = "${second} ${first}";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllNoMatch(IPcre2 api) {
+        var regex = "xyz";
+        var input = "hello world";
+        var replacement = "abc";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllEmptyReplacement(IPcre2 api) {
+        var regex = "world";
+        var input = "hello world";
+        var replacement = "";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllUnicode(IPcre2 api) {
+        var regex = "🌐";
+        var input = "hello 🌐 world 🌐";
+        var replacement = "🌍";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceFirstBasic(IPcre2 api) {
+        var regex = "o";
+        var input = "hello world";
+        var replacement = "0";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceFirst(replacement), pcre4jMatcher.replaceFirst(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceFirstWithGroupReference(IPcre2 api) {
+        var regex = "(\\w+) (\\w+)";
+        var input = "hello world, foo bar";
+        var replacement = "$2-$1";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceFirst(replacement), pcre4jMatcher.replaceFirst(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceFirstNoMatch(IPcre2 api) {
+        var regex = "xyz";
+        var input = "hello world";
+        var replacement = "abc";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceFirst(replacement), pcre4jMatcher.replaceFirst(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceAllWithFunction(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "a1b22c333";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // Replace each number with its length
+        assertEquals(
+                javaMatcher.replaceAll(mr -> "[" + mr.group().length() + "]"),
+                pcre4jMatcher.replaceAll(mr -> "[" + mr.group().length() + "]")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceFirstWithFunction(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "a1b22c333";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // Replace first number with its length
+        assertEquals(
+                javaMatcher.replaceFirst(mr -> "[" + mr.group().length() + "]"),
+                pcre4jMatcher.replaceFirst(mr -> "[" + mr.group().length() + "]")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void replaceFirstWithFunctionNoMatch(IPcre2 api) {
+        var regex = "xyz";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(
+                javaMatcher.replaceFirst(mr -> "replaced"),
+                pcre4jMatcher.replaceFirst(mr -> "replaced")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementStringBuffer(IPcre2 api) {
+        var regex = "(\\w+)";
+        var input = "one two three";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuffer();
+        var pcre4jSb = new StringBuffer();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "[$1]");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "[$1]");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementStringBuilder(IPcre2 api) {
+        var regex = "(\\w+)";
+        var input = "one two three";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "[$1]");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "[$1]");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementWithNamedGroup(IPcre2 api) {
+        var regex = "(?<word>\\w+)";
+        var input = "one two three";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "${word}!");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "${word}!");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementEscapedCharacters(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "test123value";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            // Test escaping $ and \ in replacement
+            javaMatcher.appendReplacement(javaSb, "\\$\\\\");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "\\$\\\\");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementLiteralText(IPcre2 api) {
+        var regex = "world";
+        var input = "hello world!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "universe");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "universe");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendTailOnly(IPcre2 api) {
+        var regex = "xyz";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        // No matches, just call appendTail
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementNoMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "hello world";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var sb = new StringBuilder();
+
+        // Calling appendReplacement without a match should throw
+        assertThrows(IllegalStateException.class, () -> pcre4jMatcher.appendReplacement(sb, "test"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementMultipleGroups(IPcre2 api) {
+        var regex = "(\\w)(\\w)(\\w)";
+        var input = "abc def ghi";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "$3$2$1");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "$3$2$1");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementGroupZero(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "[$0]");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "[$0]");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void appendReplacementUnicode(IPcre2 api) {
+        var regex = "🌐";
+        var input = "hello 🌐 world 🌐!";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, "🌍");
+            pcre4jMatcher.appendReplacement(pcre4jSb, "🌍");
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
 }

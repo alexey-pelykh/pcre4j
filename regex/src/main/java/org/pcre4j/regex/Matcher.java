@@ -21,6 +21,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims
@@ -81,6 +82,12 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private int[] lastMatchIndices;
 
+    /**
+     * The position in the input from which to start the next append operation.
+     * Used by {@link #appendReplacement} and {@link #appendTail}.
+     */
+    private int appendPos;
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
@@ -98,13 +105,194 @@ public class Matcher implements java.util.regex.MatchResult {
         reset();
     }
 
-    // TODO: appendReplacement(StringBuffer sb, String replacement)
+    /**
+     * Implements a non-terminal append-and-replace step.
+     * <p>
+     * This method performs the following actions:
+     * <ol>
+     * <li>It reads characters from the input sequence, starting at the append position, and appends them to the
+     *     given string buffer. It stops after reading the last character preceding the previous match.</li>
+     * <li>It appends the given replacement string to the string buffer.</li>
+     * <li>It sets the append position of this matcher to the index of the last character matched, plus one.</li>
+     * </ol>
+     * <p>
+     * The replacement string may contain references to captured subsequences: {@code $g} or {@code ${g}} refers to
+     * capturing group {@code g}; {@code ${name}} refers to a named-capturing group. Use {@code \\} to include a
+     * literal backslash and {@code \$} to include a literal dollar sign.
+     *
+     * @param sb          the target string buffer
+     * @param replacement the replacement string
+     * @return this matcher
+     * @throws IllegalStateException if no match has yet been attempted, or if the previous match operation failed
+     */
+    public Matcher appendReplacement(StringBuffer sb, String replacement) {
+        if (!hasMatch()) {
+            throw new IllegalStateException("No match available");
+        }
+        // Append text between last append position and start of match
+        sb.append(input, appendPos, start());
+        // Process and append replacement string
+        appendReplacementInternal(sb, replacement);
+        // Update append position to end of current match
+        appendPos = end();
+        return this;
+    }
 
-    // TODO: appendReplacement(StringBuilder sb, String replacement)
+    /**
+     * Implements a non-terminal append-and-replace step.
+     * <p>
+     * This method performs the following actions:
+     * <ol>
+     * <li>It reads characters from the input sequence, starting at the append position, and appends them to the
+     *     given string builder. It stops after reading the last character preceding the previous match.</li>
+     * <li>It appends the given replacement string to the string builder.</li>
+     * <li>It sets the append position of this matcher to the index of the last character matched, plus one.</li>
+     * </ol>
+     * <p>
+     * The replacement string may contain references to captured subsequences: {@code $g} or {@code ${g}} refers to
+     * capturing group {@code g}; {@code ${name}} refers to a named-capturing group. Use {@code \\} to include a
+     * literal backslash and {@code \$} to include a literal dollar sign.
+     *
+     * @param sb          the target string builder
+     * @param replacement the replacement string
+     * @return this matcher
+     * @throws IllegalStateException if no match has yet been attempted, or if the previous match operation failed
+     */
+    public Matcher appendReplacement(StringBuilder sb, String replacement) {
+        if (!hasMatch()) {
+            throw new IllegalStateException("No match available");
+        }
+        // Append text between last append position and start of match
+        sb.append(input, appendPos, start());
+        // Process and append replacement string
+        appendReplacementInternal(sb, replacement);
+        // Update append position to end of current match
+        appendPos = end();
+        return this;
+    }
 
-    // TODO: appendTail(StringBuffer sb)
+    /**
+     * Process the replacement string and append to the given Appendable.
+     * Handles group references: $1, ${1}, ${name}
+     */
+    private void appendReplacementInternal(Appendable sb, String replacement) {
+        int cursor = 0;
+        final int len = replacement.length();
 
-    // TODO: appendTail(StringBuilder sb)
+        try {
+            while (cursor < len) {
+                char c = replacement.charAt(cursor);
+                if (c == '\\') {
+                    cursor++;
+                    if (cursor >= len) {
+                        throw new IllegalArgumentException("Illegal escape sequence at end of replacement string");
+                    }
+                    sb.append(replacement.charAt(cursor));
+                    cursor++;
+                } else if (c == '$') {
+                    cursor++;
+                    if (cursor >= len) {
+                        throw new IllegalArgumentException("Illegal group reference at end of replacement string");
+                    }
+                    c = replacement.charAt(cursor);
+                    if (c == '{') {
+                        // Named or numbered group reference: ${name} or ${number}
+                        cursor++;
+                        int start = cursor;
+                        while (cursor < len && replacement.charAt(cursor) != '}') {
+                            cursor++;
+                        }
+                        if (cursor >= len) {
+                            throw new IllegalArgumentException("Unclosed group reference");
+                        }
+                        final String groupRef = replacement.substring(start, cursor);
+                        cursor++; // skip '}'
+                        if (groupRef.isEmpty()) {
+                            throw new IllegalArgumentException("Empty group reference");
+                        }
+                        // Try to parse as number first
+                        String groupValue;
+                        if (Character.isDigit(groupRef.charAt(0))) {
+                            int groupNum = Integer.parseInt(groupRef);
+                            if (groupNum > groupCount()) {
+                                throw new IndexOutOfBoundsException("No group " + groupNum);
+                            }
+                            groupValue = group(groupNum);
+                        } else {
+                            groupValue = group(groupRef);
+                        }
+                        if (groupValue != null) {
+                            sb.append(groupValue);
+                        }
+                    } else if (Character.isDigit(c)) {
+                        // Numbered group reference: $1, $12, etc.
+                        int groupNum = c - '0';
+                        cursor++;
+                        // Greedily consume more digits to get the full group number
+                        // but only if the resulting number is a valid group
+                        while (cursor < len) {
+                            char nextChar = replacement.charAt(cursor);
+                            if (!Character.isDigit(nextChar)) {
+                                break;
+                            }
+                            int nextGroupNum = groupNum * 10 + (nextChar - '0');
+                            if (nextGroupNum > groupCount()) {
+                                break;
+                            }
+                            groupNum = nextGroupNum;
+                            cursor++;
+                        }
+                        if (groupNum > groupCount()) {
+                            throw new IndexOutOfBoundsException("No group " + groupNum);
+                        }
+                        String groupValue = group(groupNum);
+                        if (groupValue != null) {
+                            sb.append(groupValue);
+                        }
+                    } else {
+                        throw new IllegalArgumentException(
+                                "Illegal group reference: character '" + c + "' after '$'"
+                        );
+                    }
+                } else {
+                    sb.append(c);
+                    cursor++;
+                }
+            }
+        } catch (java.io.IOException e) {
+            throw new RuntimeException("IOException during append", e);
+        }
+    }
+
+    /**
+     * Implements a terminal append-and-replace step.
+     * <p>
+     * This method reads characters from the input sequence, starting at the append position, and appends them
+     * to the given string buffer. It is intended to be invoked after one or more invocations of the
+     * {@link #appendReplacement(StringBuffer, String)} method to copy the remainder of the input sequence.
+     *
+     * @param sb the target string buffer
+     * @return the target string buffer
+     */
+    public StringBuffer appendTail(StringBuffer sb) {
+        sb.append(input, appendPos, regionEnd);
+        return sb;
+    }
+
+    /**
+     * Implements a terminal append-and-replace step.
+     * <p>
+     * This method reads characters from the input sequence, starting at the append position, and appends them
+     * to the given string builder. It is intended to be invoked after one or more invocations of the
+     * {@link #appendReplacement(StringBuilder, String)} method to copy the remainder of the input sequence.
+     *
+     * @param sb the target string builder
+     * @return the target string builder
+     */
+    public StringBuilder appendTail(StringBuilder sb) {
+        sb.append(input, appendPos, regionEnd);
+        return sb;
+    }
 
     /**
      * Returns the end index of the most recent match
@@ -384,7 +572,32 @@ public class Matcher implements java.util.regex.MatchResult {
         return pattern;
     }
 
-    // TODO: quoteReplacement(String s)
+    /**
+     * Returns a literal replacement string for the specified string.
+     * <p>
+     * This method produces a string that can be used as a literal replacement in methods like
+     * {@link #appendReplacement} and {@link #replaceAll}. The string produced will match the
+     * original string if treated as a literal sequence.
+     * <p>
+     * Special characters {@code \} and {@code $} will be escaped by prepending a {@code \}.
+     *
+     * @param s the string to be literalized
+     * @return a literal string replacement
+     */
+    public static String quoteReplacement(String s) {
+        if (s.indexOf('\\') == -1 && s.indexOf('$') == -1) {
+            return s;
+        }
+        final var sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            final var c = s.charAt(i);
+            if (c == '\\' || c == '$') {
+                sb.append('\\');
+            }
+            sb.append(c);
+        }
+        return sb.toString();
+    }
 
     /**
      * Sets the region of the input that this matcher uses to match against the pattern
@@ -424,13 +637,104 @@ public class Matcher implements java.util.regex.MatchResult {
         return regionStart;
     }
 
-    // TODO: replaceAll(String replacement)
+    /**
+     * Replaces every subsequence of the input sequence that matches the pattern with the given replacement string.
+     * <p>
+     * This method first resets the matcher, then scans through the input sequence looking for matches. Characters
+     * that are not part of any match are left unchanged; each match is replaced with the replacement string.
+     * <p>
+     * The replacement string may contain references to captured subsequences: {@code $g} or {@code ${g}} refers to
+     * capturing group {@code g}; {@code ${name}} refers to a named-capturing group. Use {@code \\} to include a
+     * literal backslash and {@code \$} to include a literal dollar sign.
+     *
+     * @param replacement the replacement string
+     * @return the string resulting from replacing every match with the replacement string
+     */
+    public String replaceAll(String replacement) {
+        reset();
+        return pattern.code.substitute(
+                input.substring(regionStart, regionEnd),
+                0,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL, Pcre2SubstituteOption.EXTENDED),
+                null,
+                matchContext,
+                replacement
+        );
+    }
 
-    // TODO: replaceAll(Function<MatchResult,String> replacer)
+    /**
+     * Replaces every subsequence of the input sequence that matches the pattern with the result of applying
+     * the given replacer function to the match result.
+     * <p>
+     * This method first resets the matcher. Each match is replaced with the result of calling
+     * {@code replacer.apply(this)} with the matcher positioned at the match.
+     *
+     * @param replacer the function to apply to each match
+     * @return the string resulting from replacing every match with the replacer function's result
+     * @throws NullPointerException if replacer is null
+     */
+    public String replaceAll(Function<java.util.regex.MatchResult, String> replacer) {
+        if (replacer == null) {
+            throw new NullPointerException("replacer");
+        }
+        reset();
+        final var sb = new StringBuilder();
+        while (find()) {
+            appendReplacement(sb, replacer.apply(this));
+        }
+        appendTail(sb);
+        return sb.toString();
+    }
 
-    // TODO: replaceFirst(String replacement)
+    /**
+     * Replaces the first subsequence of the input sequence that matches the pattern with the given replacement string.
+     * <p>
+     * This method first resets the matcher. If the pattern matches, the first match is replaced with the
+     * replacement string. Characters that are not part of the match are left unchanged.
+     * <p>
+     * The replacement string may contain references to captured subsequences: {@code $g} or {@code ${g}} refers to
+     * capturing group {@code g}; {@code ${name}} refers to a named-capturing group. Use {@code \\} to include a
+     * literal backslash and {@code \$} to include a literal dollar sign.
+     *
+     * @param replacement the replacement string
+     * @return the string resulting from replacing the first match with the replacement string
+     */
+    public String replaceFirst(String replacement) {
+        reset();
+        return pattern.code.substitute(
+                input.substring(regionStart, regionEnd),
+                0,
+                EnumSet.of(Pcre2SubstituteOption.EXTENDED),
+                null,
+                matchContext,
+                replacement
+        );
+    }
 
-    // TODO: replaceFirst(Function<MatchResult,String> replacer)
+    /**
+     * Replaces the first subsequence of the input sequence that matches the pattern with the result of applying
+     * the given replacer function to the match result.
+     * <p>
+     * This method first resets the matcher. If the pattern matches, the first match is replaced with the result
+     * of calling {@code replacer.apply(this)} with the matcher positioned at the match.
+     *
+     * @param replacer the function to apply to the match
+     * @return the string resulting from replacing the first match with the replacer function's result
+     * @throws NullPointerException if replacer is null
+     */
+    public String replaceFirst(Function<java.util.regex.MatchResult, String> replacer) {
+        if (replacer == null) {
+            throw new NullPointerException("replacer");
+        }
+        reset();
+        if (!find()) {
+            return input.substring(regionStart, regionEnd);
+        }
+        final var sb = new StringBuilder();
+        appendReplacement(sb, replacer.apply(this));
+        appendTail(sb);
+        return sb.toString();
+    }
 
     // TODO: requireEnd()
 
@@ -444,6 +748,7 @@ public class Matcher implements java.util.regex.MatchResult {
         regionEnd = input.length();
         lastMatchData = null;
         lastMatchIndices = null;
+        appendPos = 0;
         return this;
     }
 
