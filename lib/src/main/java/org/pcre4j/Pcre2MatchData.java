@@ -188,6 +188,60 @@ public class Pcre2MatchData {
         }
     }
 
+    /**
+     * Extract a captured substring by its group name.
+     * <p>
+     * The substring is extracted from the match result stored in this match data using the name of a named capturing
+     * group defined in the pattern with the {@code (?<name>...)} syntax.
+     * <p>
+     * <b>Important:</b> When calling {@link Pcre2Code#match} before using this method, you must use the
+     * {@link Pcre2MatchOption#COPY_MATCHED_SUBJECT} option. Without this option, PCRE2 stores only a pointer to the
+     * original subject string, which may be garbage collected by the JVM before this method is called, resulting in
+     * undefined behavior or corrupted data.
+     *
+     * @param name the name of the capturing group
+     * @return the extracted substring as a byte array (UTF-8 encoded)
+     * @throws IllegalArgumentException if the name is null
+     * @throws IndexOutOfBoundsException if there are no groups of that name
+     * @throws IllegalStateException if the ovector was too small for that group, the group did not participate in
+     *                               the match, or memory could not be allocated
+     */
+    public byte[] getSubstring(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final var bufferptr = new long[1];
+        final var bufflen = new long[1];
+        final var result = api.substringGetByName(handle, name, bufferptr, bufflen);
+
+        if (result == 0) {
+            try {
+                return api.readBytes(bufferptr[0], (int) bufflen[0]);
+            } finally {
+                api.substringFree(bufferptr[0]);
+            }
+        }
+
+        switch (result) {
+            case IPcre2.ERROR_NOSUBSTRING -> throw new IndexOutOfBoundsException(
+                    "No group of name '" + name + "'"
+            );
+            case IPcre2.ERROR_UNAVAILABLE -> throw new IllegalStateException(
+                    "The ovector was too small for group '" + name + "'"
+            );
+            case IPcre2.ERROR_UNSET -> throw new IllegalStateException(
+                    "Group '" + name + "' did not participate in the match"
+            );
+            case IPcre2.ERROR_NOMEMORY -> throw new IllegalStateException(
+                    "Memory could not be allocated for substring extraction"
+            );
+            default -> throw new IllegalStateException(
+                    "Unexpected error extracting substring: " + result
+            );
+        }
+    }
+
     private record Clean(IPcre2 api, long matchData) implements Runnable {
         @Override
         public void run() {

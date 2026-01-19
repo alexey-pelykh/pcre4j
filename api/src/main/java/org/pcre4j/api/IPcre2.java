@@ -1028,7 +1028,23 @@ public interface IPcre2 {
     public int substringGetByNumber(long matchData, int number, long[] bufferptr, long[] bufflen);
 
     /**
-     * Free memory that was allocated by {@link #substringGetByNumber}.
+     * Extract a captured substring by its name into newly allocated memory.
+     *
+     * @param matchData the match data handle from a successful match
+     * @param name      the name of the capturing group
+     * @param bufferptr an array of length 1 to receive the pointer to the allocated string
+     * @param bufflen   an array of length 1 to receive the length of the string (in code units, excluding null)
+     * @return zero on success, otherwise a negative error code:
+     * {@link #ERROR_NOSUBSTRING} there are no groups of that name
+     * {@link #ERROR_UNAVAILABLE} the ovector was too small for that group
+     * {@link #ERROR_UNSET} the group did not participate in the match
+     * {@link #ERROR_NOMEMORY} memory could not be obtained
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_get_byname.html">pcre2_substring_get_byname</a>
+     */
+    public int substringGetByName(long matchData, String name, long[] bufferptr, long[] bufflen);
+
+    /**
+     * Free memory that was allocated by {@link #substringGetByNumber} or {@link #substringGetByName}.
      *
      * @param buffer the pointer to the string to free (may be 0, in which case the function does nothing)
      * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_free.html">pcre2_substring_free</a>
