@@ -452,6 +452,53 @@ public class Pcre2 implements IPcre2 {
         return result;
     }
 
+    @Override
+    public int substringGetByNumber(long matchData, int number, long[] bufferptr, long[] bufflen) {
+        if (bufferptr == null || bufferptr.length < 1) {
+            throw new IllegalArgumentException("bufferptr must be an array of length 1");
+        }
+        if (bufflen == null || bufflen.length < 1) {
+            throw new IllegalArgumentException("bufflen must be an array of length 1");
+        }
+
+        final var pMatchData = new Pointer(matchData);
+        final var bufferPtrRef = new PointerByReference();
+        final var buffLenRef = new LongByReference();
+
+        final var result = library.pcre2_substring_get_bynumber(
+                pMatchData,
+                number,
+                bufferPtrRef,
+                buffLenRef
+        );
+
+        bufferptr[0] = Pointer.nativeValue(bufferPtrRef.getValue());
+        bufflen[0] = buffLenRef.getValue();
+
+        return result;
+    }
+
+    @Override
+    public void substringFree(long buffer) {
+        final var pBuffer = new Pointer(buffer);
+        library.pcre2_substring_free(pBuffer);
+    }
+
+    @Override
+    public byte[] readBytes(long pointer, int length) {
+        if (length < 0) {
+            throw new IllegalArgumentException("length must not be negative");
+        }
+        if (length == 0) {
+            return new byte[0];
+        }
+
+        final var pBuffer = new Pointer(pointer);
+        final var bytes = new byte[length];
+        pBuffer.read(0, bytes, 0, length);
+        return bytes;
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -526,6 +573,15 @@ public class Pcre2 implements IPcre2 {
                 Pointer outputbuffer,
                 LongByReference outlengthptr
         );
+
+        int pcre2_substring_get_bynumber(
+                Pointer matchData,
+                int number,
+                PointerByReference bufferptr,
+                LongByReference bufflen
+        );
+
+        void pcre2_substring_free(Pointer buffer);
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {

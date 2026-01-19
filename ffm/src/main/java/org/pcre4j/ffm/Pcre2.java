@@ -68,6 +68,9 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_substitute;
 
+    private final MethodHandle pcre2_substring_get_bynumber;
+    private final MethodHandle pcre2_substring_free;
+
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
      */
@@ -327,6 +330,23 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // PCRE2_SIZE rlength
                         ValueLayout.ADDRESS, // PCRE2_UCHAR* outputbuffer
                         ValueLayout.ADDRESS  // PCRE2_SIZE* outlengthptr
+                )
+        );
+
+        pcre2_substring_get_bynumber = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_get_bynumber" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.JAVA_INT, // uint32_t number
+                        ValueLayout.ADDRESS, // PCRE2_UCHAR** bufferptr
+                        ValueLayout.ADDRESS  // PCRE2_SIZE* bufflen
+                )
+        );
+
+        pcre2_substring_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // PCRE2_UCHAR* buffer
                 )
         );
     }
@@ -965,5 +985,61 @@ public class Pcre2 implements IPcre2 {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public int substringGetByNumber(long matchData, int number, long[] bufferptr, long[] bufflen) {
+        if (bufferptr == null || bufferptr.length < 1) {
+            throw new IllegalArgumentException("bufferptr must be an array of length 1");
+        }
+        if (bufflen == null || bufflen.length < 1) {
+            throw new IllegalArgumentException("bufflen must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pBufferPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
+            final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+
+            final var result = (int) pcre2_substring_get_bynumber.invokeExact(
+                    pMatchData,
+                    number,
+                    pBufferPtr,
+                    pBuffLen
+            );
+
+            bufferptr[0] = pBufferPtr.get(ValueLayout.ADDRESS, 0).address();
+            bufflen[0] = pBuffLen.get(ValueLayout.JAVA_LONG, 0);
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void substringFree(long buffer) {
+        try {
+            final var pBuffer = MemorySegment.ofAddress(buffer);
+
+            pcre2_substring_free.invokeExact(
+                    pBuffer
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public byte[] readBytes(long pointer, int length) {
+        if (length < 0) {
+            throw new IllegalArgumentException("length must not be negative");
+        }
+        if (length == 0) {
+            return new byte[0];
+        }
+
+        final var segment = MemorySegment.ofAddress(pointer).reinterpret(length);
+        return segment.toArray(ValueLayout.JAVA_BYTE);
     }
 }
