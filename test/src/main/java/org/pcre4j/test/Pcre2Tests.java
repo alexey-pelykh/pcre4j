@@ -20,8 +20,11 @@ import org.pcre4j.api.IPcre2;
 
 import java.util.EnumSet;
 
+import java.nio.charset.StandardCharsets;
+
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * {@link IPcre2} implementation tests.
@@ -511,6 +514,154 @@ public abstract class Pcre2Tests {
                 "0"
         );
         assertEquals("hello w0rld", result);
+    }
+
+    @Test
+    public void getSubstringEntireMatch() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var substring = matchData.getSubstring(0);
+        assertEquals("hello", new String(substring, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringCapturingGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        final var group0 = matchData.getSubstring(0);
+        assertEquals("hello world", new String(group0, StandardCharsets.UTF_8));
+
+        final var group1 = matchData.getSubstring(1);
+        assertEquals("hello", new String(group1, StandardCharsets.UTF_8));
+
+        final var group2 = matchData.getSubstring(2);
+        assertEquals("world", new String(group2, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "(🌐+)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello 🌐🌐🌐 world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var group0 = matchData.getSubstring(0);
+        assertEquals("🌐🌐🌐", new String(group0, StandardCharsets.UTF_8));
+
+        final var group1 = matchData.getSubstring(1);
+        assertEquals("🌐🌐🌐", new String(group1, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void getSubstringNegativeNumber() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.getSubstring(-1));
+    }
+
+    @Test
+    public void getSubstringInvalidGroupNumber() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstring(99));
+    }
+
+    @Test
+    public void getSubstringUnsetGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(a)|(b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var group1 = matchData.getSubstring(1);
+        assertEquals("a", new String(group1, StandardCharsets.UTF_8));
+
+        // Group 2 did not participate in the match
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstring(2));
     }
 
 }

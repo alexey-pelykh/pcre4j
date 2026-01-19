@@ -1010,4 +1010,39 @@ public interface IPcre2 {
             ByteBuffer outputbuffer,
             long[] outputlength
     );
+
+    /**
+     * Extract a captured substring by its number into newly allocated memory.
+     *
+     * @param matchData the match data handle from a successful match
+     * @param number    the group number (0 = entire match)
+     * @param bufferptr an array of length 1 to receive the pointer to the allocated string
+     * @param bufflen   an array of length 1 to receive the length of the string (in code units, excluding null)
+     * @return zero on success, otherwise a negative error code:
+     * {@link #ERROR_NOSUBSTRING} there are no groups of that number
+     * {@link #ERROR_UNAVAILABLE} the ovector was too small for that group
+     * {@link #ERROR_UNSET} the group did not participate in the match
+     * {@link #ERROR_NOMEMORY} memory could not be obtained
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_get_bynumber.html">pcre2_substring_get_bynumber</a>
+     */
+    public int substringGetByNumber(long matchData, int number, long[] bufferptr, long[] bufflen);
+
+    /**
+     * Free memory that was allocated by {@link #substringGetByNumber}.
+     *
+     * @param buffer the pointer to the string to free (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_free.html">pcre2_substring_free</a>
+     */
+    public void substringFree(long buffer);
+
+    /**
+     * Read bytes from a native memory pointer.
+     * <p>
+     * This is a utility method used internally to read string data from native memory.
+     *
+     * @param pointer the native memory pointer
+     * @param length  the number of bytes to read
+     * @return the bytes read from the pointer
+     */
+    public byte[] readBytes(long pointer, int length);
 }

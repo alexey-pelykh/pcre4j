@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -132,6 +132,60 @@ public class Pcre2MatchData {
         final var ovector = new long[api.getOvectorCount(handle) * 2];
         api.getOvector(handle, ovector);
         return ovector;
+    }
+
+    /**
+     * Extract a captured substring by its group number.
+     * <p>
+     * The substring is extracted from the match result stored in this match data. Group 0 represents the entire match,
+     * and groups 1 and higher represent capturing groups.
+     * <p>
+     * <b>Important:</b> When calling {@link Pcre2Code#match} before using this method, you must use the
+     * {@link Pcre2MatchOption#COPY_MATCHED_SUBJECT} option. Without this option, PCRE2 stores only a pointer to the
+     * original subject string, which may be garbage collected by the JVM before this method is called, resulting in
+     * undefined behavior or corrupted data.
+     *
+     * @param number the group number (0 = entire match, 1+ = capturing groups)
+     * @return the extracted substring as a byte array (UTF-8 encoded)
+     * @throws IllegalArgumentException if the group number is negative
+     * @throws IndexOutOfBoundsException if there are no groups of that number
+     * @throws IllegalStateException if the ovector was too small for that group, the group did not participate in
+     *                               the match, or memory could not be allocated
+     */
+    public byte[] getSubstring(int number) {
+        if (number < 0) {
+            throw new IllegalArgumentException("number must not be negative");
+        }
+
+        final var bufferptr = new long[1];
+        final var bufflen = new long[1];
+        final var result = api.substringGetByNumber(handle, number, bufferptr, bufflen);
+
+        if (result == 0) {
+            try {
+                return api.readBytes(bufferptr[0], (int) bufflen[0]);
+            } finally {
+                api.substringFree(bufferptr[0]);
+            }
+        }
+
+        switch (result) {
+            case IPcre2.ERROR_NOSUBSTRING -> throw new IndexOutOfBoundsException(
+                    "No group of number " + number
+            );
+            case IPcre2.ERROR_UNAVAILABLE -> throw new IllegalStateException(
+                    "The ovector was too small for group " + number
+            );
+            case IPcre2.ERROR_UNSET -> throw new IllegalStateException(
+                    "Group " + number + " did not participate in the match"
+            );
+            case IPcre2.ERROR_NOMEMORY -> throw new IllegalStateException(
+                    "Memory could not be allocated for substring extraction"
+            );
+            default -> throw new IllegalStateException(
+                    "Unexpected error extracting substring: " + result
+            );
+        }
     }
 
     private record Clean(IPcre2 api, long matchData) implements Runnable {
