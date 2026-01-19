@@ -1140,4 +1140,62 @@ public abstract class Pcre2Tests {
         assertEquals(5000, code.heapLimit());
     }
 
+    @Test
+    public void matchWithEmbeddedHeapLimitCausesHeapLimitError() {
+        // Use a pattern with embedded heap limit and disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        // (*NO_AUTO_POSSESS) and (*NO_START_OPT) disable optimizations that
+        // would normally make the match efficient.
+        final var code = new Pcre2Code(
+                api,
+                "(*LIMIT_HEAP=1)(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces extensive backtracking that requires heap memory
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        // The match should fail with HEAPLIMIT error due to heap memory exhaustion
+        assertEquals(IPcre2.ERROR_HEAPLIMIT, result);
+    }
+
+    @Test
+    public void matchWithContextHeapLimitCausesHeapLimitError() {
+        // A pattern that requires extensive backtracking - disable PCRE2 optimizations
+        // that would otherwise prevent catastrophic backtracking.
+        final var code = new Pcre2Code(
+                api,
+                "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Create a match context with a very low heap limit
+        final var matchContext = new Pcre2MatchContext(api, null);
+        matchContext.setHeapLimit(1); // 1 KiB - very low limit
+
+        // Match against a string that cannot match (ends with 'b' not matching '$' after 'a's)
+        // This forces extensive backtracking that requires heap memory
+        final var result = code.match(
+                "aaaaaaaaaaaaaaaaaaaaaaaab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext
+        );
+
+        // The match should fail with HEAPLIMIT error due to heap memory exhaustion
+        assertEquals(IPcre2.ERROR_HEAPLIMIT, result);
+    }
+
 }
