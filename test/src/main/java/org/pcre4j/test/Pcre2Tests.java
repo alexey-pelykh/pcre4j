@@ -832,4 +832,94 @@ public abstract class Pcre2Tests {
         assertEquals("hello", new String(num, StandardCharsets.UTF_8));
     }
 
+    @Test
+    public void groupNumberFromNameSingle() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var groupNumber = code.groupNumberFromName("word");
+        assertEquals(1, groupNumber);
+    }
+
+    @Test
+    public void groupNumberFromNameMultiple() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>\\w+) (?<second>\\w+) (?<third>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertEquals(1, code.groupNumberFromName("first"));
+        assertEquals(2, code.groupNumberFromName("second"));
+        assertEquals(3, code.groupNumberFromName("third"));
+    }
+
+    @Test
+    public void groupNumberFromNameNonexistent() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertThrows(Pcre2NoSubstringError.class, () -> code.groupNumberFromName("nonexistent"));
+    }
+
+    @Test
+    public void groupNumberFromNameNull() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> code.groupNumberFromName(null));
+    }
+
+    @Test
+    public void groupNumberFromNameDuplicateNames() {
+        // DUPNAMES option allows duplicate named groups, but querying returns non-unique error
+        final var code = new Pcre2Code(
+                api,
+                "(?<num>\\d+)|(?<num>\\w+)",
+                EnumSet.of(Pcre2CompileOption.DUPNAMES),
+                null
+        );
+
+        assertThrows(Pcre2NoUniqueSubstringError.class, () -> code.groupNumberFromName("num"));
+    }
+
+    @Test
+    public void groupNumberFromNameWithUnderscore() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<my_group_name>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var groupNumber = code.groupNumberFromName("my_group_name");
+        assertEquals(1, groupNumber);
+    }
+
+    @Test
+    public void groupNumberFromNameWithDigits() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<group123>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var groupNumber = code.groupNumberFromName("group123");
+        assertEquals(1, groupNumber);
+    }
+
 }

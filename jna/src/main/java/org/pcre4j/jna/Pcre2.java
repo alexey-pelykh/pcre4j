@@ -518,6 +518,21 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringNumberFromName(long code, String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final var pCode = new Pointer(code);
+        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
+        pszName[nameBytes.length] = 0; // null terminator
+
+        return library.pcre2_substring_number_from_name(pCode, pszName);
+    }
+
+    @Override
     public byte[] readBytes(long pointer, int length) {
         if (length < 0) {
             throw new IllegalArgumentException("length must not be negative");
@@ -622,6 +637,8 @@ public class Pcre2 implements IPcre2 {
         );
 
         void pcre2_substring_free(Pointer buffer);
+
+        int pcre2_substring_number_from_name(Pointer code, byte[] name);
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {
