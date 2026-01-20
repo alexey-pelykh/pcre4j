@@ -1221,6 +1221,30 @@ public interface IPcre2 {
     public int substringNumberFromName(long code, String name);
 
     /**
+     * Find the first and last name table entries for a given capture group name.
+     * <p>
+     * This function locates entries in the name-to-number mapping table for named capture groups.
+     * When duplicate names are allowed (via DUPNAMES option), a name may map to multiple group numbers.
+     * This function returns pointers to the first and last table entries for the given name.
+     * <p>
+     * Each entry in the name table consists of a fixed-size record containing the group number followed by
+     * the null-terminated name. The entry size can be obtained via {@link #patternInfo} with
+     * {@link #INFO_NAMEENTRYSIZE}.
+     *
+     * @param code  the compiled pattern handle
+     * @param name  the name of the capturing group to look up
+     * @param first an array of length 1 to receive the pointer to the first matching entry,
+     *              or null to just get a group number (returns any matching group number)
+     * @param last  an array of length 1 to receive the pointer to the last matching entry,
+     *              or null if not needed
+     * @return On success: the length of each entry in code units (when first is not null),
+     *         or a group number (when first is null and the name is found).
+     *         On failure: {@link #ERROR_NOSUBSTRING} if the name is not found
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_nametable_scan.html">pcre2_substring_nametable_scan</a>
+     */
+    public int substringNametableScan(long code, String name, long[] first, long[] last);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.

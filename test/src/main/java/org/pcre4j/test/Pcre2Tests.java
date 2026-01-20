@@ -1439,6 +1439,85 @@ public abstract class Pcre2Tests {
     }
 
     @Test
+    public void scanNametableSingle() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        final var groupNumbers = code.scanNametable("word");
+        assertArrayEquals(new int[]{1}, groupNumbers);
+    }
+
+    @Test
+    public void scanNametableMultipleGroups() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>\\w+) (?<second>\\w+) (?<third>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertArrayEquals(new int[]{1}, code.scanNametable("first"));
+        assertArrayEquals(new int[]{2}, code.scanNametable("second"));
+        assertArrayEquals(new int[]{3}, code.scanNametable("third"));
+    }
+
+    @Test
+    public void scanNametableDuplicateNames() {
+        // DUPNAMES option allows duplicate named groups
+        final var code = new Pcre2Code(
+                api,
+                "(?<num>\\d+)|(?<num>\\w+)",
+                EnumSet.of(Pcre2CompileOption.DUPNAMES),
+                null
+        );
+
+        final var groupNumbers = code.scanNametable("num");
+        assertArrayEquals(new int[]{1, 2}, groupNumbers);
+    }
+
+    @Test
+    public void scanNametableMultipleDuplicateNames() {
+        // Multiple duplicate named groups
+        final var code = new Pcre2Code(
+                api,
+                "(?<a>a)|(?<b>b)|(?<a>aa)|(?<b>bb)|(?<a>aaa)",
+                EnumSet.of(Pcre2CompileOption.DUPNAMES),
+                null
+        );
+
+        assertArrayEquals(new int[]{1, 3, 5}, code.scanNametable("a"));
+        assertArrayEquals(new int[]{2, 4}, code.scanNametable("b"));
+    }
+
+    @Test
+    public void scanNametableNonexistent() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertThrows(Pcre2NoSubstringError.class, () -> code.scanNametable("nonexistent"));
+    }
+
+    @Test
+    public void scanNametableNull() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> code.scanNametable(null));
+    }
+
+    @Test
     public void setMatchLimitNegativeThrows() {
         final var matchContext = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> matchContext.setMatchLimit(-1));

@@ -74,5 +74,5 @@ Here's the list of the PCRE2 API functions exposed via `org.pcre4j.api.IPcre2` a
 | ✅ | [pcre2_substring_length_bynumber](https://www.pcre.org/current/doc/html/pcre2_substring_length_bynumber.html)             | Find length of numbered substring                                                 |
 | ✅ | [pcre2_substring_list_free](https://www.pcre.org/current/doc/html/pcre2_substring_list_free.html)                         | Free list of extracted substrings                                                 |
 | ✅ | [pcre2_substring_list_get](https://www.pcre.org/current/doc/html/pcre2_substring_list_get.html)                           | Extract all substrings into new memory                                            |
-|   | [pcre2_substring_nametable_scan](https://www.pcre.org/current/doc/html/pcre2_substring_nametable_scan.html)               | Find table entries for given string name                                          |
+| ✅ | [pcre2_substring_nametable_scan](https://www.pcre.org/current/doc/html/pcre2_substring_nametable_scan.html)               | Find table entries for given string name                                          |
 | ✅ | [pcre2_substring_number_from_name](https://www.pcre.org/current/doc/html/pcre2_substring_number_from_name.html)           | Convert captured string name to number                                            |

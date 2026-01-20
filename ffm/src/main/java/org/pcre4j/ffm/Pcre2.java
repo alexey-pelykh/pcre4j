@@ -82,6 +82,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_list_get;
     private final MethodHandle pcre2_substring_list_free;
     private final MethodHandle pcre2_substring_number_from_name;
+    private final MethodHandle pcre2_substring_nametable_scan;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -463,6 +464,16 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_code*
                         ValueLayout.ADDRESS  // PCRE2_SPTR name
+                )
+        );
+
+        pcre2_substring_nametable_scan = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_nametable_scan" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // const pcre2_code *code
+                        ValueLayout.ADDRESS, // PCRE2_SPTR name
+                        ValueLayout.ADDRESS, // PCRE2_SPTR *first
+                        ValueLayout.ADDRESS  // PCRE2_SPTR *last
                 )
         );
     }
@@ -1443,6 +1454,45 @@ public class Pcre2 implements IPcre2 {
                     pCode,
                     pszName
             );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substringNametableScan(long code, String name, long[] first, long[] last) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pszName = arena.allocateUtf8String(name);
+
+            final var pFirst = first != null
+                    ? arena.allocate(ValueLayout.ADDRESS)
+                    : MemorySegment.NULL;
+            final var pLast = last != null
+                    ? arena.allocate(ValueLayout.ADDRESS)
+                    : MemorySegment.NULL;
+
+            final var result = (int) pcre2_substring_nametable_scan.invokeExact(
+                    pCode,
+                    pszName,
+                    pFirst,
+                    pLast
+            );
+
+            if (result >= 0) {
+                if (first != null) {
+                    first[0] = pFirst.get(ValueLayout.ADDRESS, 0).address();
+                }
+                if (last != null) {
+                    last[0] = pLast.get(ValueLayout.ADDRESS, 0).address();
+                }
+            }
+
+            return result;
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
