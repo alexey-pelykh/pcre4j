@@ -1892,4 +1892,190 @@ public abstract class Pcre2Tests {
         api.codeFree(code);
     }
 
+    @Test
+    public void getSubstringLengthEntireMatch() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var length = matchData.getSubstringLength(0);
+        assertEquals(5, length);
+    }
+
+    @Test
+    public void getSubstringLengthCapturingGroups() {
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        assertEquals(11, matchData.getSubstringLength(0)); // "hello world"
+        assertEquals(5, matchData.getSubstringLength(1));  // "hello"
+        assertEquals(5, matchData.getSubstringLength(2));  // "world"
+    }
+
+    @Test
+    public void getSubstringLengthUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "(🌐+)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello 🌐🌐🌐 world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Each emoji is 4 bytes in UTF-8, 3 emojis = 12 bytes
+        final var length = matchData.getSubstringLength(0);
+        assertEquals(12, length);
+    }
+
+    @Test
+    public void getSubstringLengthNegativeNumber() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.getSubstringLength(-1));
+    }
+
+    @Test
+    public void getSubstringLengthNoGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstringLength(1));
+    }
+
+    @Test
+    public void getSubstringLengthUnsetGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(a)|(b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Group 1 matched "a"
+        assertEquals(1, matchData.getSubstringLength(1));
+
+        // Group 2 did not participate in the match
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstringLength(2));
+    }
+
+    @Test
+    public void substringLengthByNumberApiDirect() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0);
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+
+        final var result = api.match(code, "hello world", 0, 0, matchData, 0);
+        assertTrue(result > 0);
+
+        final var length = new long[1];
+        final var lengthResult = api.substringLengthByNumber(matchData, 0, length);
+        assertEquals(0, lengthResult);
+        assertEquals(5, length[0]);
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void substringLengthByNumberApiNullLength() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0);
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+
+        final var result = api.match(code, "hello world", 0, 0, matchData, 0);
+        assertTrue(result > 0);
+
+        // Calling with null length should still succeed (just checking existence)
+        final var lengthResult = api.substringLengthByNumber(matchData, 0, null);
+        assertEquals(0, lengthResult);
+
+        // Invalid group should fail even with null length
+        final var invalidResult = api.substringLengthByNumber(matchData, 99, null);
+        assertEquals(IPcre2.ERROR_NOSUBSTRING, invalidResult);
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
 }

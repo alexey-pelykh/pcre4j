@@ -1136,6 +1136,24 @@ public interface IPcre2 {
     public int substringCopyByName(long matchData, String name, ByteBuffer buffer, long[] bufflen);
 
     /**
+     * Get the length of a captured substring by its group number.
+     * <p>
+     * This allows querying substring length before allocation, enabling efficient buffer sizing for copy operations.
+     * After a partial match, only substring 0 is available.
+     *
+     * @param matchData the match data handle from a successful match
+     * @param number    the group number (0 = entire match)
+     * @param length    an array of length 1 to receive the length of the substring (in code units, excluding null),
+     *                  or null if only checking whether the substring exists
+     * @return zero on success, otherwise a negative error code:
+     * {@link #ERROR_NOSUBSTRING} there are no groups of that number
+     * {@link #ERROR_UNAVAILABLE} the ovector was too small for that group
+     * {@link #ERROR_UNSET} the group did not participate in the match
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_length_bynumber.html">pcre2_substring_length_bynumber</a>
+     */
+    public int substringLengthByNumber(long matchData, int number, long[] length);
+
+    /**
      * Free memory that was allocated by {@link #substringGetByNumber} or {@link #substringGetByName}.
      *
      * @param buffer the pointer to the string to free (may be 0, in which case the function does nothing)

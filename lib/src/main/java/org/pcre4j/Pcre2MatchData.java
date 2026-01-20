@@ -355,6 +355,47 @@ public class Pcre2MatchData {
         }
     }
 
+    /**
+     * Get the length of a captured substring by its group number.
+     * <p>
+     * This allows querying substring length before allocation, enabling efficient buffer sizing for copy operations.
+     * After a partial match, only substring 0 is available.
+     *
+     * @param number the group number (0 = entire match, 1+ = capturing groups)
+     * @return the length of the substring in code units (excluding the null terminator)
+     * @throws IllegalArgumentException if the group number is negative
+     * @throws IndexOutOfBoundsException if there are no groups of that number
+     * @throws IllegalStateException if the ovector was too small for that group or the group did not participate in
+     *                               the match
+     */
+    public long getSubstringLength(int number) {
+        if (number < 0) {
+            throw new IllegalArgumentException("number must not be negative");
+        }
+
+        final var length = new long[1];
+        final var result = api.substringLengthByNumber(handle, number, length);
+
+        if (result == 0) {
+            return length[0];
+        }
+
+        switch (result) {
+            case IPcre2.ERROR_NOSUBSTRING -> throw new IndexOutOfBoundsException(
+                    "No group of number " + number
+            );
+            case IPcre2.ERROR_UNAVAILABLE -> throw new IllegalStateException(
+                    "The ovector was too small for group " + number
+            );
+            case IPcre2.ERROR_UNSET -> throw new IllegalStateException(
+                    "Group " + number + " did not participate in the match"
+            );
+            default -> throw new IllegalStateException(
+                    "Unexpected error getting substring length: " + result
+            );
+        }
+    }
+
     private record Clean(IPcre2 api, long matchData) implements Runnable {
         @Override
         public void run() {

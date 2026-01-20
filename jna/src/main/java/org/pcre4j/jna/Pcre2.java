@@ -600,6 +600,24 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringLengthByNumber(long matchData, int number, long[] length) {
+        final var pMatchData = new Pointer(matchData);
+
+        if (length == null) {
+            return library.pcre2_substring_length_bynumber(pMatchData, number, null);
+        }
+
+        if (length.length < 1) {
+            throw new IllegalArgumentException("length must be an array of length 1");
+        }
+
+        final var lengthRef = new LongByReference();
+        final var result = library.pcre2_substring_length_bynumber(pMatchData, number, lengthRef);
+        length[0] = lengthRef.getValue();
+        return result;
+    }
+
+    @Override
     public void substringFree(long buffer) {
         final var pBuffer = new Pointer(buffer);
         library.pcre2_substring_free(pBuffer);
@@ -744,6 +762,12 @@ public class Pcre2 implements IPcre2 {
                 byte[] name,
                 Pointer buffer,
                 LongByReference bufflen
+        );
+
+        int pcre2_substring_length_bynumber(
+                Pointer matchData,
+                int number,
+                LongByReference length
         );
 
         void pcre2_substring_free(Pointer buffer);
