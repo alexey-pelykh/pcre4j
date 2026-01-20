@@ -17,6 +17,7 @@ package org.pcre4j;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
+import java.nio.ByteBuffer;
 
 /**
  * The match data where the results of the match are stored
@@ -238,6 +239,62 @@ public class Pcre2MatchData {
             );
             default -> throw new IllegalStateException(
                     "Unexpected error extracting substring: " + result
+            );
+        }
+    }
+
+    /**
+     * Copy a captured substring by its group number into a caller-provided buffer.
+     * <p>
+     * This is a zero-allocation alternative to {@link #getSubstring(int)} for performance-critical paths.
+     * The caller provides the buffer, and the method copies the substring into it.
+     * <p>
+     * <b>Important:</b> When calling {@link Pcre2Code#match} before using this method, you must use the
+     * {@link Pcre2MatchOption#COPY_MATCHED_SUBJECT} option. Without this option, PCRE2 stores only a pointer to the
+     * original subject string, which may be garbage collected by the JVM before this method is called, resulting in
+     * undefined behavior or corrupted data.
+     *
+     * @param number the group number (0 = entire match, 1+ = capturing groups)
+     * @param buffer a direct {@link ByteBuffer} to receive the extracted substring (must have sufficient capacity)
+     * @return the number of bytes written to the buffer (excluding the null terminator that PCRE2 appends)
+     * @throws IllegalArgumentException if the group number is negative, buffer is null, or buffer is not direct
+     * @throws IndexOutOfBoundsException if there are no groups of that number
+     * @throws IllegalStateException if the ovector was too small for that group, the group did not participate in
+     *                               the match, or the buffer is too small
+     */
+    public int copySubstring(int number, ByteBuffer buffer) {
+        if (number < 0) {
+            throw new IllegalArgumentException("number must not be negative");
+        }
+        if (buffer == null) {
+            throw new IllegalArgumentException("buffer must not be null");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer must be a direct ByteBuffer");
+        }
+
+        final var bufflen = new long[]{buffer.remaining()};
+        final var result = api.substringCopyByNumber(handle, number, buffer, bufflen);
+
+        if (result == 0) {
+            return (int) bufflen[0];
+        }
+
+        switch (result) {
+            case IPcre2.ERROR_NOSUBSTRING -> throw new IndexOutOfBoundsException(
+                    "No group of number " + number
+            );
+            case IPcre2.ERROR_UNAVAILABLE -> throw new IllegalStateException(
+                    "The ovector was too small for group " + number
+            );
+            case IPcre2.ERROR_UNSET -> throw new IllegalStateException(
+                    "Group " + number + " did not participate in the match"
+            );
+            case IPcre2.ERROR_NOMEMORY -> throw new IllegalStateException(
+                    "Buffer is too small for group " + number + " (need at least " + (bufflen[0] + 1) + " bytes)"
+            );
+            default -> throw new IllegalStateException(
+                    "Unexpected error copying substring: " + result
             );
         }
     }
