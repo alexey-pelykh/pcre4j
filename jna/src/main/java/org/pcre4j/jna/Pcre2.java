@@ -413,6 +413,13 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setOffsetLimit(long mcontext, long limit) {
+        final var pMContext = new Pointer(mcontext);
+        final var pLimit = new Pointer(limit);
+        return library.pcre2_set_offset_limit(pMContext, pLimit);
+    }
+
+    @Override
     public int substitute(
             long code,
             String subject,
@@ -631,6 +638,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_depth_limit(Pointer mcontext, int value);
 
         int pcre2_set_heap_limit(Pointer mcontext, int value);
+
+        int pcre2_set_offset_limit(Pointer mcontext, Pointer value);
 
         int pcre2_substitute(
                 Pointer code,

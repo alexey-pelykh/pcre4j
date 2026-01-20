@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * {@link IPcre2} implementation tests.
@@ -1196,6 +1197,184 @@ public abstract class Pcre2Tests {
 
         // The match should fail with HEAPLIMIT error due to heap memory exhaustion
         assertEquals(IPcre2.ERROR_HEAPLIMIT, result);
+    }
+
+    @Test
+    public void setOffsetLimitNegativeThrows() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        assertThrows(IllegalArgumentException.class, () -> matchContext.setOffsetLimit(-1));
+    }
+
+    @Test
+    public void setOffsetLimitZeroAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setOffsetLimit(0);
+    }
+
+    @Test
+    public void setOffsetLimitPositiveAllowed() {
+        final var matchContext = new Pcre2MatchContext(api, null);
+        // Should not throw
+        matchContext.setOffsetLimit(1000);
+    }
+
+    @Test
+    public void offsetLimitEnforcedWhenPatternCompiledWithOption() {
+        // Compile pattern with USE_OFFSET_LIMIT option
+        final var code = new Pcre2Code(
+                api,
+                "test",
+                EnumSet.of(Pcre2CompileOption.USE_OFFSET_LIMIT),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Offset limit semantics: match can start at position <= limit (inclusive)
+        // To prevent a match at position P, set limit to P-1
+
+        // Test 1: "test" starts at position 0
+        // With limit 0, position 0 IS allowed (0 <= 0), so match succeeds
+        final var matchContext1 = new Pcre2MatchContext(api, null);
+        matchContext1.setOffsetLimit(0);
+
+        final var result1 = code.match(
+                "test",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext1
+        );
+        assertTrue(result1 > 0, "Limit 0, pos 0: should match (0<=0), result=" + result1);
+
+        // Test 2: In "XXXXtest", "test" starts at position 4
+        // With limit 3, positions 0-3 are allowed, position 4 is NOT (4 > 3)
+        final var matchContext2 = new Pcre2MatchContext(api, null);
+        matchContext2.setOffsetLimit(3);
+
+        final var result2 = code.match(
+                "XXXXtest",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext2
+        );
+        assertEquals(IPcre2.ERROR_NOMATCH, result2, "Limit 3, pos 4: should fail (4>3), result=" + result2);
+
+        // Test 3: With limit 4, position 4 IS allowed (4 <= 4)
+        final var matchContext3 = new Pcre2MatchContext(api, null);
+        matchContext3.setOffsetLimit(4);
+
+        final var result3 = code.match(
+                "XXXXtest",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext3
+        );
+        assertTrue(result3 > 0, "Match should succeed: test at pos 4, limit 4 (4 <= 4) (result=" + result3 + ")");
+
+        // Test 4: With limit 5, position 4 is also allowed (4 <= 5)
+        final var matchContext4 = new Pcre2MatchContext(api, null);
+        matchContext4.setOffsetLimit(5);
+
+        final var result4 = code.match(
+                "XXXXtest",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext4
+        );
+        assertTrue(result4 > 0, "Match should succeed: test at pos 4, limit 5 (4 <= 5) (result=" + result4 + ")");
+    }
+
+    @Test
+    public void offsetLimitCausesErrorWithoutCompileOption() {
+        // Compile pattern WITHOUT USE_OFFSET_LIMIT option
+        final var code = new Pcre2Code(
+                api,
+                "test",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // First verify the pattern matches without any match context
+        final var resultNoContext = code.match(
+                "01234test",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(resultNoContext > 0, "Match should succeed without match context");
+
+        // Create a match context with offset limit of 5
+        final var matchContext = new Pcre2MatchContext(api, null);
+        matchContext.setOffsetLimit(5);
+
+        // According to PCRE2, using offset limit on a pattern not compiled with USE_OFFSET_LIMIT
+        // causes PCRE2_ERROR_BADOFFSETLIMIT error
+        final var result = code.match(
+                "01234test",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                matchContext
+        );
+        assertEquals(
+                IPcre2.ERROR_BADOFFSETLIMIT,
+                result,
+                "Offset limit without USE_OFFSET_LIMIT should cause BADOFFSETLIMIT"
+        );
+    }
+
+    @Test
+    public void offsetLimitRawApiTest() {
+        // Test using raw API to verify low-level behavior
+        // Test with "Xtest" where "test" starts at position 1
+        String pattern = "test";
+        int options = IPcre2.USE_OFFSET_LIMIT;
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+
+        // Compile with USE_OFFSET_LIMIT
+        long code = api.compile(pattern, options, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed (code=" + code + ", error=" + errorcode[0] + ")");
+
+        // Create match data
+        long matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        // Test 1: Match without offset limit (should succeed)
+        int result = api.match(code, "Xtest", 0, 0, matchData, 0);
+        assertTrue(result > 0, "Match without offset limit should succeed (result=" + result + ")");
+
+        // Create match context
+        long matchCtx = api.matchContextCreate(0);
+        assertTrue(matchCtx != 0, "Match context creation should succeed");
+
+        // Offset limit semantics: match can start at position <= limit (inclusive)
+
+        // Test 2: Set offset limit to 0 - "test" starts at position 1, which is > 0, so should fail
+        api.setOffsetLimit(matchCtx, 0);
+        result = api.match(code, "Xtest", 0, 0, matchData, matchCtx);
+        assertEquals(IPcre2.ERROR_NOMATCH, result, "Limit 0, pos 1: should fail (1>0), result=" + result);
+
+        // Test 3: Set offset limit to 1 - "test" starts at position 1, which IS <= 1, so should succeed
+        api.setOffsetLimit(matchCtx, 1);
+        result = api.match(code, "Xtest", 0, 0, matchData, matchCtx);
+        assertTrue(result > 0, "Limit 1, pos 1: should match (1<=1), result=" + result);
+
+        // Test 4: Set offset limit to 2 - "test" starts at position 1, which IS <= 2, so should succeed
+        api.setOffsetLimit(matchCtx, 2);
+        result = api.match(code, "Xtest", 0, 0, matchData, matchCtx);
+        assertTrue(result > 0, "Limit 2, pos 1: should match (1<=2), result=" + result);
+
+        // Clean up
+        api.matchContextFree(matchCtx);
+        api.matchDataFree(matchData);
+        api.codeFree(code);
     }
 
 }
