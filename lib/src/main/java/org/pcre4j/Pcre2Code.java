@@ -277,11 +277,7 @@ public class Pcre2Code {
      * @return the backtracking depth limit
      */
     public int depthLimit() {
-        final var depthLimit = getPatternIntInfo(IPcre2.INFO_DEPTHLIMIT);
-        if (depthLimit == IPcre2.ERROR_UNSET) {
-            throw new IllegalStateException("Depth limit is not set");
-        }
-        return depthLimit;
+        return getPatternIntInfo(IPcre2.INFO_DEPTHLIMIT);
     }
 
     /**
@@ -327,11 +323,7 @@ public class Pcre2Code {
      * @return the heap limit
      */
     public int heapLimit() {
-        final var heapLimit = getPatternIntInfo(IPcre2.INFO_HEAPLIMIT);
-        if (heapLimit == IPcre2.ERROR_UNSET) {
-            throw new IllegalStateException("Heap limit is not set");
-        }
-        return heapLimit;
+        return getPatternIntInfo(IPcre2.INFO_HEAPLIMIT);
     }
 
     /**
@@ -374,11 +366,7 @@ public class Pcre2Code {
      * @return the match limit
      */
     public int matchLimit() {
-        final var matchLimit = getPatternIntInfo(IPcre2.INFO_MATCHLIMIT);
-        if (matchLimit == IPcre2.ERROR_UNSET) {
-            throw new IllegalStateException("Match limit is not set");
-        }
-        return matchLimit;
+        return getPatternIntInfo(IPcre2.INFO_MATCHLIMIT);
     }
 
     /**
