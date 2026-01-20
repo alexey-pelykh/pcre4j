@@ -76,6 +76,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_copy_bynumber;
     private final MethodHandle pcre2_substring_get_byname;
     private final MethodHandle pcre2_substring_copy_byname;
+    private final MethodHandle pcre2_substring_length_bynumber;
     private final MethodHandle pcre2_substring_free;
     private final MethodHandle pcre2_substring_number_from_name;
 
@@ -410,6 +411,15 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // PCRE2_SPTR name
                         ValueLayout.ADDRESS, // PCRE2_UCHAR* buffer
                         ValueLayout.ADDRESS  // PCRE2_SIZE* bufflen
+                )
+        );
+
+        pcre2_substring_length_bynumber = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_length_bynumber" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.JAVA_INT, // uint32_t number
+                        ValueLayout.ADDRESS  // PCRE2_SIZE* length
                 )
         );
 
@@ -1250,6 +1260,42 @@ public class Pcre2 implements IPcre2 {
 
             bufflen[0] = pBuffLen.get(ValueLayout.JAVA_LONG, 0);
 
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substringLengthByNumber(long matchData, int number, long[] length) {
+        final var pMatchData = MemorySegment.ofAddress(matchData);
+
+        if (length == null) {
+            try {
+                return (int) pcre2_substring_length_bynumber.invokeExact(
+                        pMatchData,
+                        number,
+                        MemorySegment.NULL
+                );
+            } catch (Throwable e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        if (length.length < 1) {
+            throw new IllegalArgumentException("length must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+
+            final var result = (int) pcre2_substring_length_bynumber.invokeExact(
+                    pMatchData,
+                    number,
+                    pLength
+            );
+
+            length[0] = pLength.get(ValueLayout.JAVA_LONG, 0);
             return result;
         } catch (Throwable e) {
             throw new RuntimeException(e);
