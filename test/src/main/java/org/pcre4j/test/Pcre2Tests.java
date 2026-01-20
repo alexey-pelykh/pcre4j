@@ -1079,6 +1079,276 @@ public abstract class Pcre2Tests {
     }
 
     @Test
+    public void copySubstringByNameSimple() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        final var length = matchData.copySubstring("word", buffer);
+        assertEquals(5, length);
+
+        final var bytes = new byte[length];
+        buffer.get(bytes);
+        assertEquals("hello", new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringByNameMultipleGroups() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>\\w+) (?<second>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        // Group "first"
+        final var buffer1 = ByteBuffer.allocateDirect(100);
+        final var length1 = matchData.copySubstring("first", buffer1);
+        assertEquals(5, length1);
+        final var bytes1 = new byte[length1];
+        buffer1.get(bytes1);
+        assertEquals("hello", new String(bytes1, StandardCharsets.UTF_8));
+
+        // Group "second"
+        final var buffer2 = ByteBuffer.allocateDirect(100);
+        final var length2 = matchData.copySubstring("second", buffer2);
+        assertEquals(5, length2);
+        final var bytes2 = new byte[length2];
+        buffer2.get(bytes2);
+        assertEquals("world", new String(bytes2, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringByNameUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<emoji>🌐+)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello 🌐🌐🌐 world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        final var length = matchData.copySubstring("emoji", buffer);
+        // Each 🌐 is 4 bytes in UTF-8
+        assertEquals(12, length);
+
+        final var bytes = new byte[length];
+        buffer.get(bytes);
+        assertEquals("🌐🌐🌐", new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringByNameNullName() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring((String) null, buffer));
+    }
+
+    @Test
+    public void copySubstringByNameNullBuffer() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring("word", null));
+    }
+
+    @Test
+    public void copySubstringByNameNonDirectBuffer() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocate(100); // Not direct
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring("word", buffer));
+    }
+
+    @Test
+    public void copySubstringByNameInvalid() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.copySubstring("nonexistent", buffer));
+    }
+
+    @Test
+    public void copySubstringByNameUnsetGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<first>a)|(?<second>b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Group "first" matched
+        final var buffer1 = ByteBuffer.allocateDirect(100);
+        final var length1 = matchData.copySubstring("first", buffer1);
+        assertEquals(1, length1);
+        final var bytes1 = new byte[length1];
+        buffer1.get(bytes1);
+        assertEquals("a", new String(bytes1, StandardCharsets.UTF_8));
+
+        // Group "second" did not participate in the match
+        final var buffer2 = ByteBuffer.allocateDirect(100);
+        assertThrows(IllegalStateException.class, () -> matchData.copySubstring("second", buffer2));
+    }
+
+    @Test
+    public void copySubstringByNameBufferTooSmall() {
+        final var code = new Pcre2Code(
+                api,
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Buffer too small - needs at least 6 bytes (5 for "hello" + 1 for null terminator)
+        final var buffer = ByteBuffer.allocateDirect(3);
+        assertThrows(IllegalStateException.class, () -> matchData.copySubstring("word", buffer));
+    }
+
+    @Test
+    public void copySubstringByNameDuplicateNames() {
+        // DUPNAMES option allows duplicate named groups
+        final var code = new Pcre2Code(
+                api,
+                "(?<num>\\d+)|(?<num>\\w+)",
+                EnumSet.of(Pcre2CompileOption.DUPNAMES),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Match letters (second alternative)
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        final var length = matchData.copySubstring("num", buffer);
+        assertEquals(5, length);
+
+        final var bytes = new byte[length];
+        buffer.get(bytes);
+        assertEquals("hello", new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    @Test
     public void groupNumberFromNameSingle() {
         final var code = new Pcre2Code(
                 api,

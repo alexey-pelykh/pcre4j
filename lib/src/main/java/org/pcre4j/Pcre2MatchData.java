@@ -299,6 +299,62 @@ public class Pcre2MatchData {
         }
     }
 
+    /**
+     * Copy a captured substring by its group name into a caller-provided buffer.
+     * <p>
+     * This is a zero-allocation alternative to {@link #getSubstring(String)} for performance-critical paths.
+     * The caller provides the buffer, and the method copies the substring into it.
+     * <p>
+     * <b>Important:</b> When calling {@link Pcre2Code#match} before using this method, you must use the
+     * {@link Pcre2MatchOption#COPY_MATCHED_SUBJECT} option. Without this option, PCRE2 stores only a pointer to the
+     * original subject string, which may be garbage collected by the JVM before this method is called, resulting in
+     * undefined behavior or corrupted data.
+     *
+     * @param name   the name of the capturing group
+     * @param buffer a direct {@link ByteBuffer} to receive the extracted substring (must have sufficient capacity)
+     * @return the number of bytes written to the buffer (excluding the null terminator that PCRE2 appends)
+     * @throws IllegalArgumentException if the name is null, buffer is null, or buffer is not direct
+     * @throws IndexOutOfBoundsException if there are no groups of that name
+     * @throws IllegalStateException if the ovector was too small for that group, the group did not participate in
+     *                               the match, or the buffer is too small
+     */
+    public int copySubstring(String name, ByteBuffer buffer) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+        if (buffer == null) {
+            throw new IllegalArgumentException("buffer must not be null");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer must be a direct ByteBuffer");
+        }
+
+        final var bufflen = new long[]{buffer.remaining()};
+        final var result = api.substringCopyByName(handle, name, buffer, bufflen);
+
+        if (result == 0) {
+            return (int) bufflen[0];
+        }
+
+        switch (result) {
+            case IPcre2.ERROR_NOSUBSTRING -> throw new IndexOutOfBoundsException(
+                    "No group of name '" + name + "'"
+            );
+            case IPcre2.ERROR_UNAVAILABLE -> throw new IllegalStateException(
+                    "The ovector was too small for group '" + name + "'"
+            );
+            case IPcre2.ERROR_UNSET -> throw new IllegalStateException(
+                    "Group '" + name + "' did not participate in the match"
+            );
+            case IPcre2.ERROR_NOMEMORY -> throw new IllegalStateException(
+                    "Buffer is too small for group '" + name + "' (need at least " + (bufflen[0] + 1) + " bytes)"
+            );
+            default -> throw new IllegalStateException(
+                    "Unexpected error copying substring: " + result
+            );
+        }
+    }
+
     private record Clean(IPcre2 api, long matchData) implements Runnable {
         @Override
         public void run() {

@@ -565,6 +565,41 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringCopyByName(long matchData, String name, ByteBuffer buffer, long[] bufflen) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+        if (buffer == null) {
+            throw new IllegalArgumentException("buffer must not be null");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer must be a direct ByteBuffer");
+        }
+        if (bufflen == null || bufflen.length < 1) {
+            throw new IllegalArgumentException("bufflen must be an array of length 1");
+        }
+
+        final var pMatchData = new Pointer(matchData);
+        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
+        pszName[nameBytes.length] = 0; // null terminator
+        final var pBuffer = Native.getDirectBufferPointer(buffer);
+        final var buffLenRef = new LongByReference(bufflen[0]);
+
+        final var result = library.pcre2_substring_copy_byname(
+                pMatchData,
+                pszName,
+                pBuffer,
+                buffLenRef
+        );
+
+        bufflen[0] = buffLenRef.getValue();
+
+        return result;
+    }
+
+    @Override
     public void substringFree(long buffer) {
         final var pBuffer = new Pointer(buffer);
         library.pcre2_substring_free(pBuffer);
@@ -701,6 +736,13 @@ public class Pcre2 implements IPcre2 {
                 Pointer matchData,
                 byte[] name,
                 PointerByReference bufferptr,
+                LongByReference bufflen
+        );
+
+        int pcre2_substring_copy_byname(
+                Pointer matchData,
+                byte[] name,
+                Pointer buffer,
                 LongByReference bufflen
         );
 
