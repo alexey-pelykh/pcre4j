@@ -79,6 +79,8 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_length_byname;
     private final MethodHandle pcre2_substring_length_bynumber;
     private final MethodHandle pcre2_substring_free;
+    private final MethodHandle pcre2_substring_list_get;
+    private final MethodHandle pcre2_substring_list_free;
     private final MethodHandle pcre2_substring_number_from_name;
 
     /**
@@ -437,6 +439,22 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_substring_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // PCRE2_UCHAR* buffer
+                )
+        );
+
+        pcre2_substring_list_get = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_list_get" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_data* match_data
+                        ValueLayout.ADDRESS, // PCRE2_UCHAR*** listptr
+                        ValueLayout.ADDRESS  // PCRE2_SIZE** lengthsptr
+                )
+        );
+
+        pcre2_substring_list_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_list_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // PCRE2_UCHAR** list
                 )
         );
 
@@ -1356,6 +1374,55 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_substring_free.invokeExact(
                     pBuffer
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substringListGet(long matchData, long[] listptr, long[] lengthsptr) {
+        if (listptr == null) {
+            throw new IllegalArgumentException("listptr must not be null");
+        }
+        if (listptr.length < 1) {
+            throw new IllegalArgumentException("listptr must be an array of length 1");
+        }
+        if (lengthsptr != null && lengthsptr.length < 1) {
+            throw new IllegalArgumentException("lengthsptr must be an array of length 1 or null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pListPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
+            final var pLengthsPtr = lengthsptr != null
+                    ? arena.allocateArray(ValueLayout.ADDRESS, 1)
+                    : MemorySegment.NULL;
+
+            final var result = (int) pcre2_substring_list_get.invokeExact(
+                    pMatchData,
+                    pListPtr,
+                    pLengthsPtr
+            );
+
+            listptr[0] = pListPtr.get(ValueLayout.ADDRESS, 0).address();
+            if (lengthsptr != null) {
+                lengthsptr[0] = pLengthsPtr.get(ValueLayout.ADDRESS, 0).address();
+            }
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void substringListFree(long list) {
+        try {
+            final var pList = MemorySegment.ofAddress(list);
+
+            pcre2_substring_list_free.invokeExact(
+                    pList
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

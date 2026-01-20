@@ -1180,6 +1180,34 @@ public interface IPcre2 {
     public void substringFree(long buffer);
 
     /**
+     * Extract all captured substrings into newly allocated memory.
+     * <p>
+     * This function extracts all captured substrings (including the full match at position 0) into a single block of
+     * memory. This is more efficient than calling {@link #substringGetByNumber} repeatedly when multiple substrings
+     * need to be extracted, as it reduces JNI/FFM call overhead.
+     * <p>
+     * The returned list pointer points to an array of string pointers, terminated by a NULL entry.
+     * The lengths array (if requested) contains the length of each substring in code units, excluding null terminators.
+     * <p>
+     * The caller must free the returned memory using {@link #substringListFree} when done.
+     *
+     * @param matchData  the match data handle from a successful match
+     * @param listptr    an array of length 1 to receive the pointer to the string list
+     * @param lengthsptr an array of length 1 to receive the pointer to the lengths array, or null if not needed
+     * @return zero on success, otherwise {@link #ERROR_NOMEMORY} if memory could not be obtained
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_list_get.html">pcre2_substring_list_get</a>
+     */
+    public int substringListGet(long matchData, long[] listptr, long[] lengthsptr);
+
+    /**
+     * Free memory that was allocated by {@link #substringListGet}.
+     *
+     * @param list the pointer to the string list to free (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_list_free.html">pcre2_substring_list_free</a>
+     */
+    public void substringListFree(long list);
+
+    /**
      * Convert a named capturing group to its group number.
      *
      * @param code the compiled pattern handle
