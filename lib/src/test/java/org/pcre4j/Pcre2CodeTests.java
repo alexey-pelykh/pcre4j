@@ -120,4 +120,11 @@ public class Pcre2CodeTests {
         assertThrows(IllegalStateException.class, code::depthLimit);
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void heapLimitThrowsWhenUnset(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        assertThrows(IllegalStateException.class, code::heapLimit);
+    }
+
 }
