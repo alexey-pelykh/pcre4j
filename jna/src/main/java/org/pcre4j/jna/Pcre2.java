@@ -697,6 +697,35 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringNametableScan(long code, String name, long[] first, long[] last) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final var pCode = new Pointer(code);
+        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
+        pszName[nameBytes.length] = 0; // null terminator
+
+        final PointerByReference firstRef = first != null ? new PointerByReference() : null;
+        final PointerByReference lastRef = last != null ? new PointerByReference() : null;
+
+        final var result = library.pcre2_substring_nametable_scan(pCode, pszName, firstRef, lastRef);
+
+        if (result >= 0) {
+            if (first != null && firstRef != null) {
+                first[0] = Pointer.nativeValue(firstRef.getValue());
+            }
+            if (last != null && lastRef != null) {
+                last[0] = Pointer.nativeValue(lastRef.getValue());
+            }
+        }
+
+        return result;
+    }
+
+    @Override
     public byte[] readBytes(long pointer, int length) {
         if (length < 0) {
             throw new IllegalArgumentException("length must not be negative");
@@ -845,6 +874,13 @@ public class Pcre2 implements IPcre2 {
         void pcre2_substring_list_free(Pointer list);
 
         int pcre2_substring_number_from_name(Pointer code, byte[] name);
+
+        int pcre2_substring_nametable_scan(
+                Pointer code,
+                byte[] name,
+                PointerByReference first,
+                PointerByReference last
+        );
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {
