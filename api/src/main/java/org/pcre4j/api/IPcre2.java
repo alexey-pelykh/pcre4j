@@ -1080,6 +1080,26 @@ public interface IPcre2 {
     public int substringGetByNumber(long matchData, int number, long[] bufferptr, long[] bufflen);
 
     /**
+     * Copy a captured substring by its number into a caller-provided buffer.
+     * <p>
+     * This is a zero-allocation alternative to {@link #substringGetByNumber} for performance-critical paths.
+     * The caller provides the buffer, and the method copies the substring into it.
+     *
+     * @param matchData the match data handle from a successful match
+     * @param number    the group number (0 = entire match)
+     * @param buffer    a {@link ByteBuffer} to receive the extracted substring (must have sufficient capacity)
+     * @param bufflen   an array of length 1; on input, contains the buffer size; on output, receives the actual
+     *                  length of the extracted string (in code units, excluding the null terminator)
+     * @return zero on success, otherwise a negative error code:
+     * {@link #ERROR_NOSUBSTRING} there are no groups of that number
+     * {@link #ERROR_UNAVAILABLE} the ovector was too small for that group
+     * {@link #ERROR_UNSET} the group did not participate in the match
+     * {@link #ERROR_NOMEMORY} the buffer is too small
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_copy_bynumber.html">pcre2_substring_copy_bynumber</a>
+     */
+    public int substringCopyByNumber(long matchData, int number, ByteBuffer buffer, long[] bufflen);
+
+    /**
      * Extract a captured substring by its name into newly allocated memory.
      *
      * @param matchData the match data handle from a successful match

@@ -18,9 +18,9 @@ import org.junit.jupiter.api.Test;
 import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
-import java.util.EnumSet;
-
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -831,6 +831,251 @@ public abstract class Pcre2Tests {
 
         final var num = matchData.getSubstring("num");
         assertEquals("hello", new String(num, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringEntireMatch() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        final var length = matchData.copySubstring(0, buffer);
+        assertEquals(5, length);
+
+        final var bytes = new byte[length];
+        buffer.get(bytes);
+        assertEquals("hello", new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringCapturingGroups() {
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        // Group 0 - entire match
+        final var buffer0 = ByteBuffer.allocateDirect(100);
+        final var length0 = matchData.copySubstring(0, buffer0);
+        assertEquals(11, length0);
+        final var bytes0 = new byte[length0];
+        buffer0.get(bytes0);
+        assertEquals("hello world", new String(bytes0, StandardCharsets.UTF_8));
+
+        // Group 1
+        final var buffer1 = ByteBuffer.allocateDirect(100);
+        final var length1 = matchData.copySubstring(1, buffer1);
+        assertEquals(5, length1);
+        final var bytes1 = new byte[length1];
+        buffer1.get(bytes1);
+        assertEquals("hello", new String(bytes1, StandardCharsets.UTF_8));
+
+        // Group 2
+        final var buffer2 = ByteBuffer.allocateDirect(100);
+        final var length2 = matchData.copySubstring(2, buffer2);
+        assertEquals(5, length2);
+        final var bytes2 = new byte[length2];
+        buffer2.get(bytes2);
+        assertEquals("world", new String(bytes2, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringUnicode() {
+        final var code = new Pcre2Code(
+                api,
+                "(🌐+)",
+                EnumSet.of(Pcre2CompileOption.UTF),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello 🌐🌐🌐 world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        final var length = matchData.copySubstring(1, buffer);
+        // Each 🌐 is 4 bytes in UTF-8
+        assertEquals(12, length);
+
+        final var bytes = new byte[length];
+        buffer.get(bytes);
+        assertEquals("🌐🌐🌐", new String(bytes, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    public void copySubstringNegativeNumber() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring(-1, buffer));
+    }
+
+    @Test
+    public void copySubstringNullBuffer() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring(0, null));
+    }
+
+    @Test
+    public void copySubstringNonDirectBuffer() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var buffer = ByteBuffer.allocate(100); // Not direct
+        assertThrows(IllegalArgumentException.class, () -> matchData.copySubstring(0, buffer));
+    }
+
+    @Test
+    public void copySubstringInvalidGroupNumber() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var buffer = ByteBuffer.allocateDirect(100);
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.copySubstring(99, buffer));
+    }
+
+    @Test
+    public void copySubstringUnsetGroup() {
+        final var code = new Pcre2Code(
+                api,
+                "(a)|(b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Group 1 matched
+        final var buffer1 = ByteBuffer.allocateDirect(100);
+        final var length1 = matchData.copySubstring(1, buffer1);
+        assertEquals(1, length1);
+
+        // Group 2 did not participate in the match
+        final var buffer2 = ByteBuffer.allocateDirect(100);
+        assertThrows(IllegalStateException.class, () -> matchData.copySubstring(2, buffer2));
+    }
+
+    @Test
+    public void copySubstringBufferTooSmall() {
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        // Buffer too small - needs at least 6 bytes (5 for "hello" + 1 for null terminator)
+        final var buffer = ByteBuffer.allocateDirect(3);
+        assertThrows(IllegalStateException.class, () -> matchData.copySubstring(0, buffer));
     }
 
     @Test

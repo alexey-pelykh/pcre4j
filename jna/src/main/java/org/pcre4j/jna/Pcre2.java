@@ -504,6 +504,34 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringCopyByNumber(long matchData, int number, ByteBuffer buffer, long[] bufflen) {
+        if (buffer == null) {
+            throw new IllegalArgumentException("buffer must not be null");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer must be a direct ByteBuffer");
+        }
+        if (bufflen == null || bufflen.length < 1) {
+            throw new IllegalArgumentException("bufflen must be an array of length 1");
+        }
+
+        final var pMatchData = new Pointer(matchData);
+        final var pBuffer = Native.getDirectBufferPointer(buffer);
+        final var buffLenRef = new LongByReference(bufflen[0]);
+
+        final var result = library.pcre2_substring_copy_bynumber(
+                pMatchData,
+                number,
+                pBuffer,
+                buffLenRef
+        );
+
+        bufflen[0] = buffLenRef.getValue();
+
+        return result;
+    }
+
+    @Override
     public int substringGetByName(long matchData, String name, long[] bufferptr, long[] bufflen) {
         if (name == null) {
             throw new IllegalArgumentException("name must not be null");
@@ -659,6 +687,13 @@ public class Pcre2 implements IPcre2 {
                 Pointer matchData,
                 int number,
                 PointerByReference bufferptr,
+                LongByReference bufflen
+        );
+
+        int pcre2_substring_copy_bynumber(
+                Pointer matchData,
+                int number,
+                Pointer buffer,
                 LongByReference bufflen
         );
 
