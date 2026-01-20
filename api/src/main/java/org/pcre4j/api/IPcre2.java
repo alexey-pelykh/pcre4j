@@ -1023,6 +1023,19 @@ public interface IPcre2 {
     public int setHeapLimit(long mcontext, int limit);
 
     /**
+     * Set the offset limit within a match context.
+     * <p>
+     * The offset limit sets a limit on how far into the subject the start of a match can be.
+     * The pattern must be compiled with the {@link #USE_OFFSET_LIMIT} option for this to take effect.
+     *
+     * @param mcontext the match context handle
+     * @param limit    the offset limit value
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_offset_limit.html">pcre2_set_offset_limit</a>
+     */
+    public int setOffsetLimit(long mcontext, long limit);
+
+    /**
      * Match a compiled pattern against a subject string and perform substitution.
      *
      * @param code          the compiled pattern handle

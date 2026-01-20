@@ -68,6 +68,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_set_match_limit;
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
+    private final MethodHandle pcre2_set_offset_limit;
 
     private final MethodHandle pcre2_substitute;
 
@@ -342,6 +343,14 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_match_context*
                         ValueLayout.JAVA_INT // uint32_t
+                )
+        );
+
+        pcre2_set_offset_limit = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_offset_limit" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_context*
+                        ValueLayout.ADDRESS // PCRE2_SIZE
                 )
         );
 
@@ -1007,6 +1016,21 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_heap_limit.invokeExact(
                     pMContext,
                     limit
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setOffsetLimit(long mcontext, long limit) {
+        try (var arena = Arena.ofConfined()) {
+            final var pMContext = MemorySegment.ofAddress(mcontext);
+            final var pLimit = MemorySegment.ofAddress(limit);
+
+            return (int) pcre2_set_offset_limit.invokeExact(
+                    pMContext,
+                    pLimit
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

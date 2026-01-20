@@ -150,6 +150,24 @@ public class Pcre2MatchContext {
         api.setHeapLimit(handle, limit);
     }
 
+    /**
+     * Set the offset limit for this match context.
+     * <p>
+     * The offset limit sets a limit on how far into the subject the start of a match can be.
+     * The pattern must be compiled with the {@link org.pcre4j.api.IPcre2#USE_OFFSET_LIMIT} option
+     * for this to take effect.
+     *
+     * @param limit the offset limit value (must be non-negative)
+     * @throws IllegalArgumentException if the limit is negative
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_offset_limit.html">pcre2_set_offset_limit</a>
+     */
+    public void setOffsetLimit(long limit) {
+        if (limit < 0) {
+            throw new IllegalArgumentException("limit must be non-negative");
+        }
+        api.setOffsetLimit(handle, limit);
+    }
+
     private record Clean(IPcre2 api, long matchContext) implements Runnable {
         @Override
         public void run() {
