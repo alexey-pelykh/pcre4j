@@ -2079,6 +2079,72 @@ public abstract class Pcre2Tests {
     }
 
     @Test
+    public void substringListGetApiDirect() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("(\\w+) (\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0);
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+
+        final var result = api.match(code, "hello world", 0, 0, matchData, 0);
+        assertEquals(3, result); // Full match + 2 groups
+
+        final var listptr = new long[1];
+        final var lengthsptr = new long[1];
+        final var listResult = api.substringListGet(matchData, listptr, lengthsptr);
+        assertEquals(0, listResult);
+        assertTrue(listptr[0] != 0);
+        assertTrue(lengthsptr[0] != 0);
+
+        // Read and verify the lengths array (3 entries: full match + 2 groups)
+        // Each PCRE2_SIZE is 8 bytes (long) in native byte order
+        final var lengthsBytes = api.readBytes(lengthsptr[0], 3 * 8);
+        final var lengthsBuffer = java.nio.ByteBuffer.wrap(lengthsBytes)
+                .order(java.nio.ByteOrder.nativeOrder());
+        assertEquals(11, lengthsBuffer.getLong(0));  // "hello world" = 11 chars
+        assertEquals(5, lengthsBuffer.getLong(8));   // "hello" = 5 chars
+        assertEquals(5, lengthsBuffer.getLong(16));  // "world" = 5 chars
+
+        // Free the list
+        api.substringListFree(listptr[0]);
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void substringListGetApiNullLengthsPtr() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("(\\w+) (\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0);
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+
+        final var result = api.match(code, "hello world", 0, 0, matchData, 0);
+        assertTrue(result > 0);
+
+        final var listptr = new long[1];
+        // Pass null for lengthsptr - should work
+        final var listResult = api.substringListGet(matchData, listptr, null);
+        assertEquals(0, listResult);
+        assertTrue(listptr[0] != 0);
+
+        // Free the list
+        api.substringListFree(listptr[0]);
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void substringListFreeApiNullPointer() {
+        // Free with null pointer should not throw
+        api.substringListFree(0);
+    }
+
+    @Test
     public void getSubstringLengthByName() {
         final var code = new Pcre2Code(
                 api,

@@ -650,6 +650,38 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringListGet(long matchData, long[] listptr, long[] lengthsptr) {
+        if (listptr == null) {
+            throw new IllegalArgumentException("listptr must not be null");
+        }
+        if (listptr.length < 1) {
+            throw new IllegalArgumentException("listptr must be an array of length 1");
+        }
+        if (lengthsptr != null && lengthsptr.length < 1) {
+            throw new IllegalArgumentException("lengthsptr must be an array of length 1 or null");
+        }
+
+        final var pMatchData = new Pointer(matchData);
+        final var listPtrRef = new PointerByReference();
+        final var lengthsPtrRef = lengthsptr != null ? new PointerByReference() : null;
+
+        final var result = library.pcre2_substring_list_get(pMatchData, listPtrRef, lengthsPtrRef);
+
+        listptr[0] = Pointer.nativeValue(listPtrRef.getValue());
+        if (lengthsptr != null) {
+            lengthsptr[0] = Pointer.nativeValue(lengthsPtrRef.getValue());
+        }
+
+        return result;
+    }
+
+    @Override
+    public void substringListFree(long list) {
+        final var pList = new Pointer(list);
+        library.pcre2_substring_list_free(pList);
+    }
+
+    @Override
     public int substringNumberFromName(long code, String name) {
         if (name == null) {
             throw new IllegalArgumentException("name must not be null");
@@ -803,6 +835,14 @@ public class Pcre2 implements IPcre2 {
         );
 
         void pcre2_substring_free(Pointer buffer);
+
+        int pcre2_substring_list_get(
+                Pointer matchData,
+                PointerByReference listptr,
+                PointerByReference lengthsptr
+        );
+
+        void pcre2_substring_list_free(Pointer list);
 
         int pcre2_substring_number_from_name(Pointer code, byte[] name);
     }
