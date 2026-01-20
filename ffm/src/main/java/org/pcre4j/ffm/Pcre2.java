@@ -76,6 +76,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_copy_bynumber;
     private final MethodHandle pcre2_substring_get_byname;
     private final MethodHandle pcre2_substring_copy_byname;
+    private final MethodHandle pcre2_substring_length_byname;
     private final MethodHandle pcre2_substring_length_bynumber;
     private final MethodHandle pcre2_substring_free;
     private final MethodHandle pcre2_substring_number_from_name;
@@ -411,6 +412,15 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // PCRE2_SPTR name
                         ValueLayout.ADDRESS, // PCRE2_UCHAR* buffer
                         ValueLayout.ADDRESS  // PCRE2_SIZE* bufflen
+                )
+        );
+
+        pcre2_substring_length_byname = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_substring_length_byname" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.ADDRESS, // PCRE2_SPTR name
+                        ValueLayout.ADDRESS  // PCRE2_SIZE* length
                 )
         );
 
@@ -1260,6 +1270,43 @@ public class Pcre2 implements IPcre2 {
 
             bufflen[0] = pBuffLen.get(ValueLayout.JAVA_LONG, 0);
 
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int substringLengthByName(long matchData, String name, long[] length) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pszName = arena.allocateUtf8String(name);
+
+            if (length == null) {
+                return (int) pcre2_substring_length_byname.invokeExact(
+                        pMatchData,
+                        pszName,
+                        MemorySegment.NULL
+                );
+            }
+
+            if (length.length < 1) {
+                throw new IllegalArgumentException("length must be an array of length 1");
+            }
+
+            final var pLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+
+            final var result = (int) pcre2_substring_length_byname.invokeExact(
+                    pMatchData,
+                    pszName,
+                    pLength
+            );
+
+            length[0] = pLength.get(ValueLayout.JAVA_LONG, 0);
             return result;
         } catch (Throwable e) {
             throw new RuntimeException(e);

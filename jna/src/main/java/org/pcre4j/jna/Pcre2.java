@@ -600,6 +600,32 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int substringLengthByName(long matchData, String name, long[] length) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final var pMatchData = new Pointer(matchData);
+        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
+        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
+        pszName[nameBytes.length] = 0; // null terminator
+
+        if (length == null) {
+            return library.pcre2_substring_length_byname(pMatchData, pszName, null);
+        }
+
+        if (length.length < 1) {
+            throw new IllegalArgumentException("length must be an array of length 1");
+        }
+
+        final var lengthRef = new LongByReference();
+        final var result = library.pcre2_substring_length_byname(pMatchData, pszName, lengthRef);
+        length[0] = lengthRef.getValue();
+        return result;
+    }
+
+    @Override
     public int substringLengthByNumber(long matchData, int number, long[] length) {
         final var pMatchData = new Pointer(matchData);
 
@@ -762,6 +788,12 @@ public class Pcre2 implements IPcre2 {
                 byte[] name,
                 Pointer buffer,
                 LongByReference bufflen
+        );
+
+        int pcre2_substring_length_byname(
+                Pointer matchData,
+                byte[] name,
+                LongByReference length
         );
 
         int pcre2_substring_length_bynumber(
