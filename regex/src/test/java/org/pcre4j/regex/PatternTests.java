@@ -142,5 +142,16 @@ public class PatternTests {
         assertThrows(IllegalStateException.class, javaMatcher::group);
         assertThrows(IllegalStateException.class, pcre4jMatcher::group);
     }
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void quote(IPcre2 api) {
+        var input = ".*+?^$|()[]\\{}";
+        var inputWithSlashE = "abc\\Edef";
+        var inputWithEmptyString = "";
 
+        assertEquals(java.util.regex.Pattern.quote(inputWithEmptyString), Pattern.quote(inputWithEmptyString));
+        assertEquals(java.util.regex.Pattern.quote(input), Pattern.quote(input));
+        assertEquals(java.util.regex.Pattern.quote(inputWithSlashE), Pattern.quote(inputWithSlashE));
+    }
+    
 }

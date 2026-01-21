@@ -286,7 +286,24 @@ public class Pattern {
         return regex;
     }
 
-    // TODO: quote(String s)
+    /**
+     * Returns a literal pattern String for the specified String.
+     *
+     * <p>This method returns a String that can be used to create a Pattern that would
+     * match the string {@code s} as if it were a literal pattern.</p>
+     *
+     * <p>Metacharacters or escape sequences in the input String will be given no special meaning.</p>
+     *
+     * @param s The string to be literalized
+     * @return A literal string replacement
+     */
+    public static String quote(String s) {
+        int slashEIndex = s.indexOf("\\E");
+        if (slashEIndex == -1) {
+            return "\\Q" + s + "\\E";
+        }
+        return "\\Q" + s.replace("\\E", "\\E\\\\E\\Q") + "\\E";
+    }
 
     /**
      * Splits the given input around matches of this pattern.
