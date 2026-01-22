@@ -1078,6 +1078,34 @@ public interface IPcre2 {
     public int setMaxPatternLength(long ccontext, long length);
 
     /**
+     * Set additional compile options within a compile context.
+     * <p>
+     * This function sets additional option bits for {@code pcre2_compile()} that are housed in a compile context.
+     * It completely replaces all the bits. The extra options are:
+     * <ul>
+     * <li>{@link #EXTRA_ALLOW_SURROGATE_ESCAPES} - Allow surrogate escapes in UTF-8 mode</li>
+     * <li>{@link #EXTRA_BAD_ESCAPE_IS_LITERAL} - Treat unrecognized escapes as literal</li>
+     * <li>{@link #EXTRA_MATCH_WORD} - Pattern matches whole words</li>
+     * <li>{@link #EXTRA_MATCH_LINE} - Pattern matches whole lines</li>
+     * <li>{@link #EXTRA_ESCAPED_CR_IS_LF} - Interpret escaped CR as LF</li>
+     * <li>{@link #EXTRA_ALT_BSUX} - Extended alternate handling of &#92;u, &#92;U, and &#92;x</li>
+     * <li>{@link #EXTRA_ALLOW_LOOKAROUND_BSK} - Allow \K in lookaround assertions</li>
+     * <li>{@link #EXTRA_CASELESS_RESTRICT} - Restrict caseless matching to same-script</li>
+     * <li>{@link #EXTRA_ASCII_BSD} - Use ASCII for \d in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_BSS} - Use ASCII for \s in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_BSW} - Use ASCII for \w in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_POSIX} - Use ASCII for POSIX classes in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_DIGIT} - Use ASCII for \d (alias for EXTRA_ASCII_BSD)</li>
+     * </ul>
+     *
+     * @param ccontext     the compile context handle
+     * @param extraOptions the extra compile options bit flags
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_compile_extra_options.html">pcre2_set_compile_extra_options</a>
+     */
+    public int setCompileExtraOptions(long ccontext, int extraOptions);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.

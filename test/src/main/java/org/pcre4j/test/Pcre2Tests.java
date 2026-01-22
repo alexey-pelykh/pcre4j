@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * {@link IPcre2} implementation tests.
@@ -2871,6 +2872,204 @@ public abstract class Pcre2Tests {
         );
 
         assertTrue(result > 0, "Pattern should match with high length limit");
+    }
+
+    @Test
+    public void setCompileExtraOptionsNullThrows() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> compileContext.setCompileExtraOptions((Pcre2CompileExtraOption[]) null));
+    }
+
+    @Test
+    public void setCompileExtraOptionsNullElementThrows() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        assertThrows(IllegalArgumentException.class,
+                () -> compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_WORD, null));
+    }
+
+    @Test
+    public void setCompileExtraOptionsEmpty() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Should not throw with empty varargs
+        compileContext.setCompileExtraOptions();
+
+        // Pattern should still compile and match
+        final var code = new Pcre2Code(
+                api,
+                "\\d+",
+                EnumSet.of(Pcre2CompileOption.UCP, Pcre2CompileOption.UTF),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+        // Unicode digit (Arabic-Indic digit 5) should match with UCP+UTF and no ASCII restriction
+        final var result = code.match(
+                "\u0665",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "Unicode digit should match \\d with UCP+UTF enabled");
+    }
+
+    @Test
+    public void setCompileExtraOptionsAsciiDigitRestrictsToAscii() {
+        // ASCII_BSD was added in PCRE2 10.43
+        assumeTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 43),
+                "Skipping test: ASCII_BSD requires PCRE2 10.43+");
+
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.ASCII_BSD);
+
+        // With ASCII_BSD, \d should only match ASCII digits even with UCP+UTF
+        final var code = new Pcre2Code(
+                api,
+                "\\d+",
+                EnumSet.of(Pcre2CompileOption.UCP, Pcre2CompileOption.UTF),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+
+        // ASCII digit should still match
+        final var asciiResult = code.match(
+                "5",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(asciiResult > 0, "ASCII digit should match \\d with ASCII_BSD");
+
+        // Unicode digit (Arabic-Indic digit 5) should NOT match
+        final var unicodeResult = code.match(
+                "\u0665",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(unicodeResult < 0, "Unicode digit should NOT match \\d with ASCII_BSD");
+    }
+
+    @Test
+    public void setCompileExtraOptionsMatchWord() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_WORD);
+
+        // With MATCH_WORD, pattern should only match whole words
+        final var code = new Pcre2Code(
+                api,
+                "test",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+
+        // Should match "test" as a whole word
+        final var wholeWordResult = code.match(
+                "a test here",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(wholeWordResult > 0, "Should match 'test' as whole word");
+
+        // Should NOT match "test" within "testing"
+        final var partialResult = code.match(
+                "testing",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(partialResult < 0, "Should NOT match 'test' within 'testing' with MATCH_WORD");
+    }
+
+    @Test
+    public void setCompileExtraOptionsMatchLine() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_LINE);
+
+        // With MATCH_LINE, pattern should only match whole lines
+        final var code = new Pcre2Code(
+                api,
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+
+        // Should match "hello" as a whole line
+        final var wholeLineResult = code.match(
+                "hello",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(wholeLineResult > 0, "Should match 'hello' as whole line");
+
+        // Should NOT match "hello" within a longer line
+        final var partialResult = code.match(
+                "say hello world",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(partialResult < 0, "Should NOT match 'hello' within a longer line with MATCH_LINE");
+    }
+
+    @Test
+    public void setCompileExtraOptionsMultipleOptions() {
+        // ASCII_BSD, ASCII_BSS, ASCII_BSW were added in PCRE2 10.43
+        assumeTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 43),
+                "Skipping test: ASCII_BSD/BSS/BSW requires PCRE2 10.43+");
+
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Set multiple extra options at once
+        compileContext.setCompileExtraOptions(
+                Pcre2CompileExtraOption.ASCII_BSD,
+                Pcre2CompileExtraOption.ASCII_BSS,
+                Pcre2CompileExtraOption.ASCII_BSW
+        );
+
+        // With all ASCII options, \w should only match ASCII word characters even with UCP+UTF
+        final var code = new Pcre2Code(
+                api,
+                "\\w+",
+                EnumSet.of(Pcre2CompileOption.UCP, Pcre2CompileOption.UTF),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+
+        // ASCII letters should match
+        final var asciiResult = code.match(
+                "hello",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(asciiResult > 0, "ASCII letters should match \\w with ASCII_BSW");
+
+        // Non-ASCII letter (Greek alpha) should NOT match
+        final var unicodeResult = code.match(
+                "\u03B1",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+        assertTrue(unicodeResult < 0, "Non-ASCII letter should NOT match \\w with ASCII_BSW");
     }
 
 }
