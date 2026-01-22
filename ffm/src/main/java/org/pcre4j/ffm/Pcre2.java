@@ -66,6 +66,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_get_ovector_pointer;
 
     private final MethodHandle pcre2_set_newline;
+    private final MethodHandle pcre2_set_bsr;
     private final MethodHandle pcre2_set_match_limit;
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
@@ -339,6 +340,14 @@ public class Pcre2 implements IPcre2 {
 
         pcre2_set_newline = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_set_newline" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_compile_context*
+                        ValueLayout.JAVA_INT // int
+                )
+        );
+
+        pcre2_set_bsr = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_bsr" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_compile_context*
                         ValueLayout.JAVA_INT // int
@@ -1111,6 +1120,20 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_newline.invokeExact(
                     pCContext,
                     newline
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setBsr(long ccontext, int value) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCContext = MemorySegment.ofAddress(ccontext);
+
+            return (int) pcre2_set_bsr.invokeExact(
+                    pCContext,
+                    value
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
