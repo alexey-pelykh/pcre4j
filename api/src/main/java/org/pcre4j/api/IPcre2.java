@@ -1033,6 +1033,19 @@ public interface IPcre2 {
     public int setNewline(long ccontext, int newline);
 
     /**
+     * Set what \R matches within a compile context.
+     * <p>
+     * The value must be {@link #BSR_UNICODE} (to match any Unicode line ending) or {@link #BSR_ANYCRLF}
+     * (to match only CR, LF, or CRLF).
+     *
+     * @param ccontext the compile context handle
+     * @param value    the BSR value ({@link #BSR_UNICODE} or {@link #BSR_ANYCRLF})
+     * @return 0 on success, otherwise a negative error code
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_bsr.html">pcre2_set_bsr</a>
+     */
+    public int setBsr(long ccontext, int value);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.
