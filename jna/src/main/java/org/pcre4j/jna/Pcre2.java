@@ -452,6 +452,13 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setMaxPatternLength(long ccontext, long length) {
+        final var pCContext = new Pointer(ccontext);
+        final var pLength = new Pointer(length);
+        return library.pcre2_set_max_pattern_length(pCContext, pLength);
+    }
+
+    @Override
     public int setMatchLimit(long mcontext, int limit) {
         final var pMContext = new Pointer(mcontext);
         return library.pcre2_set_match_limit(pMContext, limit);
@@ -873,6 +880,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_bsr(Pointer ccontext, int value);
 
         int pcre2_set_parens_nest_limit(Pointer ccontext, int value);
+
+        int pcre2_set_max_pattern_length(Pointer ccontext, Pointer value);
 
         int pcre2_set_match_limit(Pointer mcontext, int value);
 

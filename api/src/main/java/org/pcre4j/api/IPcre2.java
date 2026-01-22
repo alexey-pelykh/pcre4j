@@ -1060,6 +1060,24 @@ public interface IPcre2 {
     public int setParensNestLimit(long ccontext, int limit);
 
     /**
+     * Set the maximum length of pattern that can be compiled.
+     * <p>
+     * This function sets the maximum length (in code units) of the pattern string that can be
+     * passed to {@code pcre2_compile()}. If a pattern longer than this limit is passed, the
+     * compile function will immediately return an error.
+     * <p>
+     * By default, there is no limit (the value is the maximum that a PCRE2_SIZE variable can hold).
+     * This function can be used to set a lower limit for security purposes, to prevent excessively
+     * long patterns from being processed.
+     *
+     * @param ccontext the compile context handle
+     * @param length   the maximum pattern length in code units
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_max_pattern_length.html">pcre2_set_max_pattern_length</a>
+     */
+    public int setMaxPatternLength(long ccontext, long length);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.

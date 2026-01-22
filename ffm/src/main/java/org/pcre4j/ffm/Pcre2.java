@@ -68,6 +68,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_set_newline;
     private final MethodHandle pcre2_set_bsr;
     private final MethodHandle pcre2_set_parens_nest_limit;
+    private final MethodHandle pcre2_set_max_pattern_length;
     private final MethodHandle pcre2_set_match_limit;
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
@@ -360,6 +361,14 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_compile_context*
                         ValueLayout.JAVA_INT // uint32_t
+                )
+        );
+
+        pcre2_set_max_pattern_length = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_max_pattern_length" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_compile_context*
+                        ValueLayout.ADDRESS // PCRE2_SIZE
                 )
         );
 
@@ -1157,6 +1166,21 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_parens_nest_limit.invokeExact(
                     pCContext,
                     limit
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setMaxPatternLength(long ccontext, long length) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCContext = MemorySegment.ofAddress(ccontext);
+            final var pLength = MemorySegment.ofAddress(length);
+
+            return (int) pcre2_set_max_pattern_length.invokeExact(
+                    pCContext,
+                    pLength
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
