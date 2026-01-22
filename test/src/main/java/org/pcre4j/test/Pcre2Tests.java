@@ -2804,4 +2804,73 @@ public abstract class Pcre2Tests {
         assertTrue(result > 0, "Pattern should match with high nesting limit");
     }
 
+    @Test
+    public void setMaxPatternLengthAllowsValidPattern() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setMaxPatternLength(100);
+
+        // A short pattern should compile successfully
+        final var code = new Pcre2Code(
+                api,
+                "abc",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+        final var result = code.match(
+                "abc",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "Pattern within length limit should compile and match");
+    }
+
+    @Test
+    public void setMaxPatternLengthRejectsLongPattern() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setMaxPatternLength(5);
+
+        // A pattern longer than the limit should fail to compile
+        final var exception = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(
+                api,
+                "abcdefghij",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        ));
+
+        assertTrue(exception.message().contains("pattern") || exception.message().contains("long"),
+                "Should fail with pattern length error, got: " + exception.message());
+    }
+
+    @Test
+    public void setMaxPatternLengthWithHighValue() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Setting a high limit should not throw
+        compileContext.setMaxPatternLength(1000000);
+
+        // Should compile a reasonably long pattern
+        final var longPattern = "a{1,100}";
+        final var code = new Pcre2Code(
+                api,
+                longPattern,
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+        final var result = code.match(
+                "aaaaaaaaaa",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "Pattern should match with high length limit");
+    }
+
 }
