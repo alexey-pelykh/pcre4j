@@ -1046,6 +1046,20 @@ public interface IPcre2 {
     public int setBsr(long ccontext, int value);
 
     /**
+     * Set the parentheses nesting limit within a compile context.
+     * <p>
+     * This limit is used to prevent patterns with excessive parentheses nesting from consuming
+     * too many resources during compilation. The default limit is 250, but this can be changed
+     * at build time.
+     *
+     * @param ccontext the compile context handle
+     * @param limit    the maximum depth of nested parentheses allowed in a pattern
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_parens_nest_limit.html">pcre2_set_parens_nest_limit</a>
+     */
+    public int setParensNestLimit(long ccontext, int limit);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.
