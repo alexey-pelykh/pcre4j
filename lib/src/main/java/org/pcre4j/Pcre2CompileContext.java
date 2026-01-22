@@ -140,6 +140,27 @@ public class Pcre2CompileContext {
         }
     }
 
+    /**
+     * Set the maximum pattern length.
+     * <p>
+     * This limit restricts the maximum length (in code units) of a pattern that can be compiled.
+     * If a pattern longer than this limit is passed to compilation, the compilation immediately
+     * fails with an error.
+     * <p>
+     * By default, there is no limit (the value is the maximum that a PCRE2_SIZE variable can hold).
+     * This can be used for security purposes to prevent excessively long patterns from being processed.
+     *
+     * @param length the maximum pattern length in code units
+     */
+    public void setMaxPatternLength(long length) {
+        final var result = api.setMaxPatternLength(handle, length);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the maximum pattern length",
+                    new IllegalStateException(errorMessage));
+        }
+    }
+
     private record Clean(IPcre2 api, long compileContext) implements Runnable {
         @Override
         public void run() {
