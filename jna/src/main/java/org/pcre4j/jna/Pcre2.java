@@ -372,6 +372,51 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int dfaMatch(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            int[] workspace,
+            int wscount
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (workspace == null) {
+            throw new IllegalArgumentException("workspace must not be null");
+        }
+        if (wscount < 0) {
+            throw new IllegalArgumentException("wscount must not be negative");
+        }
+        if (wscount > workspace.length) {
+            throw new IllegalArgumentException("wscount must not be greater than workspace.length");
+        }
+
+        final var pCode = new Pointer(code);
+        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
+        final var subjectLength = new Pointer(pszSubject.length);
+        final var startOffset = new Pointer(startoffset);
+        final var pMatchData = new Pointer(matchData);
+        final var pMContext = new Pointer(mcontext);
+        final var wsCount = new Pointer(wscount);
+
+        return library.pcre2_dfa_match(
+                pCode,
+                pszSubject,
+                subjectLength,
+                startOffset,
+                options,
+                pMatchData,
+                pMContext,
+                workspace,
+                wsCount
+        );
+    }
+
+    @Override
     public int getOvectorCount(long matchData) {
         final var pMatchData = new Pointer(matchData);
         return library.pcre2_get_ovector_count(pMatchData);
@@ -794,6 +839,18 @@ public class Pcre2 implements IPcre2 {
                 int options,
                 Pointer matchData,
                 Pointer mcontext
+        );
+
+        int pcre2_dfa_match(
+                Pointer code,
+                byte[] subject,
+                Pointer length,
+                Pointer startoffset,
+                int options,
+                Pointer matchData,
+                Pointer mcontext,
+                int[] workspace,
+                Pointer wscount
         );
 
         int pcre2_get_ovector_count(Pointer matchData);

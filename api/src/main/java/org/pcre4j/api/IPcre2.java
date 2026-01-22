@@ -959,6 +959,55 @@ public interface IPcre2 {
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext);
 
     /**
+     * Match a compiled pattern against a subject string using the alternative DFA matching algorithm.
+     * <p>
+     * DFA (Deterministic Finite Automaton) matching finds all possible matches at a given point in the subject string.
+     * This is useful for lexers and tokenizers. Note that DFA matching is not Perl-compatible.
+     * <p>
+     * Unlike the standard {@link #match} function, DFA matching requires a workspace array for internal use.
+     * The workspace must be an array of integers, and its size should be at least 20 elements for simple patterns,
+     * though more complex patterns may require larger workspaces.
+     * <p>
+     * Important differences from standard matching:
+     * <ul>
+     *   <li>The output vector contains matched strings in reverse order (longest first)</li>
+     *   <li>Capturing parentheses are not supported (only the overall match is returned)</li>
+     *   <li>The {@link #DFA_RESTART} option can be used to continue after a partial match</li>
+     *   <li>The {@link #DFA_SHORTEST} option can be used to return only the shortest match</li>
+     * </ul>
+     *
+     * @param code        the compiled pattern handle
+     * @param subject     the subject string
+     * @param startoffset the starting offset in the subject string
+     * @param options     option bits (may include {@link #DFA_RESTART}, {@link #DFA_SHORTEST},
+     *                    {@link #PARTIAL_SOFT}, {@link #PARTIAL_HARD})
+     * @param matchData   the match data handle
+     * @param mcontext    the match context handle (may be 0)
+     * @param workspace   an array of integers used as working space by the matching algorithm
+     * @param wscount     the number of elements in the workspace array
+     * @return the number of matched substrings, zero if the output vector is too small,
+     *         or a negative error code:
+     *         {@link #ERROR_NOMATCH} if no match was found,
+     *         {@link #ERROR_DFA_WSSIZE} if the workspace is too small,
+     *         {@link #ERROR_DFA_RECURSE} if recursion is used in the pattern,
+     *         {@link #ERROR_DFA_UCOND} if an unsupported condition is used,
+     *         {@link #ERROR_DFA_UFUNC} if an unsupported function is used,
+     *         {@link #ERROR_DFA_UITEM} if an unsupported pattern item is encountered,
+     *         {@link #ERROR_DFA_BADRESTART} if {@link #DFA_RESTART} is used incorrectly
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_dfa_match.html">pcre2_dfa_match</a>
+     */
+    public int dfaMatch(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            int[] workspace,
+            int wscount
+    );
+
+    /**
      * Get number of the offset pairs in the output vector of the match data
      *
      * @param matchData the match data handle
