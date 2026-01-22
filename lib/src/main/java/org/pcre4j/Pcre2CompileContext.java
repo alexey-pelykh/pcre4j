@@ -119,6 +119,27 @@ public class Pcre2CompileContext {
         }
     }
 
+    /**
+     * Set the parentheses nesting limit.
+     * <p>
+     * This limit is used to prevent patterns with excessive parentheses nesting from consuming
+     * too many resources during compilation. The default limit is 250, but this can be changed
+     * at build time.
+     * <p>
+     * If a pattern exceeds this limit during compilation, the error {@code PCRE2_ERROR_PARENTHESES_NEST_TOO_DEEP}
+     * is returned.
+     *
+     * @param limit the maximum depth of nested parentheses allowed in a pattern
+     */
+    public void setParensNestLimit(int limit) {
+        final var result = api.setParensNestLimit(handle, limit);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the parentheses nest limit",
+                    new IllegalStateException(errorMessage));
+        }
+    }
+
     private record Clean(IPcre2 api, long compileContext) implements Runnable {
         @Override
         public void run() {

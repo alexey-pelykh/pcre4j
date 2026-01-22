@@ -2736,4 +2736,72 @@ public abstract class Pcre2Tests {
                 "\\R with BSR_ANYCRLF should match CRLF");
     }
 
+    @Test
+    public void setParensNestLimitAllowsValidNesting() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setParensNestLimit(10);
+
+        // A pattern with nesting depth of 3 should compile successfully
+        final var code = new Pcre2Code(
+                api,
+                "((a)(b))",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+        final var result = code.match(
+                "ab",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "Pattern with acceptable nesting should match");
+    }
+
+    @Test
+    public void setParensNestLimitRejectsExcessiveNesting() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setParensNestLimit(2);
+
+        // A pattern with nesting depth of 3 should fail to compile with limit of 2
+        final var exception = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(
+                api,
+                "(((a)))",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        ));
+
+        assertTrue(exception.message().contains("parentheses") || exception.message().contains("nest"),
+                "Should fail with parentheses nesting error, got: " + exception.message());
+    }
+
+    @Test
+    public void setParensNestLimitWithHighValue() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Setting a high limit should not throw
+        compileContext.setParensNestLimit(1000);
+
+        // Should compile complex nested pattern
+        final var code = new Pcre2Code(
+                api,
+                "((((((a))))))",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+
+        final var matchData = new Pcre2MatchData(code);
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "Pattern should match with high nesting limit");
+    }
+
 }
