@@ -1024,6 +1024,22 @@ public interface IPcre2 {
     public void getOvector(long matchData, long[] ovector);
 
     /**
+     * Get the starting character offset from a match.
+     * <p>
+     * After a successful match, this function returns the code unit offset of the character at which the successful
+     * match started. For non-partial matches, this may differ from {@code ovector[0]} if the pattern uses the
+     * {@code \K} escape sequence, which resets the start of the matched string.
+     * <p>
+     * After a partial match, this value is always the same as {@code ovector[0]} because {@code \K} does not affect
+     * the result of a partial match.
+     *
+     * @param matchData the match data handle from a successful match
+     * @return the code unit offset of the character at which the match started
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_startchar.html">pcre2_get_startchar</a>
+     */
+    public long getStartchar(long matchData);
+
+    /**
      * Set the newline convention within a compile context
      *
      * @param ccontext the compile context handle

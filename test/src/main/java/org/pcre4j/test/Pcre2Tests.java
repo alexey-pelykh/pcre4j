@@ -3072,4 +3072,55 @@ public abstract class Pcre2Tests {
         assertTrue(unicodeResult < 0, "Non-ASCII letter should NOT match \\w with ASCII_BSW");
     }
 
+    @Test
+    public void testGetStartchar() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Normal case - getStartchar should equal ovector[0]
+        final var code1 = api.compile("bar", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern");
+
+        final var matchData1 = api.matchDataCreateFromPattern(code1, 0);
+        assertTrue(matchData1 != 0, "Failed to create match data");
+
+        final var result1 = api.match(code1, "foobar", 0, 0, matchData1, 0);
+        assertTrue(result1 > 0, "Match should succeed");
+
+        final var ovector1 = new long[2];
+        api.getOvector(matchData1, ovector1);
+        final var startchar1 = api.getStartchar(matchData1);
+        assertEquals(ovector1[0], startchar1, "For normal patterns, getStartchar should equal ovector[0]");
+        assertEquals(3, startchar1, "Match should start at position 3");
+
+        api.matchDataFree(matchData1);
+        api.codeFree(code1);
+
+        // Test 2: Pattern with \K - getStartchar should differ from ovector[0]
+        // \K resets the start of the matched string, so ovector[0] will be after \K,
+        // but getStartchar returns where the match actually started
+        final var code2 = api.compile("foo\\Kbar", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern with \\K");
+
+        final var matchData2 = api.matchDataCreateFromPattern(code2, 0);
+        assertTrue(matchData2 != 0, "Failed to create match data");
+
+        final var result2 = api.match(code2, "foobar", 0, 0, matchData2, 0);
+        assertTrue(result2 > 0, "Match with \\K should succeed");
+
+        final var ovector2 = new long[2];
+        api.getOvector(matchData2, ovector2);
+        final var startchar2 = api.getStartchar(matchData2);
+
+        // ovector[0] should be 3 (start of "bar" after \K reset)
+        assertEquals(3, ovector2[0], "ovector[0] should be 3 (after \\K reset)");
+        // getStartchar should be 0 (where the actual match started, at "foo")
+        assertEquals(0, startchar2, "getStartchar should be 0 (where match actually started)");
+        // They should differ due to \K
+        assertTrue(ovector2[0] != startchar2, "With \\K, getStartchar should differ from ovector[0]");
+
+        api.matchDataFree(matchData2);
+        api.codeFree(code2);
+    }
+
 }

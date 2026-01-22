@@ -64,6 +64,7 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_get_ovector_count;
     private final MethodHandle pcre2_get_ovector_pointer;
+    private final MethodHandle pcre2_get_startchar;
 
     private final MethodHandle pcre2_set_newline;
     private final MethodHandle pcre2_set_bsr;
@@ -337,6 +338,13 @@ public class Pcre2 implements IPcre2 {
         pcre2_get_ovector_pointer = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_get_ovector_pointer" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, // PCRE2_SIZE*
+                        ValueLayout.ADDRESS // pcre2_match_data*
+                )
+        );
+
+        pcre2_get_startchar = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_get_startchar" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // PCRE2_SIZE
                         ValueLayout.ADDRESS // pcre2_match_data*
                 )
         );
@@ -1134,6 +1142,21 @@ public class Pcre2 implements IPcre2 {
             );
 
             MemorySegment.ofArray(ovector).copyFrom(pOvector.reinterpret(ovector.length * 8));
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long getStartchar(long matchData) {
+        try (var arena = Arena.ofConfined()) {
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+
+            final var result = (MemorySegment) pcre2_get_startchar.invokeExact(
+                    pMatchData
+            );
+
+            return result.address();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
