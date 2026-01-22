@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -100,6 +100,22 @@ public class Pcre2CompileContext {
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
             throw new RuntimeException("Failed set the newline convention", new IllegalStateException(errorMessage));
+        }
+    }
+
+    /**
+     * Set the BSR (backslash-R) convention
+     *
+     * @param bsr the BSR convention
+     */
+    public void setBsr(Pcre2Bsr bsr) {
+        if (bsr == null) {
+            throw new IllegalArgumentException("bsr cannot be null");
+        }
+        final var result = api.setBsr(handle, bsr.value());
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the BSR convention", new IllegalStateException(errorMessage));
         }
     }
 

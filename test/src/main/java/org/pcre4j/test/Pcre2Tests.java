@@ -2637,4 +2637,103 @@ public abstract class Pcre2Tests {
         api.codeFree(code);
     }
 
+    @Test
+    public void setBsrNullThrows() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        assertThrows(IllegalArgumentException.class, () -> compileContext.setBsr(null));
+    }
+
+    @Test
+    public void setBsrUnicodeAllowed() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Should not throw
+        compileContext.setBsr(Pcre2Bsr.UNICODE);
+    }
+
+    @Test
+    public void setBsrAnyCrLfAllowed() {
+        final var compileContext = new Pcre2CompileContext(api, null);
+        // Should not throw
+        compileContext.setBsr(Pcre2Bsr.ANYCRLF);
+    }
+
+    @Test
+    public void bsrUnicodeMatchesVerticalTab() {
+        // With BSR_UNICODE, \R should match vertical tab (U+000B)
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setBsr(Pcre2Bsr.UNICODE);
+
+        final var code = new Pcre2Code(
+                api,
+                "\\R",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Vertical tab (U+000B) should match with BSR_UNICODE
+        final var result = code.match(
+                "\u000B",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertTrue(result > 0, "\\R with BSR_UNICODE should match vertical tab");
+    }
+
+    @Test
+    public void bsrAnyCrLfDoesNotMatchVerticalTab() {
+        // With BSR_ANYCRLF, \R should NOT match vertical tab (U+000B)
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setBsr(Pcre2Bsr.ANYCRLF);
+
+        final var code = new Pcre2Code(
+                api,
+                "\\R",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // Vertical tab (U+000B) should NOT match with BSR_ANYCRLF
+        final var result = code.match(
+                "\u000B",
+                0,
+                EnumSet.noneOf(Pcre2MatchOption.class),
+                matchData,
+                null
+        );
+
+        assertEquals(IPcre2.ERROR_NOMATCH, result, "\\R with BSR_ANYCRLF should NOT match vertical tab");
+    }
+
+    @Test
+    public void bsrAnyCrLfMatchesCrLf() {
+        // With BSR_ANYCRLF, \R should match CR, LF, and CRLF
+        final var compileContext = new Pcre2CompileContext(api, null);
+        compileContext.setBsr(Pcre2Bsr.ANYCRLF);
+
+        final var code = new Pcre2Code(
+                api,
+                "\\R",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                compileContext
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        // CR should match
+        assertTrue(code.match("\r", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null) > 0,
+                "\\R with BSR_ANYCRLF should match CR");
+
+        // LF should match
+        assertTrue(code.match("\n", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null) > 0,
+                "\\R with BSR_ANYCRLF should match LF");
+
+        // CRLF should match
+        assertTrue(code.match("\r\n", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null) > 0,
+                "\\R with BSR_ANYCRLF should match CRLF");
+    }
+
 }
