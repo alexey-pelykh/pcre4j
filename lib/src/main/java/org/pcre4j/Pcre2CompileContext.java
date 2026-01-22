@@ -161,6 +161,36 @@ public class Pcre2CompileContext {
         }
     }
 
+    /**
+     * Set the extra compile options.
+     * <p>
+     * This method sets additional option bits for pattern compilation that are housed in the compile context.
+     * These options completely replace any previously set extra options.
+     * <p>
+     * The extra options provide fine-grained control over pattern compilation, such as restricting character
+     * class matching to ASCII or allowing special escape sequences.
+     *
+     * @param extraOptions the extra compile options to set
+     */
+    public void setCompileExtraOptions(Pcre2CompileExtraOption... extraOptions) {
+        if (extraOptions == null) {
+            throw new IllegalArgumentException("extraOptions cannot be null");
+        }
+        var extraOptionsValue = 0;
+        for (var extraOption : extraOptions) {
+            if (extraOption == null) {
+                throw new IllegalArgumentException("extraOptions cannot contain null");
+            }
+            extraOptionsValue |= extraOption.value();
+        }
+        final var result = api.setCompileExtraOptions(handle, extraOptionsValue);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the extra compile options",
+                    new IllegalStateException(errorMessage));
+        }
+    }
+
     private record Clean(IPcre2 api, long compileContext) implements Runnable {
         @Override
         public void run() {

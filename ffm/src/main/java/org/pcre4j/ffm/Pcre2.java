@@ -69,6 +69,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_set_bsr;
     private final MethodHandle pcre2_set_parens_nest_limit;
     private final MethodHandle pcre2_set_max_pattern_length;
+    private final MethodHandle pcre2_set_compile_extra_options;
     private final MethodHandle pcre2_set_match_limit;
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
@@ -369,6 +370,14 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_compile_context*
                         ValueLayout.ADDRESS // PCRE2_SIZE
+                )
+        );
+
+        pcre2_set_compile_extra_options = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_compile_extra_options" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_compile_context*
+                        ValueLayout.JAVA_INT // uint32_t
                 )
         );
 
@@ -1181,6 +1190,20 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_max_pattern_length.invokeExact(
                     pCContext,
                     pLength
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setCompileExtraOptions(long ccontext, int extraOptions) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCContext = MemorySegment.ofAddress(ccontext);
+
+            return (int) pcre2_set_compile_extra_options.invokeExact(
+                    pCContext,
+                    extraOptions
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

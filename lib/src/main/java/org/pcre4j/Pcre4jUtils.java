@@ -57,6 +57,37 @@ public final class Pcre4jUtils {
     }
 
     /**
+     * Check if the PCRE2 version is at least the specified version.
+     *
+     * @param api   the PCRE2 API
+     * @param major the major version number
+     * @param minor the minor version number
+     * @return {@code true} if the PCRE2 version is at least major.minor, {@code false} otherwise
+     */
+    public static boolean isVersionAtLeast(IPcre2 api, int major, int minor) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var version = getVersion(api);
+        // Version format is "major.minor date" e.g., "10.42 2022-12-11"
+        final var spaceIndex = version.indexOf(' ');
+        final var versionPart = spaceIndex >= 0 ? version.substring(0, spaceIndex) : version;
+        final var parts = versionPart.split("\\.");
+        if (parts.length < 2) {
+            throw new IllegalStateException("Unexpected version format: " + version);
+        }
+
+        final var actualMajor = Integer.parseInt(parts[0]);
+        final var actualMinor = Integer.parseInt(parts[1]);
+
+        if (actualMajor != major) {
+            return actualMajor > major;
+        }
+        return actualMinor >= minor;
+    }
+
+    /**
      * Get the Unicode version.
      *
      * @param api the PCRE2 API
