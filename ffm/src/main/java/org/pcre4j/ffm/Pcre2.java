@@ -60,6 +60,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_match_context_free;
 
     private final MethodHandle pcre2_match;
+    private final MethodHandle pcre2_dfa_match;
 
     private final MethodHandle pcre2_get_ovector_count;
     private final MethodHandle pcre2_get_ovector_pointer;
@@ -304,6 +305,21 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_match_data*
                         ValueLayout.ADDRESS // pcre2_match_context*
+                )
+        );
+
+        pcre2_dfa_match = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_dfa_match" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS, // PCRE2_SPTR
+                        ValueLayout.ADDRESS, // PCRE2_SIZE length
+                        ValueLayout.ADDRESS, // PCRE2_SIZE startoffset
+                        ValueLayout.JAVA_INT, // uint32_t options
+                        ValueLayout.ADDRESS, // pcre2_match_data*
+                        ValueLayout.ADDRESS, // pcre2_match_context*
+                        ValueLayout.ADDRESS, // int* workspace
+                        ValueLayout.ADDRESS  // PCRE2_SIZE wscount
                 )
         );
 
@@ -999,6 +1015,56 @@ public class Pcre2 implements IPcre2 {
                     options,
                     pMatchData,
                     pMatchContext
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int dfaMatch(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            int[] workspace,
+            int wscount
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (workspace == null) {
+            throw new IllegalArgumentException("workspace must not be null");
+        }
+        if (wscount < 0) {
+            throw new IllegalArgumentException("wscount must not be negative");
+        }
+        if (wscount > workspace.length) {
+            throw new IllegalArgumentException("wscount must not be greater than workspace.length");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pszSubject = arena.allocateUtf8String(subject);
+            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var startOffset = MemorySegment.ofAddress(startoffset);
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+            final var pMatchContext = MemorySegment.ofAddress(mcontext);
+            final var pWorkspace = arena.allocateArray(ValueLayout.JAVA_INT, workspace);
+            final var wsCount = MemorySegment.ofAddress(wscount);
+
+            return (int) pcre2_dfa_match.invokeExact(
+                    pCode,
+                    pszSubject,
+                    subjectLength,
+                    startOffset,
+                    options,
+                    pMatchData,
+                    pMatchContext,
+                    pWorkspace,
+                    wsCount
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

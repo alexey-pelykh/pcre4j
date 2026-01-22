@@ -2384,4 +2384,257 @@ public abstract class Pcre2Tests {
         api.codeFree(code);
     }
 
+    @Test
+    public void dfaMatchBasic() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        // DFA matching requires a workspace array
+        final var workspace = new int[100];
+        final var result = api.dfaMatch(code, "hello world", 0, 0, matchData, 0, workspace, workspace.length);
+
+        // DFA match should succeed and return 1 for a simple match
+        assertTrue(result > 0, "DFA match should succeed (result=" + result + ")");
+
+        // Verify match position using ovector
+        final var ovector = new long[2];
+        api.getOvector(matchData, ovector);
+        assertEquals(0, ovector[0], "Match should start at position 0");
+        assertEquals(5, ovector[1], "Match should end at position 5");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchNoMatch() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("xyz", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+        final var result = api.dfaMatch(code, "hello world", 0, 0, matchData, 0, workspace, workspace.length);
+
+        assertEquals(IPcre2.ERROR_NOMATCH, result, "DFA match should return NOMATCH");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchWithStartOffset() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("world", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+        // Start matching from offset 6
+        final var result = api.dfaMatch(code, "hello world", 6, 0, matchData, 0, workspace, workspace.length);
+
+        assertTrue(result > 0, "DFA match should succeed (result=" + result + ")");
+
+        // Verify match position
+        final var ovector = new long[2];
+        api.getOvector(matchData, ovector);
+        assertEquals(6, ovector[0], "Match should start at position 6");
+        assertEquals(11, ovector[1], "Match should end at position 11");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchAlternatives() {
+        // DFA matching can find all alternative matches - use a pattern with alternation
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        // Pattern matches "ab", "abc", or "abcd"
+        final var code = api.compile("ab(c(d)?)?", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        // Create match data with enough space for multiple matches
+        // DFA can return multiple matches, so we need space in ovector
+        final var matchData = api.matchDataCreate(10, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+        final var result = api.dfaMatch(code, "abcd", 0, 0, matchData, 0, workspace, workspace.length);
+
+        // DFA should find multiple matches (ab, abc, abcd)
+        assertTrue(result >= 1, "DFA match should find at least one match (result=" + result + ")");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchWorkspaceTooSmall() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("(a+)+", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        // Use a very small workspace
+        final var workspace = new int[1];
+        final var result = api.dfaMatch(code, "aaaaaaaaaa", 0, 0, matchData, 0, workspace, workspace.length);
+
+        // Should return DFA workspace too small error
+        assertEquals(IPcre2.ERROR_DFA_WSSIZE, result, "Should return DFA_WSSIZE error");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchNullSubject() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+
+        assertThrows(IllegalArgumentException.class,
+                () -> api.dfaMatch(code, null, 0, 0, matchData, 0, workspace, workspace.length));
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchNullWorkspace() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> api.dfaMatch(code, "hello world", 0, 0, matchData, 0, null, 100));
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchNegativeWscount() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+
+        assertThrows(IllegalArgumentException.class,
+                () -> api.dfaMatch(code, "hello world", 0, 0, matchData, 0, workspace, -1));
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchWscountTooLarge() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+
+        // wscount larger than workspace array
+        assertThrows(IllegalArgumentException.class,
+                () -> api.dfaMatch(code, "hello world", 0, 0, matchData, 0, workspace, 200));
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchUnicode() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        final var code = api.compile("🌐+", IPcre2.UTF, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+        final var result = api.dfaMatch(code, "hello 🌐🌐🌐 world", 0, 0, matchData, 0, workspace, workspace.length);
+
+        assertTrue(result > 0, "DFA match should succeed (result=" + result + ")");
+
+        // Verify match position (UTF-8 encoding: each emoji is 4 bytes)
+        final var ovector = new long[2];
+        api.getOvector(matchData, ovector);
+        assertEquals(6, ovector[0], "Match should start at byte offset 6");
+        assertEquals(18, ovector[1], "Match should end at byte offset 18 (6 + 3*4)");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
+    @Test
+    public void dfaMatchShortest() {
+        // Test DFA_SHORTEST option which returns shortest match
+        // DFA_SHORTEST only has effect with patterns that have alternatives of different lengths
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        // Pattern with explicit alternatives of different lengths
+        final var code = api.compile("a|aa|aaa|aaaa", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Compile should succeed");
+
+        final var matchData = api.matchDataCreate(10, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var workspace = new int[100];
+
+        // Without DFA_SHORTEST, DFA returns all matches with longest first (rc=count of matches)
+        final var resultLongest = api.dfaMatch(code, "aaaa", 0, 0, matchData, 0, workspace, workspace.length);
+        assertEquals(4, resultLongest, "DFA without DFA_SHORTEST should return all 4 alternative matches");
+
+        final var ovectorLongest = new long[2];
+        api.getOvector(matchData, ovectorLongest);
+        assertEquals(4, ovectorLongest[1], "Without DFA_SHORTEST, first match should be longest (4 a's)");
+
+        // With DFA_SHORTEST, DFA returns only the shortest match
+        final var resultShortest = api.dfaMatch(
+                code, "aaaa", 0, IPcre2.DFA_SHORTEST, matchData, 0, workspace, workspace.length);
+        assertEquals(1, resultShortest, "DFA with DFA_SHORTEST should return only 1 match");
+
+        final var ovectorShortest = new long[2];
+        api.getOvector(matchData, ovectorShortest);
+        assertEquals(1, ovectorShortest[1], "With DFA_SHORTEST, should match only 1 'a'");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+    }
+
 }
