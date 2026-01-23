@@ -142,6 +142,7 @@ public class PatternTests {
         assertThrows(IllegalStateException.class, javaMatcher::group);
         assertThrows(IllegalStateException.class, pcre4jMatcher::group);
     }
+
     @ParameterizedTest
     @MethodSource("parameters")
     void quote(IPcre2 api) {
@@ -152,6 +153,9 @@ public class PatternTests {
         assertEquals(java.util.regex.Pattern.quote(inputWithEmptyString), Pattern.quote(inputWithEmptyString));
         assertEquals(java.util.regex.Pattern.quote(input), Pattern.quote(input));
         assertEquals(java.util.regex.Pattern.quote(inputWithSlashE), Pattern.quote(inputWithSlashE));
+        assertTrue(Pattern.compile(api, Pattern.quote(inputWithEmptyString)).matcher(inputWithEmptyString).matches());
+        assertTrue(Pattern.compile(api, Pattern.quote(input)).matcher(input).matches());
+        assertTrue(Pattern.compile(api, Pattern.quote(inputWithSlashE)).matcher(inputWithSlashE).matches());
     }
-    
+
 }

@@ -295,7 +295,7 @@ public class Pattern {
      * <p>Metacharacters or escape sequences in the input String will be given no special meaning.</p>
      *
      * @param s The string to be literalized
-     * @return A literal string replacement
+     * @return A literal pattern String
      */
     public static String quote(String s) {
         int slashEIndex = s.indexOf("\\E");
