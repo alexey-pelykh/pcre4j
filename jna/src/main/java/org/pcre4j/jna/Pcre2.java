@@ -917,6 +917,15 @@ public class Pcre2 implements IPcre2 {
         return result;
     }
 
+    @Override
+    public void serializeFree(long bytes) {
+        if (bytes == 0) {
+            return;
+        }
+
+        library.pcre2_serialize_free(new Pointer(bytes));
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -1097,6 +1106,8 @@ public class Pcre2 implements IPcre2 {
                 byte[] bytes,
                 Pointer gcontext
         );
+
+        void pcre2_serialize_free(Pointer bytes);
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {
