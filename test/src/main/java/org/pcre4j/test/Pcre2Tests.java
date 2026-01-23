@@ -3653,4 +3653,18 @@ public abstract class Pcre2Tests {
                 "serializeGetNumberOfCodes should return ERROR_BADMAGIC for invalid data");
     }
 
+    @Test
+    public void setCalloutDisablesCallouts() {
+        // Create match context
+        long matchCtx = api.matchContextCreate(0);
+        assertTrue(matchCtx != 0, "Match context creation should succeed");
+
+        // Set callout to 0 (disable callouts) - should always return 0
+        int result = api.setCallout(matchCtx, 0, 0);
+        assertEquals(0, result, "setCallout should return 0");
+
+        // Clean up
+        api.matchContextFree(matchCtx);
+    }
+
 }

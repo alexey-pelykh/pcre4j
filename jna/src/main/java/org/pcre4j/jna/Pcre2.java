@@ -516,6 +516,14 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setCallout(long mcontext, long callback, long calloutData) {
+        final var pMContext = new Pointer(mcontext);
+        final var pCallback = new Pointer(callback);
+        final var pCalloutData = new Pointer(calloutData);
+        return library.pcre2_set_callout(pMContext, pCallback, pCalloutData);
+    }
+
+    @Override
     public int substitute(
             long code,
             String subject,
@@ -1030,6 +1038,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_heap_limit(Pointer mcontext, int value);
 
         int pcre2_set_offset_limit(Pointer mcontext, Pointer value);
+
+        int pcre2_set_callout(Pointer mcontext, Pointer callback, Pointer calloutData);
 
         int pcre2_substitute(
                 Pointer code,

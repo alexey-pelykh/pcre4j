@@ -78,6 +78,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
     private final MethodHandle pcre2_set_offset_limit;
+    private final MethodHandle pcre2_set_callout;
 
     private final MethodHandle pcre2_substitute;
 
@@ -447,6 +448,15 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_match_context*
                         ValueLayout.ADDRESS // PCRE2_SIZE
+                )
+        );
+
+        pcre2_set_callout = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_callout" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_match_context*
+                        ValueLayout.ADDRESS, // int (*)(pcre2_callout_block *, void *)
+                        ValueLayout.ADDRESS  // void*
                 )
         );
 
@@ -1393,6 +1403,23 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_offset_limit.invokeExact(
                     pMContext,
                     pLimit
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setCallout(long mcontext, long callback, long calloutData) {
+        try {
+            final var pMContext = MemorySegment.ofAddress(mcontext);
+            final var pCallback = MemorySegment.ofAddress(callback);
+            final var pCalloutData = MemorySegment.ofAddress(calloutData);
+
+            return (int) pcre2_set_callout.invokeExact(
+                    pMContext,
+                    pCallback,
+                    pCalloutData
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

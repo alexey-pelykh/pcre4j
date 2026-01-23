@@ -1219,6 +1219,27 @@ public interface IPcre2 {
     public int setOffsetLimit(long mcontext, long limit);
 
     /**
+     * Set up a callout function within a match context.
+     * <p>
+     * This function sets a callout function for the match context. The callout function is called during matching
+     * whenever a callout point is reached in the pattern. Callout points are either automatically generated
+     * (when compiled with {@link #AUTO_CALLOUT}) or explicitly placed in the pattern using (?C) or (?Cn) syntax.
+     * <p>
+     * The callout function receives a pointer to a callout block structure containing information about the
+     * current match state, and a user-supplied data pointer. The function should return zero to continue
+     * matching, or a non-zero value to abort the match with that value as the match result.
+     * <p>
+     * Passing 0 as the callback disables callouts.
+     *
+     * @param mcontext    the match context handle
+     * @param callback    a callback function handle, or 0 to disable callouts
+     * @param calloutData a value to be passed to the callback function
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_callout.html">pcre2_set_callout</a>
+     */
+    public int setCallout(long mcontext, long callback, long calloutData);
+
+    /**
      * Match a compiled pattern against a subject string and perform substitution.
      *
      * @param code          the compiled pattern handle
