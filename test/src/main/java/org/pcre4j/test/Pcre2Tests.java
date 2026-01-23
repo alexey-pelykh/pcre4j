@@ -3593,4 +3593,64 @@ public abstract class Pcre2Tests {
         api.codeFree(code2);
     }
 
+    @Test
+    public void testSerializeGetNumberOfCodes() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Get count from serialized single pattern
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var serializedBytes = new long[1];
+        final var serializedSize = new long[1];
+
+        final var encodeResult = api.serializeEncode(new long[]{code}, 1, serializedBytes, serializedSize, 0);
+        assertEquals(1, encodeResult, "serializeEncode should return 1 for single pattern");
+
+        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        final var count = api.serializeGetNumberOfCodes(bytes);
+        assertEquals(1, count, "serializeGetNumberOfCodes should return 1 for single pattern");
+
+        api.serializeFree(serializedBytes[0]);
+        api.codeFree(code);
+
+        // Test 2: Get count from serialized multiple patterns
+        final var code1 = api.compile("pattern1", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern1");
+
+        final var code2 = api.compile("pattern2", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern2");
+
+        final var code3 = api.compile("pattern3", 0, errorcode, erroroffset, 0);
+        assertTrue(code3 != 0, "Failed to compile pattern3");
+
+        final var serializedBytes2 = new long[1];
+        final var serializedSize2 = new long[1];
+
+        final var encodeResult2 = api.serializeEncode(
+                new long[]{code1, code2, code3}, 3, serializedBytes2, serializedSize2, 0);
+        assertEquals(3, encodeResult2, "serializeEncode should return 3 for three patterns");
+
+        final var bytes2 = api.readBytes(serializedBytes2[0], (int) serializedSize2[0]);
+        final var count2 = api.serializeGetNumberOfCodes(bytes2);
+        assertEquals(3, count2, "serializeGetNumberOfCodes should return 3 for three patterns");
+
+        api.serializeFree(serializedBytes2[0]);
+        api.codeFree(code1);
+        api.codeFree(code2);
+        api.codeFree(code3);
+
+        // Test 3: Invalid input - null bytes array
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeGetNumberOfCodes(null);
+        }, "Should throw IllegalArgumentException for null bytes array");
+
+        // Test 4: Invalid input - corrupted/invalid data (should return ERROR_BADMAGIC)
+        final var invalidBytes = new byte[]{0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        final var invalidResult = api.serializeGetNumberOfCodes(invalidBytes);
+        assertEquals(IPcre2.ERROR_BADMAGIC, invalidResult,
+                "serializeGetNumberOfCodes should return ERROR_BADMAGIC for invalid data");
+    }
+
 }
