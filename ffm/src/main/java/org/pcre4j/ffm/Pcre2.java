@@ -63,6 +63,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_dfa_match;
 
     private final MethodHandle pcre2_get_ovector_count;
+    private final MethodHandle pcre2_get_match_data_size;
     private final MethodHandle pcre2_get_ovector_pointer;
     private final MethodHandle pcre2_get_startchar;
     private final MethodHandle pcre2_get_mark;
@@ -332,6 +333,13 @@ public class Pcre2 implements IPcre2 {
         pcre2_get_ovector_count = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_get_ovector_count" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS // pcre2_match_data*
+                )
+        );
+
+        pcre2_get_match_data_size = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_get_match_data_size" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // PCRE2_SIZE
                         ValueLayout.ADDRESS // pcre2_match_data*
                 )
         );
@@ -1131,6 +1139,21 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_get_ovector_count.invokeExact(
                     pMatchData
             );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long getMatchDataSize(long matchData) {
+        try (var arena = Arena.ofConfined()) {
+            final var pMatchData = MemorySegment.ofAddress(matchData);
+
+            final var result = (MemorySegment) pcre2_get_match_data_size.invokeExact(
+                    pMatchData
+            );
+
+            return result.address();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

@@ -423,6 +423,12 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long getMatchDataSize(long matchData) {
+        final var pMatchData = new Pointer(matchData);
+        return Pointer.nativeValue(library.pcre2_get_match_data_size(pMatchData));
+    }
+
+    @Override
     public void getOvector(long matchData, long[] ovector) {
         if (ovector == null) {
             throw new IllegalArgumentException("ovector must not be null");
@@ -891,6 +897,7 @@ public class Pcre2 implements IPcre2 {
         );
 
         int pcre2_get_ovector_count(Pointer matchData);
+        Pointer pcre2_get_match_data_size(Pointer matchData);
         Pointer pcre2_get_ovector_pointer(Pointer matchData);
         Pointer pcre2_get_startchar(Pointer matchData);
         Pointer pcre2_get_mark(Pointer matchData);

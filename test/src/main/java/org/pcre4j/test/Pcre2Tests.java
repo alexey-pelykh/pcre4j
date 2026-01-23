@@ -3073,6 +3073,52 @@ public abstract class Pcre2Tests {
     }
 
     @Test
+    public void testGetMatchDataSize() {
+        // Test 1: Match data created with explicit ovector size
+        final var matchData1 = api.matchDataCreate(10, 0);
+        assertTrue(matchData1 != 0, "Failed to create match data with size 10");
+
+        final var size1 = api.getMatchDataSize(matchData1);
+        assertTrue(size1 > 0, "Match data size should be greater than 0");
+
+        api.matchDataFree(matchData1);
+
+        // Test 2: Match data created from pattern
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Pattern with 3 capture groups - should allocate space for 4 ovector pairs (full match + 3 groups)
+        final var code2 = api.compile("(a)(b)(c)", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern");
+
+        final var matchData2 = api.matchDataCreateFromPattern(code2, 0);
+        assertTrue(matchData2 != 0, "Failed to create match data from pattern");
+
+        final var size2 = api.getMatchDataSize(matchData2);
+        assertTrue(size2 > 0, "Match data size from pattern should be greater than 0");
+
+        api.matchDataFree(matchData2);
+        api.codeFree(code2);
+
+        // Test 3: Different ovector sizes should result in different match data sizes
+        final var smallMatchData = api.matchDataCreate(1, 0);
+        final var largeMatchData = api.matchDataCreate(100, 0);
+
+        assertTrue(smallMatchData != 0, "Failed to create small match data");
+        assertTrue(largeMatchData != 0, "Failed to create large match data");
+
+        final var smallSize = api.getMatchDataSize(smallMatchData);
+        final var largeSize = api.getMatchDataSize(largeMatchData);
+
+        assertTrue(smallSize > 0, "Small match data size should be greater than 0");
+        assertTrue(largeSize > 0, "Large match data size should be greater than 0");
+        assertTrue(largeSize > smallSize, "Larger ovector should result in larger match data block");
+
+        api.matchDataFree(smallMatchData);
+        api.matchDataFree(largeMatchData);
+    }
+
+    @Test
     public void testGetStartchar() {
         final var errorcode = new int[1];
         final var erroroffset = new long[1];
