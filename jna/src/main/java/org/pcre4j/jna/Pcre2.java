@@ -197,6 +197,14 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int calloutEnumerate(long code, long callback, long calloutData) {
+        final var pCode = new Pointer(code);
+        final var pCallback = new Pointer(callback);
+        final var pCalloutData = new Pointer(calloutData);
+        return library.pcre2_callout_enumerate(pCode, pCallback, pCalloutData);
+    }
+
+    @Override
     public int getErrorMessage(int errorcode, ByteBuffer buffer) {
         if (buffer == null) {
             throw new IllegalArgumentException("buffer must not be null");
@@ -967,6 +975,8 @@ public class Pcre2 implements IPcre2 {
         );
         Pointer pcre2_code_copy(Pointer code);
         void pcre2_code_free(Pointer code);
+
+        int pcre2_callout_enumerate(Pointer code, Pointer callback, Pointer calloutData);
 
         int pcre2_get_error_message(int errorcode, Pointer buffer, Pointer bufferSize);
         int pcre2_pattern_info(Pointer code, int what, Pointer where);
