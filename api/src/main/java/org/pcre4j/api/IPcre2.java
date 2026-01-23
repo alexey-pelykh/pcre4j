@@ -1016,6 +1016,19 @@ public interface IPcre2 {
     public int getOvectorCount(long matchData);
 
     /**
+     * Get the size of a match data block in bytes.
+     * <p>
+     * This function returns the size of the match data block that was obtained by a call to
+     * {@code pcre2_match_data_create()} or {@code pcre2_match_data_create_from_pattern()}.
+     * This is the size of the opaque data block.
+     *
+     * @param matchData the match data handle
+     * @return the size of the match data block in bytes
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_match_data_size.html">pcre2_get_match_data_size</a>
+     */
+    public long getMatchDataSize(long matchData);
+
+    /**
      * Get the output vector of the match data
      *
      * @param matchData the match data handle

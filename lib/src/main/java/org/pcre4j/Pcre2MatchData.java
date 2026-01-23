@@ -124,6 +124,18 @@ public class Pcre2MatchData {
     }
 
     /**
+     * Get the size of this match data block in bytes.
+     * <p>
+     * This returns the size of the opaque match data block that was allocated when this object was created.
+     *
+     * @return the size of the match data block in bytes
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_match_data_size.html">pcre2_get_match_data_size</a>
+     */
+    public long size() {
+        return api.getMatchDataSize(handle);
+    }
+
+    /**
      * Get the output vector composed of offset pairs, each offset pair represents the start and end of the match. The
      * value of the offset is the index of the byte where the character starts, not the charcater index.
      *
