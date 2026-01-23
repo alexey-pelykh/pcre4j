@@ -775,6 +775,22 @@ public interface IPcre2 {
     public void codeFree(long code);
 
     /**
+     * Enumerate callouts in a compiled pattern.
+     * <p>
+     * This function scans a compiled pattern and calls the callback function for each callout in the pattern.
+     * The callback receives a pointer to a callout enumeration block containing information about the callout,
+     * and a user-supplied data pointer. The callback should return zero to continue enumeration; returning
+     * any other value stops the enumeration and that value becomes the function's return value.
+     *
+     * @param code        the compiled pattern handle
+     * @param callback    a callback function handle
+     * @param calloutData a value to be passed to the callback function
+     * @return 0 for successful completion, or a non-zero value if the callback returns non-zero or an error occurs
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_callout_enumerate.html">pcre2_callout_enumerate</a>
+     */
+    public int calloutEnumerate(long code, long callback, long calloutData);
+
+    /**
      * Get the error message for the given error code.
      *
      * @param errorcode the error code

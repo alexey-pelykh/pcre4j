@@ -4,7 +4,7 @@ Here's the list of the PCRE2 API functions exposed via `org.pcre4j.api.IPcre2` a
 
 | ✅ | API                                                                                                                       | Description                                                                       |
 |---|---------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------|
-|   | [pcre2_callout_enumerate](https://www.pcre.org/current/doc/html/pcre2_callout_enumerate.html)                             | Enumerate callouts in a compiled pattern                                          |
+| ✅ | [pcre2_callout_enumerate](https://www.pcre.org/current/doc/html/pcre2_callout_enumerate.html)                             | Enumerate callouts in a compiled pattern                                          |
 | ✅ | [pcre2_code_copy](https://www.pcre.org/current/doc/html/pcre2_code_copy.html)                                             | Copy a compiled pattern                                                           |
 |   | [pcre2_code_copy_with_tables](https://www.pcre.org/current/doc/html/pcre2_code_copy_with_tables.html)                     | Copy a compiled pattern and its character tables                                  |
 | ✅ | [pcre2_code_free](https://www.pcre.org/current/doc/html/pcre2_code_free.html)                                             | Free a compiled pattern                                                           |

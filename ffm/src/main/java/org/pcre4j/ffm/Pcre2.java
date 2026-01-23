@@ -43,6 +43,8 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_code_copy;
     private final MethodHandle pcre2_code_free;
 
+    private final MethodHandle pcre2_callout_enumerate;
+
     private final MethodHandle pcre2_get_error_message;
     private final MethodHandle pcre2_pattern_info;
 
@@ -205,6 +207,15 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_code_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // pcre2_code*
+                )
+        );
+
+        pcre2_callout_enumerate = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_callout_enumerate" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // const pcre2_code*
+                        ValueLayout.ADDRESS, // int (*)(pcre2_callout_enumerate_block *, void *)
+                        ValueLayout.ADDRESS  // void*
                 )
         );
 
@@ -822,6 +833,23 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_code_free.invokeExact(
                     pCode
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int calloutEnumerate(long code, long callback, long calloutData) {
+        try {
+            final var pCode = MemorySegment.ofAddress(code);
+            final var pCallback = MemorySegment.ofAddress(callback);
+            final var pCalloutData = MemorySegment.ofAddress(calloutData);
+
+            return (int) pcre2_callout_enumerate.invokeExact(
+                    pCode,
+                    pCallback,
+                    pCalloutData
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
