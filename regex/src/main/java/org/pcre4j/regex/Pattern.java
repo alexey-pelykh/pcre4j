@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
 /**
  * A compiled representation of a regular expression that uses the PCRE library yet aims to have a
@@ -387,5 +389,10 @@ public class Pattern {
     @Override
     public String toString() {
         return regex;
+    }
+
+    public Stream<String> splitAsStream(CharSequence input)
+    {
+        return Arrays.stream(split(input, 0));
     }
 }
