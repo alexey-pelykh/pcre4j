@@ -40,6 +40,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_compile_context_free;
 
     private final MethodHandle pcre2_compile;
+    private final MethodHandle pcre2_code_copy;
     private final MethodHandle pcre2_code_free;
 
     private final MethodHandle pcre2_get_error_message;
@@ -184,6 +185,13 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // int*
                         ValueLayout.ADDRESS, // PCRE2_SIZE*
                         ValueLayout.ADDRESS // pcre2_compile_context*
+                )
+        );
+
+        pcre2_code_copy = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_code_copy" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS // pcre2_code*
                 )
         );
 
@@ -737,6 +745,21 @@ public class Pcre2 implements IPcre2 {
             erroroffset[0] = pErrorOffset.get(ValueLayout.JAVA_LONG, 0);
 
             return pCode.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long codeCopy(long code) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+
+            final var pNewCode = (MemorySegment) pcre2_code_copy.invokeExact(
+                    pCode
+            );
+
+            return pNewCode.address();
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }

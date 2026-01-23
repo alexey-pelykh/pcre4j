@@ -754,6 +754,19 @@ public interface IPcre2 {
     public long compile(String pattern, int options, int[] errorcode, long[] erroroffset, long ccontext);
 
     /**
+     * Create a copy of a compiled pattern.
+     * <p>
+     * This function makes a copy of the memory used for a compiled pattern, excluding any memory used by the JIT
+     * compiler. Without a subsequent call to {@link #jitCompile(long, int)}, the copy can be used only for
+     * non-JIT matching.
+     *
+     * @param code the compiled pattern handle
+     * @return the new compiled pattern handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_code_copy.html">pcre2_code_copy</a>
+     */
+    public long codeCopy(long code);
+
+    /**
      * Free a compiled pattern resources.
      *
      * @param code the compiled pattern handle
