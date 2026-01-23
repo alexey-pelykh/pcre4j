@@ -1463,6 +1463,34 @@ public interface IPcre2 {
             long gcontext);
 
     /**
+     * Deserialize compiled patterns from a byte array.
+     * <p>
+     * This function decodes a serialized set of compiled patterns, recreating up to {@code numberOfCodes}
+     * patterns from the serialized data. The decoded patterns are stored in the {@code codes} array.
+     * <p>
+     * The serialized data must have been created by {@link #serializeEncode} on a system with compatible
+     * characteristics (same PCRE2 version, code unit width, byte order, and pointer size).
+     * <p>
+     * The memory for the decoded patterns is obtained using the general context's memory management
+     * functions (or {@code malloc()} if no context is provided). Each decoded pattern must be freed
+     * separately using {@link #codeFree}.
+     *
+     * @param codes          an array to receive the decoded compiled pattern handles
+     * @param numberOfCodes  the number of slots available in the codes array (must be positive)
+     * @param bytes          the serialized byte data (as obtained from {@link #serializeEncode})
+     * @param gcontext       the general context handle for memory allocation, or 0 to use default
+     * @return the number of decoded patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADDATA} if {@code numberOfCodes} is zero or less
+     *         {@link #ERROR_BADMAGIC} if the data does not start with the correct bytes (possibly corrupted
+     *                                 or from a different system endianness)
+     *         {@link #ERROR_BADMODE} if the code unit size or PCRE2 version does not match
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed
+     *         {@link #ERROR_NULL} if {@code codes} or {@code bytes} is null
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_decode.html">pcre2_serialize_decode</a>
+     */
+    public int serializeDecode(long[] codes, int numberOfCodes, byte[] bytes, long gcontext);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.

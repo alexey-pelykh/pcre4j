@@ -881,6 +881,42 @@ public class Pcre2 implements IPcre2 {
         return result;
     }
 
+    @Override
+    public int serializeDecode(long[] codes, int numberOfCodes, byte[] bytes, long gcontext) {
+        if (codes == null) {
+            throw new IllegalArgumentException("codes must not be null");
+        }
+        if (numberOfCodes < 1) {
+            throw new IllegalArgumentException("numberOfCodes must be positive");
+        }
+        if (codes.length < numberOfCodes) {
+            throw new IllegalArgumentException("codes array length must be at least numberOfCodes");
+        }
+        if (bytes == null) {
+            throw new IllegalArgumentException("bytes must not be null");
+        }
+
+        // Allocate memory for the output array of pointers
+        final var pCodes = new Memory((long) numberOfCodes * Native.POINTER_SIZE);
+        final var pGContext = gcontext != 0 ? new Pointer(gcontext) : null;
+
+        final var result = library.pcre2_serialize_decode(
+                pCodes,
+                numberOfCodes,
+                bytes,
+                pGContext
+        );
+
+        if (result > 0) {
+            // Copy the decoded pattern handles to the output array
+            for (int i = 0; i < result; i++) {
+                codes[i] = Pointer.nativeValue(pCodes.getPointer((long) i * Native.POINTER_SIZE));
+            }
+        }
+
+        return result;
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -1052,6 +1088,13 @@ public class Pcre2 implements IPcre2 {
                 int numberOfCodes,
                 PointerByReference serializedBytes,
                 LongByReference serializedSize,
+                Pointer gcontext
+        );
+
+        int pcre2_serialize_decode(
+                Pointer codes,
+                int numberOfCodes,
+                byte[] bytes,
                 Pointer gcontext
         );
     }

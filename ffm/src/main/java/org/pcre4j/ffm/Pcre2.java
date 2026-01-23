@@ -94,6 +94,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_nametable_scan;
 
     private final MethodHandle pcre2_serialize_encode;
+    private final MethodHandle pcre2_serialize_decode;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -570,6 +571,16 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.JAVA_INT, // int32_t number_of_codes
                         ValueLayout.ADDRESS, // uint8_t **serialized_bytes
                         ValueLayout.ADDRESS, // PCRE2_SIZE *serialized_size
+                        ValueLayout.ADDRESS  // pcre2_general_context *gcontext
+                )
+        );
+
+        pcre2_serialize_decode = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_serialize_decode" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int32_t
+                        ValueLayout.ADDRESS, // pcre2_code **codes
+                        ValueLayout.JAVA_INT, // int32_t number_of_codes
+                        ValueLayout.ADDRESS, // const uint8_t *bytes
                         ValueLayout.ADDRESS  // pcre2_general_context *gcontext
                 )
         );
@@ -1816,6 +1827,51 @@ public class Pcre2 implements IPcre2 {
             if (result > 0) {
                 serializedBytes[0] = pSerializedBytes.get(ValueLayout.ADDRESS, 0).address();
                 serializedSize[0] = pSerializedSize.get(ValueLayout.JAVA_LONG, 0);
+            }
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int serializeDecode(long[] codes, int numberOfCodes, byte[] bytes, long gcontext) {
+        if (codes == null) {
+            throw new IllegalArgumentException("codes must not be null");
+        }
+        if (numberOfCodes < 1) {
+            throw new IllegalArgumentException("numberOfCodes must be positive");
+        }
+        if (codes.length < numberOfCodes) {
+            throw new IllegalArgumentException("codes array length must be at least numberOfCodes");
+        }
+        if (bytes == null) {
+            throw new IllegalArgumentException("bytes must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            // Allocate memory for the output array of pointers
+            final var pCodes = arena.allocateArray(ValueLayout.ADDRESS, numberOfCodes);
+
+            // Copy the input bytes to native memory
+            final var pBytes = arena.allocateArray(ValueLayout.JAVA_BYTE, bytes.length);
+            pBytes.copyFrom(MemorySegment.ofArray(bytes));
+
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            final var result = (int) pcre2_serialize_decode.invokeExact(
+                    pCodes,
+                    numberOfCodes,
+                    pBytes,
+                    pGContext
+            );
+
+            if (result > 0) {
+                // Copy the decoded pattern handles to the output array
+                for (int i = 0; i < result; i++) {
+                    codes[i] = pCodes.getAtIndex(ValueLayout.ADDRESS, i).address();
+                }
             }
 
             return result;
