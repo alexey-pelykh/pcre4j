@@ -93,6 +93,8 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_substring_number_from_name;
     private final MethodHandle pcre2_substring_nametable_scan;
 
+    private final MethodHandle pcre2_serialize_encode;
+
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
      */
@@ -558,6 +560,17 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // PCRE2_SPTR name
                         ValueLayout.ADDRESS, // PCRE2_SPTR *first
                         ValueLayout.ADDRESS  // PCRE2_SPTR *last
+                )
+        );
+
+        pcre2_serialize_encode = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_serialize_encode" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int32_t
+                        ValueLayout.ADDRESS, // const pcre2_code **codes
+                        ValueLayout.JAVA_INT, // int32_t number_of_codes
+                        ValueLayout.ADDRESS, // uint8_t **serialized_bytes
+                        ValueLayout.ADDRESS, // PCRE2_SIZE *serialized_size
+                        ValueLayout.ADDRESS  // pcre2_general_context *gcontext
                 )
         );
     }
@@ -1760,5 +1773,54 @@ public class Pcre2 implements IPcre2 {
 
         final var segment = MemorySegment.ofAddress(pointer).reinterpret(length);
         return segment.toArray(ValueLayout.JAVA_BYTE);
+    }
+
+    @Override
+    public int serializeEncode(long[] codes, int numberOfCodes, long[] serializedBytes, long[] serializedSize,
+            long gcontext) {
+        if (codes == null) {
+            throw new IllegalArgumentException("codes must not be null");
+        }
+        if (numberOfCodes < 1) {
+            throw new IllegalArgumentException("numberOfCodes must be positive");
+        }
+        if (codes.length < numberOfCodes) {
+            throw new IllegalArgumentException("codes array length must be at least numberOfCodes");
+        }
+        if (serializedBytes == null || serializedBytes.length < 1) {
+            throw new IllegalArgumentException("serializedBytes must be an array of length 1");
+        }
+        if (serializedSize == null || serializedSize.length < 1) {
+            throw new IllegalArgumentException("serializedSize must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            // Create an array of pointers for the codes
+            final var pCodes = arena.allocateArray(ValueLayout.ADDRESS, numberOfCodes);
+            for (int i = 0; i < numberOfCodes; i++) {
+                pCodes.setAtIndex(ValueLayout.ADDRESS, i, MemorySegment.ofAddress(codes[i]));
+            }
+
+            final var pSerializedBytes = arena.allocate(ValueLayout.ADDRESS);
+            final var pSerializedSize = arena.allocate(ValueLayout.JAVA_LONG);
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            final var result = (int) pcre2_serialize_encode.invokeExact(
+                    pCodes,
+                    numberOfCodes,
+                    pSerializedBytes,
+                    pSerializedSize,
+                    pGContext
+            );
+
+            if (result > 0) {
+                serializedBytes[0] = pSerializedBytes.get(ValueLayout.ADDRESS, 0).address();
+                serializedSize[0] = pSerializedSize.get(ValueLayout.JAVA_LONG, 0);
+            }
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
     }
 }

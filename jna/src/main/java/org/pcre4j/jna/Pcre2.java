@@ -15,6 +15,7 @@
 package org.pcre4j.jna;
 
 import com.sun.jna.FunctionMapper;
+import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.NativeLibrary;
 import com.sun.jna.Pointer;
@@ -835,6 +836,51 @@ public class Pcre2 implements IPcre2 {
         return bytes;
     }
 
+    @Override
+    public int serializeEncode(long[] codes, int numberOfCodes, long[] serializedBytes, long[] serializedSize,
+            long gcontext) {
+        if (codes == null) {
+            throw new IllegalArgumentException("codes must not be null");
+        }
+        if (numberOfCodes < 1) {
+            throw new IllegalArgumentException("numberOfCodes must be positive");
+        }
+        if (codes.length < numberOfCodes) {
+            throw new IllegalArgumentException("codes array length must be at least numberOfCodes");
+        }
+        if (serializedBytes == null || serializedBytes.length < 1) {
+            throw new IllegalArgumentException("serializedBytes must be an array of length 1");
+        }
+        if (serializedSize == null || serializedSize.length < 1) {
+            throw new IllegalArgumentException("serializedSize must be an array of length 1");
+        }
+
+        // Create an array of Pointers for the codes
+        final var pCodes = new Memory((long) numberOfCodes * Native.POINTER_SIZE);
+        for (int i = 0; i < numberOfCodes; i++) {
+            pCodes.setPointer((long) i * Native.POINTER_SIZE, new Pointer(codes[i]));
+        }
+
+        final var serializedBytesRef = new PointerByReference();
+        final var serializedSizeRef = new LongByReference();
+        final var pGContext = gcontext != 0 ? new Pointer(gcontext) : null;
+
+        final var result = library.pcre2_serialize_encode(
+                pCodes,
+                numberOfCodes,
+                serializedBytesRef,
+                serializedSizeRef,
+                pGContext
+        );
+
+        if (result > 0) {
+            serializedBytes[0] = Pointer.nativeValue(serializedBytesRef.getValue());
+            serializedSize[0] = serializedSizeRef.getValue();
+        }
+
+        return result;
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -999,6 +1045,14 @@ public class Pcre2 implements IPcre2 {
                 byte[] name,
                 PointerByReference first,
                 PointerByReference last
+        );
+
+        int pcre2_serialize_encode(
+                Pointer codes,
+                int numberOfCodes,
+                PointerByReference serializedBytes,
+                LongByReference serializedSize,
+                Pointer gcontext
         );
     }
 

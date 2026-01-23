@@ -1428,6 +1428,41 @@ public interface IPcre2 {
     public int substringNametableScan(long code, String name, long[] first, long[] last);
 
     /**
+     * Serialize one or more compiled patterns to a byte array.
+     * <p>
+     * This function serializes one or more compiled patterns into a contiguous block of memory
+     * that can be saved to a file or other storage. The serialized data can later be restored
+     * using {@code pcre2_serialize_decode()}.
+     * <p>
+     * The memory for the serialized data is obtained using the general context's memory
+     * management functions (or {@code malloc()} if no context is provided). The caller
+     * must free this memory using {@code pcre2_serialize_free()} when done.
+     * <p>
+     * <b>Important restrictions:</b>
+     * <ul>
+     *   <li>Serialized data is architecture-specific and cannot be transferred between
+     *       machines with different characteristics (e.g., different byte order or pointer size)</li>
+     *   <li>The same PCRE2 version must be used for encoding and decoding</li>
+     *   <li>Patterns compiled with different character tables cannot be serialized together</li>
+     * </ul>
+     *
+     * @param codes           an array of compiled pattern handles to serialize
+     * @param numberOfCodes   the number of patterns to serialize (must be positive)
+     * @param serializedBytes an array of length 1 to receive the pointer to the serialized data
+     * @param serializedSize  an array of length 1 to receive the size of the serialized data in bytes
+     * @param gcontext        the general context handle for memory allocation, or 0 to use default
+     * @return the number of serialized patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADDATA} if {@code numberOfCodes} is zero or negative
+     *         {@link #ERROR_BADMAGIC} if one of the patterns has an invalid magic number
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed
+     *         {@link #ERROR_NULL} if any argument (except gcontext) is null
+     *         {@link #ERROR_MIXEDTABLES} if patterns were compiled with different character tables
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_encode.html">pcre2_serialize_encode</a>
+     */
+    public int serializeEncode(long[] codes, int numberOfCodes, long[] serializedBytes, long[] serializedSize,
+            long gcontext);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.
