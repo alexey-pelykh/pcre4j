@@ -1491,6 +1491,18 @@ public interface IPcre2 {
     public int serializeDecode(long[] codes, int numberOfCodes, byte[] bytes, long gcontext);
 
     /**
+     * Free memory that was allocated by {@link #serializeEncode} for holding a serialized byte stream.
+     * <p>
+     * This function deallocates the memory for a serialized set of compiled patterns. If the
+     * argument is 0 (null pointer), the function returns without doing anything.
+     *
+     * @param bytes the pointer to the serialized byte stream to free (may be 0, in which case the function
+     *              does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_free.html">pcre2_serialize_free</a>
+     */
+    public void serializeFree(long bytes);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.

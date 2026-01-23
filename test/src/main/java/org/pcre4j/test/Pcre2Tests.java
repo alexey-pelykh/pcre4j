@@ -3336,9 +3336,6 @@ public abstract class Pcre2Tests {
 
     @Test
     public void testSerializeEncode() {
-        // TODO: Once pcre2_serialize_free is implemented, add calls to free the serialized data
-        //       to avoid memory leaks. See: https://github.com/alexey-pelykh/pcre4j/issues/138
-
         final var errorcode = new int[1];
         final var erroroffset = new long[1];
 
@@ -3358,6 +3355,7 @@ public abstract class Pcre2Tests {
         final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
         assertEquals(serializedSize[0], bytes.length, "Read bytes should match serialized size");
 
+        api.serializeFree(serializedBytes[0]);
         api.codeFree(code);
 
         // Test 2: Serialization of multiple patterns
@@ -3375,6 +3373,7 @@ public abstract class Pcre2Tests {
         assertTrue(serializedBytes2[0] != 0, "serializedBytes should be non-null for multiple patterns");
         assertTrue(serializedSize2[0] > serializedSize[0], "Multiple patterns should have larger serialized size");
 
+        api.serializeFree(serializedBytes2[0]);
         api.codeFree(code1);
         api.codeFree(code2);
 
@@ -3390,6 +3389,7 @@ public abstract class Pcre2Tests {
         assertTrue(serializedBytes3[0] != 0, "serializedBytes should be non-null");
         assertTrue(serializedSize3[0] > 0, "serializedSize should be positive");
 
+        api.serializeFree(serializedBytes3[0]);
         api.codeFree(code3);
 
         // Test 4: Invalid input - null codes array
@@ -3452,6 +3452,7 @@ public abstract class Pcre2Tests {
 
         api.matchDataFree(matchData);
         api.codeFree(decodedCodes[0]);
+        api.serializeFree(serializedBytes[0]);
         api.codeFree(code);
 
         // Test 2: Serialize and decode multiple patterns
@@ -3489,6 +3490,7 @@ public abstract class Pcre2Tests {
 
         api.codeFree(decodedCodes2[0]);
         api.codeFree(decodedCodes2[1]);
+        api.serializeFree(serializedBytes2[0]);
         api.codeFree(code1);
         api.codeFree(code2);
 
@@ -3519,6 +3521,7 @@ public abstract class Pcre2Tests {
 
         api.matchDataFree(matchData3);
         api.codeFree(decodedCodes3[0]);
+        api.serializeFree(serializedBytes3[0]);
         api.codeFree(code3);
 
         // Test 4: Invalid input - null codes array
@@ -3545,6 +3548,49 @@ public abstract class Pcre2Tests {
         assertThrows(IllegalArgumentException.class, () -> {
             api.serializeDecode(new long[1], 2, new byte[10], 0);
         }, "Should throw IllegalArgumentException when codes array is smaller than numberOfCodes");
+    }
+
+    @Test
+    public void testSerializeFree() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Free serialized data from a single pattern
+        final var code = api.compile("test", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var serializedBytes = new long[1];
+        final var serializedSize = new long[1];
+
+        final var result = api.serializeEncode(new long[]{code}, 1, serializedBytes, serializedSize, 0);
+        assertEquals(1, result, "serializeEncode should return 1 for single pattern");
+        assertTrue(serializedBytes[0] != 0, "serializedBytes should be non-null");
+
+        // Free the serialized data - should not throw
+        api.serializeFree(serializedBytes[0]);
+
+        api.codeFree(code);
+
+        // Test 2: Free with null pointer (0) - should not throw
+        api.serializeFree(0);
+
+        // Test 3: Free serialized data from multiple patterns
+        final var code1 = api.compile("pattern1", 0, errorcode, erroroffset, 0);
+        final var code2 = api.compile("pattern2", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern1");
+        assertTrue(code2 != 0, "Failed to compile pattern2");
+
+        final var serializedBytes2 = new long[1];
+        final var serializedSize2 = new long[1];
+
+        final var result2 = api.serializeEncode(new long[]{code1, code2}, 2, serializedBytes2, serializedSize2, 0);
+        assertEquals(2, result2, "serializeEncode should return 2 for two patterns");
+
+        // Free the serialized data - should not throw
+        api.serializeFree(serializedBytes2[0]);
+
+        api.codeFree(code1);
+        api.codeFree(code2);
     }
 
 }

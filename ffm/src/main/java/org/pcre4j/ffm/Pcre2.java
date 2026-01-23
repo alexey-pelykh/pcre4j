@@ -95,6 +95,7 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_serialize_encode;
     private final MethodHandle pcre2_serialize_decode;
+    private final MethodHandle pcre2_serialize_free;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -582,6 +583,13 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.JAVA_INT, // int32_t number_of_codes
                         ValueLayout.ADDRESS, // const uint8_t *bytes
                         ValueLayout.ADDRESS  // pcre2_general_context *gcontext
+                )
+        );
+
+        pcre2_serialize_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_serialize_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // uint8_t *bytes
                 )
         );
     }
@@ -1875,6 +1883,23 @@ public class Pcre2 implements IPcre2 {
             }
 
             return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void serializeFree(long bytes) {
+        if (bytes == 0) {
+            return;
+        }
+
+        try {
+            final var pBytes = MemorySegment.ofAddress(bytes);
+
+            pcre2_serialize_free.invokeExact(
+                    pBytes
+            );
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
