@@ -3123,4 +3123,123 @@ public abstract class Pcre2Tests {
         api.codeFree(code2);
     }
 
+    @Test
+    public void testGetMark() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Pattern with (*MARK:name) - getMark should return non-null pointer
+        final var code1 = api.compile("a(*MARK:foo)b", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern with (*MARK:foo)");
+
+        final var matchData1 = api.matchDataCreateFromPattern(code1, 0);
+        assertTrue(matchData1 != 0, "Failed to create match data");
+
+        final var result1 = api.match(code1, "ab", 0, 0, matchData1, 0);
+        assertTrue(result1 > 0, "Match should succeed");
+
+        final var mark1 = api.getMark(matchData1);
+        assertTrue(mark1 != 0, "getMark should return non-null after successful match with (*MARK)");
+
+        api.matchDataFree(matchData1);
+        api.codeFree(code1);
+
+        // Test 2: Pattern without mark - getMark should return NULL (0)
+        final var code2 = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern without mark");
+
+        final var matchData2 = api.matchDataCreateFromPattern(code2, 0);
+        assertTrue(matchData2 != 0, "Failed to create match data");
+
+        final var result2 = api.match(code2, "hello", 0, 0, matchData2, 0);
+        assertTrue(result2 > 0, "Match should succeed");
+
+        assertEquals(0, api.getMark(matchData2), "getMark should return 0 (NULL) when no mark is set");
+
+        api.matchDataFree(matchData2);
+        api.codeFree(code2);
+
+        // Test 3: Pattern with multiple marks - should return the last encountered mark
+        final var code3 = api.compile("(*MARK:first)a(*MARK:second)b", 0, errorcode, erroroffset, 0);
+        assertTrue(code3 != 0, "Failed to compile pattern with multiple marks");
+
+        final var matchData3 = api.matchDataCreateFromPattern(code3, 0);
+        assertTrue(matchData3 != 0, "Failed to create match data");
+
+        final var result3 = api.match(code3, "ab", 0, 0, matchData3, 0);
+        assertTrue(result3 > 0, "Match should succeed");
+
+        final var mark3 = api.getMark(matchData3);
+        assertTrue(mark3 != 0, "getMark should return non-null for pattern with marks");
+
+        api.matchDataFree(matchData3);
+        api.codeFree(code3);
+
+        // Test 4: getMark after failed match - should return mark passed before failure
+        // Pattern: (*MARK:passed) sets the mark, 'a' matches, then (*FAIL) forces failure
+        final var code4 = api.compile("(*MARK:passed)a(*FAIL)", 0, errorcode, erroroffset, 0);
+        assertTrue(code4 != 0, "Failed to compile pattern for failed match test");
+
+        final var matchData4 = api.matchDataCreateFromPattern(code4, 0);
+        assertTrue(matchData4 != 0, "Failed to create match data");
+
+        final var result4 = api.match(code4, "a", 0, 0, matchData4, 0);
+        assertEquals(IPcre2.ERROR_NOMATCH, result4, "Match should fail with NOMATCH due to (*FAIL)");
+
+        final var mark4 = api.getMark(matchData4);
+        assertTrue(mark4 != 0, "getMark should return non-null for mark passed before match failure");
+
+        api.matchDataFree(matchData4);
+        api.codeFree(code4);
+
+        // Test 5: getMark after partial match
+        final var code5 = api.compile("abc", 0, errorcode, erroroffset, 0);
+        assertTrue(code5 != 0, "Failed to compile pattern for partial match test");
+
+        final var matchData5 = api.matchDataCreateFromPattern(code5, 0);
+        assertTrue(matchData5 != 0, "Failed to create match data");
+
+        // Match "ab" against pattern "abc" with PARTIAL_SOFT - should return partial match
+        final var result5 = api.match(code5, "ab", 0, IPcre2.PARTIAL_SOFT, matchData5, 0);
+        assertEquals(IPcre2.ERROR_PARTIAL, result5, "Match should return PARTIAL");
+
+        // No mark in this pattern, so getMark should return 0 even after partial match
+        assertEquals(0, api.getMark(matchData5), "getMark should return 0 when pattern has no marks");
+
+        api.matchDataFree(matchData5);
+        api.codeFree(code5);
+
+        // Test 6: getMark with (*PRUNE:name) - getMark also returns PRUNE names
+        final var code6 = api.compile("a(*PRUNE:pruned)b", 0, errorcode, erroroffset, 0);
+        assertTrue(code6 != 0, "Failed to compile pattern with (*PRUNE:name)");
+
+        final var matchData6 = api.matchDataCreateFromPattern(code6, 0);
+        assertTrue(matchData6 != 0, "Failed to create match data");
+
+        final var result6 = api.match(code6, "ab", 0, 0, matchData6, 0);
+        assertTrue(result6 > 0, "Match should succeed");
+
+        final var mark6 = api.getMark(matchData6);
+        assertTrue(mark6 != 0, "getMark should return non-null for (*PRUNE:name)");
+
+        api.matchDataFree(matchData6);
+        api.codeFree(code6);
+
+        // Test 7: getMark with (*THEN:name) - getMark also returns THEN names
+        final var code7 = api.compile("a(*THEN:thenname)b", 0, errorcode, erroroffset, 0);
+        assertTrue(code7 != 0, "Failed to compile pattern with (*THEN:name)");
+
+        final var matchData7 = api.matchDataCreateFromPattern(code7, 0);
+        assertTrue(matchData7 != 0, "Failed to create match data");
+
+        final var result7 = api.match(code7, "ab", 0, 0, matchData7, 0);
+        assertTrue(result7 > 0, "Match should succeed");
+
+        final var mark7 = api.getMark(matchData7);
+        assertTrue(mark7 != 0, "getMark should return non-null for (*THEN:name)");
+
+        api.matchDataFree(matchData7);
+        api.codeFree(code7);
+    }
+
 }

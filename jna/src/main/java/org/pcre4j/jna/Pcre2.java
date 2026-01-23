@@ -440,6 +440,12 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long getMark(long matchData) {
+        final var pMatchData = new Pointer(matchData);
+        return Pointer.nativeValue(library.pcre2_get_mark(pMatchData));
+    }
+
+    @Override
     public int setNewline(long ccontext, int value) {
         final var pCContext = new Pointer(ccontext);
         return library.pcre2_set_newline(pCContext, value);
@@ -887,6 +893,7 @@ public class Pcre2 implements IPcre2 {
         int pcre2_get_ovector_count(Pointer matchData);
         Pointer pcre2_get_ovector_pointer(Pointer matchData);
         Pointer pcre2_get_startchar(Pointer matchData);
+        Pointer pcre2_get_mark(Pointer matchData);
 
         int pcre2_set_newline(Pointer ccontext, int value);
 

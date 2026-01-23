@@ -1040,6 +1040,25 @@ public interface IPcre2 {
     public long getStartchar(long matchData);
 
     /**
+     * Get the last (*MARK), (*PRUNE), or (*THEN) name that was encountered during matching.
+     * <p>
+     * After a successful match, a partial match (error code {@code PCRE2_ERROR_PARTIAL}), or a failure to match
+     * (error code {@code PCRE2_ERROR_NOMATCH}), this function returns the name from the last encountered
+     * {@code (*MARK)}, {@code (*PRUNE)}, or {@code (*THEN)} item in the pattern. The name is a zero-terminated string.
+     * <p>
+     * If no mark name was set during the match, or if the pattern does not contain any mark items, this function
+     * returns 0 (NULL pointer).
+     * <p>
+     * For a successful match, the returned name is the last mark encountered on the matching path. For a failed match,
+     * the returned name is the last mark passed on the main matching path before the overall match failure.
+     *
+     * @param matchData the match data handle from a match operation
+     * @return the address of a zero-terminated string containing the mark name, or 0 if no mark name is available
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_mark.html">pcre2_get_mark</a>
+     */
+    public long getMark(long matchData);
+
+    /**
      * Set the newline convention within a compile context
      *
      * @param ccontext the compile context handle
