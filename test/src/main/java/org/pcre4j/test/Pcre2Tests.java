@@ -3418,4 +3418,133 @@ public abstract class Pcre2Tests {
         }, "Should throw IllegalArgumentException for null serializedSize");
     }
 
+    @Test
+    public void testSerializeDecode() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Serialize and decode a single pattern
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var serializedBytes = new long[1];
+        final var serializedSize = new long[1];
+
+        final var encodeResult = api.serializeEncode(new long[]{code}, 1, serializedBytes, serializedSize, 0);
+        assertEquals(1, encodeResult, "serializeEncode should return 1 for single pattern");
+
+        // Read the serialized data
+        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        assertEquals(serializedSize[0], bytes.length, "Read bytes should match serialized size");
+
+        // Decode the pattern
+        final var decodedCodes = new long[1];
+        final var decodeResult = api.serializeDecode(decodedCodes, 1, bytes, 0);
+        assertEquals(1, decodeResult, "serializeDecode should return 1 for single pattern");
+        assertTrue(decodedCodes[0] != 0, "Decoded code should be non-null");
+
+        // Verify the decoded pattern works by matching
+        final var matchData = api.matchDataCreateFromPattern(decodedCodes[0], 0);
+        assertTrue(matchData != 0, "Failed to create match data from decoded pattern");
+
+        final var matchResult = api.match(decodedCodes[0], "hello world", 0, 0, matchData, 0);
+        assertTrue(matchResult > 0, "Decoded pattern should match");
+
+        api.matchDataFree(matchData);
+        api.codeFree(decodedCodes[0]);
+        api.codeFree(code);
+
+        // Test 2: Serialize and decode multiple patterns
+        final var code1 = api.compile("pattern1", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern1");
+
+        final var code2 = api.compile("pattern2", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern2");
+
+        final var serializedBytes2 = new long[1];
+        final var serializedSize2 = new long[1];
+
+        final var codes12 = new long[]{code1, code2};
+        final var encodeResult2 = api.serializeEncode(codes12, 2, serializedBytes2, serializedSize2, 0);
+        assertEquals(2, encodeResult2, "serializeEncode should return 2 for two patterns");
+
+        final var bytes2 = api.readBytes(serializedBytes2[0], (int) serializedSize2[0]);
+
+        final var decodedCodes2 = new long[2];
+        final var decodeResult2 = api.serializeDecode(decodedCodes2, 2, bytes2, 0);
+        assertEquals(2, decodeResult2, "serializeDecode should return 2 for two patterns");
+        assertTrue(decodedCodes2[0] != 0, "First decoded code should be non-null");
+        assertTrue(decodedCodes2[1] != 0, "Second decoded code should be non-null");
+
+        // Verify both decoded patterns work
+        final var matchData1 = api.matchDataCreateFromPattern(decodedCodes2[0], 0);
+        final var match1 = api.match(decodedCodes2[0], "pattern1 test", 0, 0, matchData1, 0);
+        assertTrue(match1 > 0, "First decoded pattern should match");
+        api.matchDataFree(matchData1);
+
+        final var matchData2 = api.matchDataCreateFromPattern(decodedCodes2[1], 0);
+        final var match2 = api.match(decodedCodes2[1], "pattern2 test", 0, 0, matchData2, 0);
+        assertTrue(match2 > 0, "Second decoded pattern should match");
+        api.matchDataFree(matchData2);
+
+        api.codeFree(decodedCodes2[0]);
+        api.codeFree(decodedCodes2[1]);
+        api.codeFree(code1);
+        api.codeFree(code2);
+
+        // Test 3: Decode with capturing groups preserved
+        final var code3 = api.compile("(\\w+)@(\\w+\\.\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code3 != 0, "Failed to compile pattern with capturing groups");
+
+        final var serializedBytes3 = new long[1];
+        final var serializedSize3 = new long[1];
+
+        final var encodeResult3 = api.serializeEncode(new long[]{code3}, 1, serializedBytes3, serializedSize3, 0);
+        assertEquals(1, encodeResult3, "serializeEncode should return 1");
+
+        final var bytes3 = api.readBytes(serializedBytes3[0], (int) serializedSize3[0]);
+
+        final var decodedCodes3 = new long[1];
+        final var decodeResult3 = api.serializeDecode(decodedCodes3, 1, bytes3, 0);
+        assertEquals(1, decodeResult3, "serializeDecode should return 1");
+
+        // Verify capturing groups work in decoded pattern
+        final var matchData3 = api.matchDataCreateFromPattern(decodedCodes3[0], 0);
+        final var match3 = api.match(decodedCodes3[0], "user@example.com", 0, 0, matchData3, 0);
+        assertTrue(match3 > 0, "Decoded pattern with groups should match");
+
+        // Check that we got the expected number of groups
+        final var ovectorCount = api.getOvectorCount(matchData3);
+        assertEquals(3, ovectorCount, "Should have 3 groups (full match + 2 capturing groups)");
+
+        api.matchDataFree(matchData3);
+        api.codeFree(decodedCodes3[0]);
+        api.codeFree(code3);
+
+        // Test 4: Invalid input - null codes array
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeDecode(null, 1, new byte[10], 0);
+        }, "Should throw IllegalArgumentException for null codes array");
+
+        // Test 5: Invalid input - zero numberOfCodes
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeDecode(new long[1], 0, new byte[10], 0);
+        }, "Should throw IllegalArgumentException for zero numberOfCodes");
+
+        // Test 6: Invalid input - negative numberOfCodes
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeDecode(new long[1], -1, new byte[10], 0);
+        }, "Should throw IllegalArgumentException for negative numberOfCodes");
+
+        // Test 7: Invalid input - null bytes array
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeDecode(new long[1], 1, null, 0);
+        }, "Should throw IllegalArgumentException for null bytes array");
+
+        // Test 8: Invalid input - codes array too small
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeDecode(new long[1], 2, new byte[10], 0);
+        }, "Should throw IllegalArgumentException when codes array is smaller than numberOfCodes");
+    }
+
 }
