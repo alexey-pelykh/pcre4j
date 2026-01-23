@@ -3334,4 +3334,88 @@ public abstract class Pcre2Tests {
         assertEquals(0, nullCopy, "codeCopy should return 0 for null/zero input");
     }
 
+    @Test
+    public void testSerializeEncode() {
+        // TODO: Once pcre2_serialize_free is implemented, add calls to free the serialized data
+        //       to avoid memory leaks. See: https://github.com/alexey-pelykh/pcre4j/issues/138
+
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Basic serialization of a single pattern
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var serializedBytes = new long[1];
+        final var serializedSize = new long[1];
+
+        final var result = api.serializeEncode(new long[]{code}, 1, serializedBytes, serializedSize, 0);
+        assertEquals(1, result, "serializeEncode should return 1 for single pattern");
+        assertTrue(serializedBytes[0] != 0, "serializedBytes should be non-null");
+        assertTrue(serializedSize[0] > 0, "serializedSize should be positive");
+
+        // Read the serialized data to verify it's accessible
+        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        assertEquals(serializedSize[0], bytes.length, "Read bytes should match serialized size");
+
+        api.codeFree(code);
+
+        // Test 2: Serialization of multiple patterns
+        final var code1 = api.compile("pattern1", 0, errorcode, erroroffset, 0);
+        assertTrue(code1 != 0, "Failed to compile pattern1");
+
+        final var code2 = api.compile("pattern2", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern2");
+
+        final var serializedBytes2 = new long[1];
+        final var serializedSize2 = new long[1];
+
+        final var result2 = api.serializeEncode(new long[]{code1, code2}, 2, serializedBytes2, serializedSize2, 0);
+        assertEquals(2, result2, "serializeEncode should return 2 for two patterns");
+        assertTrue(serializedBytes2[0] != 0, "serializedBytes should be non-null for multiple patterns");
+        assertTrue(serializedSize2[0] > serializedSize[0], "Multiple patterns should have larger serialized size");
+
+        api.codeFree(code1);
+        api.codeFree(code2);
+
+        // Test 3: Pattern with capturing groups
+        final var code3 = api.compile("(\\w+)@(\\w+\\.\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code3 != 0, "Failed to compile pattern with capturing groups");
+
+        final var serializedBytes3 = new long[1];
+        final var serializedSize3 = new long[1];
+
+        final var result3 = api.serializeEncode(new long[]{code3}, 1, serializedBytes3, serializedSize3, 0);
+        assertEquals(1, result3, "serializeEncode should return 1 for pattern with capturing groups");
+        assertTrue(serializedBytes3[0] != 0, "serializedBytes should be non-null");
+        assertTrue(serializedSize3[0] > 0, "serializedSize should be positive");
+
+        api.codeFree(code3);
+
+        // Test 4: Invalid input - null codes array
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeEncode(null, 1, new long[1], new long[1], 0);
+        }, "Should throw IllegalArgumentException for null codes array");
+
+        // Test 5: Invalid input - zero numberOfCodes
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeEncode(new long[]{0}, 0, new long[1], new long[1], 0);
+        }, "Should throw IllegalArgumentException for zero numberOfCodes");
+
+        // Test 6: Invalid input - negative numberOfCodes
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeEncode(new long[]{0}, -1, new long[1], new long[1], 0);
+        }, "Should throw IllegalArgumentException for negative numberOfCodes");
+
+        // Test 7: Invalid input - null serializedBytes
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeEncode(new long[]{0}, 1, null, new long[1], 0);
+        }, "Should throw IllegalArgumentException for null serializedBytes");
+
+        // Test 8: Invalid input - null serializedSize
+        assertThrows(IllegalArgumentException.class, () -> {
+            api.serializeEncode(new long[]{0}, 1, new long[1], null, 0);
+        }, "Should throw IllegalArgumentException for null serializedSize");
+    }
+
 }
