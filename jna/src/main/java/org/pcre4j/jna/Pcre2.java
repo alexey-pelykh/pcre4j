@@ -926,6 +926,18 @@ public class Pcre2 implements IPcre2 {
         library.pcre2_serialize_free(new Pointer(bytes));
     }
 
+    @Override
+    public int serializeGetNumberOfCodes(byte[] bytes) {
+        if (bytes == null) {
+            throw new IllegalArgumentException("bytes must not be null");
+        }
+
+        final var pBytes = new Memory(bytes.length);
+        pBytes.write(0, bytes, 0, bytes.length);
+
+        return library.pcre2_serialize_get_number_of_codes(pBytes);
+    }
+
     private interface Library extends com.sun.jna.Library {
         int pcre2_config(int what, Pointer where);
 
@@ -1108,6 +1120,8 @@ public class Pcre2 implements IPcre2 {
         );
 
         void pcre2_serialize_free(Pointer bytes);
+
+        int pcre2_serialize_get_number_of_codes(Pointer bytes);
     }
 
     private record SuffixFunctionMapper(String suffix) implements FunctionMapper {

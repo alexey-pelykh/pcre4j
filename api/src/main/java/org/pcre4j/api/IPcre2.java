@@ -1503,6 +1503,26 @@ public interface IPcre2 {
     public void serializeFree(long bytes);
 
     /**
+     * Get the number of serialized patterns in a byte stream.
+     * <p>
+     * This function examines a serialized byte stream (created by {@link #serializeEncode}) and returns
+     * the number of compiled patterns contained in it. This is useful when the number of patterns is not
+     * known in advance, for example when loading serialized data from a file.
+     * <p>
+     * The function does not decode or otherwise process the patterns; it simply reads the count from the
+     * header of the serialized data.
+     *
+     * @param bytes the serialized byte data (as obtained from {@link #serializeEncode})
+     * @return the number of serialized patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADMAGIC} if the data does not start with the correct bytes (possibly corrupted
+     *                                 or from a different system endianness)
+     *         {@link #ERROR_BADMODE} if the code unit size or PCRE2 version does not match
+     *         {@link #ERROR_NULL} if {@code bytes} is null
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_get_number_of_codes.html">pcre2_serialize_get_number_of_codes</a>
+     */
+    public int serializeGetNumberOfCodes(byte[] bytes);
+
+    /**
      * Read bytes from a native memory pointer.
      * <p>
      * This is a utility method used internally to read string data from native memory.

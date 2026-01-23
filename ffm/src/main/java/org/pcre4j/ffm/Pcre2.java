@@ -96,6 +96,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_serialize_encode;
     private final MethodHandle pcre2_serialize_decode;
     private final MethodHandle pcre2_serialize_free;
+    private final MethodHandle pcre2_serialize_get_number_of_codes;
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8".
@@ -590,6 +591,13 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_serialize_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // uint8_t *bytes
+                )
+        );
+
+        pcre2_serialize_get_number_of_codes = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_serialize_get_number_of_codes" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int32_t
+                        ValueLayout.ADDRESS // const uint8_t *bytes
                 )
         );
     }
@@ -1898,6 +1906,24 @@ public class Pcre2 implements IPcre2 {
             final var pBytes = MemorySegment.ofAddress(bytes);
 
             pcre2_serialize_free.invokeExact(
+                    pBytes
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int serializeGetNumberOfCodes(byte[] bytes) {
+        if (bytes == null) {
+            throw new IllegalArgumentException("bytes must not be null");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pBytes = arena.allocateArray(ValueLayout.JAVA_BYTE, bytes.length);
+            pBytes.copyFrom(MemorySegment.ofArray(bytes));
+
+            return (int) pcre2_serialize_get_number_of_codes.invokeExact(
                     pBytes
             );
         } catch (Throwable e) {
