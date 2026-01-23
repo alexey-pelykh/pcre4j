@@ -3288,4 +3288,50 @@ public abstract class Pcre2Tests {
         api.codeFree(code7);
     }
 
+    @Test
+    public void testCodeCopy() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Basic code copy functionality
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var codeCopy = api.codeCopy(code);
+        assertTrue(codeCopy != 0, "codeCopy should return non-zero for valid pattern");
+        assertTrue(codeCopy != code, "codeCopy should return a different handle");
+
+        // Verify the copy works for matching
+        final var matchData = api.matchDataCreateFromPattern(codeCopy, 0);
+        assertTrue(matchData != 0, "Failed to create match data from copied code");
+
+        final var result = api.match(codeCopy, "hello world", 0, 0, matchData, 0);
+        assertTrue(result > 0, "Match should succeed with copied code");
+
+        api.matchDataFree(matchData);
+        api.codeFree(codeCopy);
+        api.codeFree(code);
+
+        // Test 2: Copy with capturing groups
+        final var code2 = api.compile("(\\w+)@(\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern with capturing groups");
+
+        final var code2Copy = api.codeCopy(code2);
+        assertTrue(code2Copy != 0, "codeCopy should return non-zero for pattern with capturing groups");
+
+        final var matchData2 = api.matchDataCreateFromPattern(code2Copy, 0);
+        assertTrue(matchData2 != 0, "Failed to create match data from copied code");
+
+        final var result2 = api.match(code2Copy, "user@domain", 0, 0, matchData2, 0);
+        assertEquals(3, result2, "Match should return 3 (full match + 2 capturing groups)");
+
+        api.matchDataFree(matchData2);
+        api.codeFree(code2Copy);
+        api.codeFree(code2);
+
+        // Test 3: codeCopy returns 0 for null/zero input
+        final var nullCopy = api.codeCopy(0);
+        assertEquals(0, nullCopy, "codeCopy should return 0 for null/zero input");
+    }
+
 }

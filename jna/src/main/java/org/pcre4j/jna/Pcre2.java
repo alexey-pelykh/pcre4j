@@ -183,6 +183,13 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long codeCopy(long code) {
+        final var pCode = new Pointer(code);
+        final var pNewCode = library.pcre2_code_copy(pCode);
+        return Pointer.nativeValue(pNewCode);
+    }
+
+    @Override
     public void codeFree(long code) {
         final var pCode = new Pointer(code);
         library.pcre2_code_free(pCode);
@@ -847,6 +854,7 @@ public class Pcre2 implements IPcre2 {
                 LongByReference erroroffset,
                 Pointer ccontext
         );
+        Pointer pcre2_code_copy(Pointer code);
         void pcre2_code_free(Pointer code);
 
         int pcre2_get_error_message(int errorcode, Pointer buffer, Pointer bufferSize);
