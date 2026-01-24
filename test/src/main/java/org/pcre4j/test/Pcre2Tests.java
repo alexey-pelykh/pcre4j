@@ -3818,4 +3818,35 @@ public abstract class Pcre2Tests {
         api.compileContextFree(ccontext);
     }
 
+    @Test
+    public void testJitFreeUnusedMemory() {
+        // Test 1: Call with null context (0) - should not throw
+        api.jitFreeUnusedMemory(0);
+
+        // Test 2: Call with valid general context - should not throw
+        long gcontext = api.generalContextCreate(0, 0, 0);
+        assertTrue(gcontext != 0, "General context creation should succeed");
+        api.jitFreeUnusedMemory(gcontext);
+        api.generalContextFree(gcontext);
+
+        // Test 3: Call after JIT compilation (if JIT is available)
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+        long code = api.compile("test\\d+", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        // Attempt JIT compilation - may fail if JIT not available, which is OK
+        int jitResult = api.jitCompile(code, IPcre2.JIT_COMPLETE);
+        // jitResult == 0 means success, negative means JIT not available or error
+
+        // Free unused JIT memory - should not throw regardless of JIT availability
+        api.jitFreeUnusedMemory(0);
+
+        api.codeFree(code);
+
+        // Test 4: Multiple calls should be safe (idempotent)
+        api.jitFreeUnusedMemory(0);
+        api.jitFreeUnusedMemory(0);
+    }
+
 }
