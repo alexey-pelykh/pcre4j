@@ -718,6 +718,40 @@ public interface IPcre2 {
     public void generalContextFree(long gcontext);
 
     /**
+     * Build character tables in the current locale.
+     * <p>
+     * This function builds a set of character tables for character values less than 256. These can be used to support
+     * a locale that is different from the default. When pcre2_compile() is called with a compile context that contains
+     * a pointer to character tables, the tables are used for pattern compilation.
+     * <p>
+     * The character tables are built using the current locale. The functions isprint(), isupper(), islower(),
+     * isalnum(), isalpha(), iscntrl(), isdigit(), isgraph(), ispunct(), isspace(), isxdigit() and tolower() are used.
+     * <p>
+     * The memory for the tables is obtained via the general context if one is provided, or via malloc() otherwise.
+     * The memory should be freed by calling {@link #maketablesFree} when the tables are no longer needed.
+     *
+     * @param gcontext the general context handle for memory allocation, or 0 to use default
+     * @return a pointer to the character tables, or 0 if memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_maketables.html">pcre2_maketables</a>
+     */
+    public long maketables(long gcontext);
+
+    /**
+     * Free character tables that were obtained from {@link #maketables}.
+     * <p>
+     * This function frees the memory that was used to hold the character tables. If the tables argument is 0 (null),
+     * the function returns immediately without doing anything.
+     * <p>
+     * The general context must be the same as the one that was used when pcre2_maketables() was called (or 0 if
+     * that was 0). Otherwise the behaviour is undefined.
+     *
+     * @param gcontext the general context handle that was used for allocation, or 0 if default was used
+     * @param tables   the pointer to the character tables to free (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_maketables_free.html">pcre2_maketables_free</a>
+     */
+    public void maketablesFree(long gcontext, long tables);
+
+    /**
      * Create a new compile context.
      *
      * @param gcontext the general context handle or 0
