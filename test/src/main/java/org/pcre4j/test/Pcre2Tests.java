@@ -3667,4 +3667,34 @@ public abstract class Pcre2Tests {
         api.matchContextFree(matchCtx);
     }
 
+    @Test
+    public void maketablesAndFree() {
+        // Test 1: Create character tables with default general context (0)
+        long tables = api.maketables(0);
+        assertTrue(tables != 0, "maketables should return non-zero pointer for character tables");
+
+        // Free the tables with default general context
+        api.maketablesFree(0, tables);
+
+        // Test 2: Create and free with null tables pointer (should be no-op)
+        api.maketablesFree(0, 0);
+    }
+
+    @Test
+    public void maketablesWithGeneralContext() {
+        // Create a general context
+        long gcontext = api.generalContextCreate(0, 0, 0);
+        assertTrue(gcontext != 0, "General context creation should succeed");
+
+        // Create character tables with the general context
+        long tables = api.maketables(gcontext);
+        assertTrue(tables != 0, "maketables should return non-zero pointer for character tables");
+
+        // Free the tables using the same general context
+        api.maketablesFree(gcontext, tables);
+
+        // Free the general context
+        api.generalContextFree(gcontext);
+    }
+
 }

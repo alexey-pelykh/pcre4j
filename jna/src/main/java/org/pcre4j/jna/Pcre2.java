@@ -131,6 +131,20 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long maketables(long gcontext) {
+        final var pGContext = new Pointer(gcontext);
+        final var pTables = library.pcre2_maketables(pGContext);
+        return Pointer.nativeValue(pTables);
+    }
+
+    @Override
+    public void maketablesFree(long gcontext, long tables) {
+        final var pGContext = new Pointer(gcontext);
+        final var pTables = new Pointer(tables);
+        library.pcre2_maketables_free(pGContext, pTables);
+    }
+
+    @Override
     public long compileContextCreate(long gcontext) {
         final var pGContext = new Pointer(gcontext);
         final var pCContext = library.pcre2_compile_context_create(pGContext);
@@ -960,6 +974,9 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_general_context_create(Pointer malloc, Pointer free, Pointer memoryData);
         Pointer pcre2_general_context_copy(Pointer gcontext);
         void pcre2_general_context_free(Pointer gcontext);
+
+        Pointer pcre2_maketables(Pointer gcontext);
+        void pcre2_maketables_free(Pointer gcontext, Pointer tables);
 
         Pointer pcre2_compile_context_create(Pointer gcontext);
         Pointer pcre2_compile_context_copy(Pointer ccontext);

@@ -35,6 +35,9 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_general_context_copy;
     private final MethodHandle pcre2_general_context_free;
 
+    private final MethodHandle pcre2_maketables;
+    private final MethodHandle pcre2_maketables_free;
+
     private final MethodHandle pcre2_compile_context_create;
     private final MethodHandle pcre2_compile_context_copy;
     private final MethodHandle pcre2_compile_context_free;
@@ -160,6 +163,21 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_general_context_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // pcre2_general_context*
+                )
+        );
+
+        pcre2_maketables = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_maketables" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // const uint8_t*
+                        ValueLayout.ADDRESS // pcre2_general_context*
+                )
+        );
+
+        pcre2_maketables_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_maketables_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS, // pcre2_general_context*
+                        ValueLayout.ADDRESS // const uint8_t*
                 )
         );
 
@@ -724,6 +742,36 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_general_context_free.invokeExact(
                     pGContext
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long maketables(long gcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            final var pTables = (MemorySegment) pcre2_maketables.invokeExact(
+                    pGContext
+            );
+
+            return pTables.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void maketablesFree(long gcontext, long tables) {
+        try (var arena = Arena.ofConfined()) {
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+            final var pTables = MemorySegment.ofAddress(tables);
+
+            pcre2_maketables_free.invokeExact(
+                    pGContext,
+                    pTables
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
