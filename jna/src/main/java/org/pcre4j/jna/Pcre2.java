@@ -513,6 +513,13 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setCharacterTables(long ccontext, long tables) {
+        final var pCContext = new Pointer(ccontext);
+        final var pTables = new Pointer(tables);
+        return library.pcre2_set_character_tables(pCContext, pTables);
+    }
+
+    @Override
     public int setMatchLimit(long mcontext, int limit) {
         final var pMContext = new Pointer(mcontext);
         return library.pcre2_set_match_limit(pMContext, limit);
@@ -1057,6 +1064,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_max_pattern_length(Pointer ccontext, Pointer value);
 
         int pcre2_set_compile_extra_options(Pointer ccontext, int extraOptions);
+
+        int pcre2_set_character_tables(Pointer ccontext, Pointer tables);
 
         int pcre2_set_match_limit(Pointer mcontext, int value);
 
