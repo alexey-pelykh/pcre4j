@@ -3335,6 +3335,80 @@ public abstract class Pcre2Tests {
     }
 
     @Test
+    public void testCodeCopyWithTables() {
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Test 1: Basic code copy with tables functionality
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        final var codeCopy = api.codeCopyWithTables(code);
+        assertTrue(codeCopy != 0, "codeCopyWithTables should return non-zero for valid pattern");
+        assertTrue(codeCopy != code, "codeCopyWithTables should return a different handle");
+
+        // Verify the copy works for matching
+        final var matchData = api.matchDataCreateFromPattern(codeCopy, 0);
+        assertTrue(matchData != 0, "Failed to create match data from copied code");
+
+        final var result = api.match(codeCopy, "hello world", 0, 0, matchData, 0);
+        assertTrue(result > 0, "Match should succeed with copied code");
+
+        api.matchDataFree(matchData);
+        api.codeFree(codeCopy);
+        api.codeFree(code);
+
+        // Test 2: Copy with capturing groups
+        final var code2 = api.compile("(\\w+)@(\\w+)", 0, errorcode, erroroffset, 0);
+        assertTrue(code2 != 0, "Failed to compile pattern with capturing groups");
+
+        final var code2Copy = api.codeCopyWithTables(code2);
+        assertTrue(code2Copy != 0, "codeCopyWithTables should return non-zero for pattern with capturing groups");
+
+        final var matchData2 = api.matchDataCreateFromPattern(code2Copy, 0);
+        assertTrue(matchData2 != 0, "Failed to create match data from copied code");
+
+        final var result2 = api.match(code2Copy, "user@domain", 0, 0, matchData2, 0);
+        assertEquals(3, result2, "Match should return 3 (full match + 2 capturing groups)");
+
+        api.matchDataFree(matchData2);
+        api.codeFree(code2Copy);
+        api.codeFree(code2);
+
+        // Test 3: codeCopyWithTables returns 0 for null/zero input
+        final var nullCopy = api.codeCopyWithTables(0);
+        assertEquals(0, nullCopy, "codeCopyWithTables should return 0 for null/zero input");
+
+        // Test 4: Copy with custom character tables
+        final var tables = api.maketables(0);
+        assertTrue(tables != 0, "Failed to create character tables");
+
+        final var ccontext = api.compileContextCreate(0);
+        assertTrue(ccontext != 0, "Failed to create compile context");
+
+        api.setCharacterTables(ccontext, tables);
+
+        final var code3 = api.compile("HELLO", IPcre2.CASELESS, errorcode, erroroffset, ccontext);
+        assertTrue(code3 != 0, "Failed to compile pattern with custom tables");
+
+        final var code3Copy = api.codeCopyWithTables(code3);
+        assertTrue(code3Copy != 0, "codeCopyWithTables should return non-zero for pattern with custom tables");
+
+        // Verify the copy with tables works for matching
+        final var matchData3 = api.matchDataCreateFromPattern(code3Copy, 0);
+        assertTrue(matchData3 != 0, "Failed to create match data from copied code with tables");
+
+        final var result3 = api.match(code3Copy, "hello world", 0, 0, matchData3, 0);
+        assertTrue(result3 > 0, "Match should succeed with copied code with tables");
+
+        api.matchDataFree(matchData3);
+        api.codeFree(code3Copy);
+        api.codeFree(code3);
+        api.compileContextFree(ccontext);
+        api.maketablesFree(0, tables);
+    }
+
+    @Test
     public void testSerializeEncode() {
         final var errorcode = new int[1];
         final var erroroffset = new long[1];
