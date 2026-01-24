@@ -57,6 +57,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_jit_stack_create;
     private final MethodHandle pcre2_jit_stack_free;
     private final MethodHandle pcre2_jit_stack_assign;
+    private final MethodHandle pcre2_jit_free_unused_memory;
 
     private final MethodHandle pcre2_match_data_create;
     private final MethodHandle pcre2_match_data_create_from_pattern;
@@ -307,6 +308,13 @@ public class Pcre2 implements IPcre2 {
                         ValueLayout.ADDRESS, // pcre2_code*
                         ValueLayout.ADDRESS, // pcre2_jit_callback
                         ValueLayout.ADDRESS // void*
+                )
+        );
+
+        pcre2_jit_free_unused_memory = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_jit_free_unused_memory" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // pcre2_general_context*
                 )
         );
 
@@ -1139,6 +1147,19 @@ public class Pcre2 implements IPcre2 {
                     pMContext,
                     pCallback,
                     pData
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void jitFreeUnusedMemory(long gcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            pcre2_jit_free_unused_memory.invokeExact(
+                    pGContext
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

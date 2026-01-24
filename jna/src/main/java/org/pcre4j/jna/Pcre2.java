@@ -344,6 +344,12 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public void jitFreeUnusedMemory(long gcontext) {
+        final var pGContext = new Pointer(gcontext);
+        library.pcre2_jit_free_unused_memory(pGContext);
+    }
+
+    @Override
     public long matchDataCreate(int ovecsize, long gcontext) {
         final var pGContext = new Pointer(gcontext);
         final var pMatchData = library.pcre2_match_data_create(ovecsize, pGContext);
@@ -1026,6 +1032,7 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_jit_stack_create(Pointer startSize, Pointer maxSize, Pointer gcontext);
         void pcre2_jit_stack_free(Pointer stack);
         void pcre2_jit_stack_assign(Pointer mcontext, Pointer callback, Pointer data);
+        void pcre2_jit_free_unused_memory(Pointer gcontext);
 
         Pointer pcre2_match_data_create(int ovecsize, Pointer gcontext);
         Pointer pcre2_match_data_create_from_pattern(Pointer code, Pointer gcontext);

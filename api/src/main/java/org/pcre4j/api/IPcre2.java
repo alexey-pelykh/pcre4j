@@ -977,6 +977,24 @@ public interface IPcre2 {
     public void jitStackAssign(long mcontext, long callback, long data);
 
     /**
+     * Free unused JIT executable memory.
+     * <p>
+     * When JIT compilation is enabled, PCRE2 allocates executable memory for the JIT-compiled code. This memory
+     * is normally held until the compiled patterns are freed. However, the JIT compiler may also allocate some
+     * additional memory that is no longer needed after compilation. This function releases that unused memory.
+     * <p>
+     * In a multithreaded application, this function should be called in a thread-safe manner. It is safe to call
+     * this function even if JIT support is not available (it will simply do nothing).
+     * <p>
+     * If a general context is provided, it must be the same context that was used when creating the JIT-compiled
+     * patterns, as it may have custom memory management functions.
+     *
+     * @param gcontext the general context handle that was used for JIT compilation, or 0 if default was used
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_jit_free_unused_memory.html">pcre2_jit_free_unused_memory</a>
+     */
+    public void jitFreeUnusedMemory(long gcontext);
+
+    /**
      * Create a new match data block.
      *
      * @param ovecsize the size of the ovector
