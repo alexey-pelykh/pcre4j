@@ -205,6 +205,13 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long codeCopyWithTables(long code) {
+        final var pCode = new Pointer(code);
+        final var pNewCode = library.pcre2_code_copy_with_tables(pCode);
+        return Pointer.nativeValue(pNewCode);
+    }
+
+    @Override
     public void codeFree(long code) {
         final var pCode = new Pointer(code);
         library.pcre2_code_free(pCode);
@@ -998,6 +1005,7 @@ public class Pcre2 implements IPcre2 {
                 Pointer ccontext
         );
         Pointer pcre2_code_copy(Pointer code);
+        Pointer pcre2_code_copy_with_tables(Pointer code);
         void pcre2_code_free(Pointer code);
 
         int pcre2_callout_enumerate(Pointer code, Pointer callback, Pointer calloutData);

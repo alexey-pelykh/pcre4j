@@ -801,6 +801,23 @@ public interface IPcre2 {
     public long codeCopy(long code);
 
     /**
+     * Create a copy of a compiled pattern and its character tables.
+     * <p>
+     * This function makes a copy of the memory used for a compiled pattern, including any character tables that were
+     * passed to {@link #compile(String, int, int[], long[], long)} via a compile context. Without a subsequent call to
+     * {@link #jitCompile(long, int)}, the copy can be used only for non-JIT matching.
+     * <p>
+     * Unlike {@link #codeCopy(long)}, which makes a copy that references the same character tables as the original,
+     * this function creates a completely independent copy. If the original was compiled without external tables (i.e.,
+     * {@link #setCharacterTables(long, long)} was not called), the copy will also not have external tables.
+     *
+     * @param code the compiled pattern handle
+     * @return the new compiled pattern handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_code_copy_with_tables.html">pcre2_code_copy_with_tables</a>
+     */
+    public long codeCopyWithTables(long code);
+
+    /**
      * Free a compiled pattern resources.
      *
      * @param code the compiled pattern handle

@@ -44,6 +44,7 @@ public class Pcre2 implements IPcre2 {
 
     private final MethodHandle pcre2_compile;
     private final MethodHandle pcre2_code_copy;
+    private final MethodHandle pcre2_code_copy_with_tables;
     private final MethodHandle pcre2_code_free;
 
     private final MethodHandle pcre2_callout_enumerate;
@@ -217,6 +218,13 @@ public class Pcre2 implements IPcre2 {
 
         pcre2_code_copy = LINKER.downcallHandle(
                 SYMBOL_LOOKUP.find("pcre2_code_copy" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_code*
+                        ValueLayout.ADDRESS // pcre2_code*
+                )
+        );
+
+        pcre2_code_copy_with_tables = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_code_copy_with_tables" + suffix).orElseThrow(),
                 FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_code*
                         ValueLayout.ADDRESS // pcre2_code*
                 )
@@ -874,6 +882,21 @@ public class Pcre2 implements IPcre2 {
             final var pCode = MemorySegment.ofAddress(code);
 
             final var pNewCode = (MemorySegment) pcre2_code_copy.invokeExact(
+                    pCode
+            );
+
+            return pNewCode.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long codeCopyWithTables(long code) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCode = MemorySegment.ofAddress(code);
+
+            final var pNewCode = (MemorySegment) pcre2_code_copy_with_tables.invokeExact(
                     pCode
             );
 
