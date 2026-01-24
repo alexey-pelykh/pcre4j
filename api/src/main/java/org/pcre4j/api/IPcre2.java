@@ -1217,6 +1217,24 @@ public interface IPcre2 {
     public int setCompileExtraOptions(long ccontext, int extraOptions);
 
     /**
+     * Set custom character tables for pattern compilation within a compile context.
+     * <p>
+     * This function sets a pointer to custom character tables within a compile context. The tables can be
+     * generated using {@link #maketables} or the {@code pcre2_dftables} maintenance command.
+     * <p>
+     * When {@link #compile} is called with a compile context that contains a pointer to character tables,
+     * those tables are used for pattern compilation instead of the default tables built into PCRE2.
+     * <p>
+     * Passing 0 as the tables pointer causes the compile context to use the default character tables.
+     *
+     * @param ccontext the compile context handle
+     * @param tables   a pointer to character tables (from {@link #maketables}), or 0 to use default tables
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_character_tables.html">pcre2_set_character_tables</a>
+     */
+    public int setCharacterTables(long ccontext, long tables);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.

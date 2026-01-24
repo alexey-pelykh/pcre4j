@@ -3697,4 +3697,51 @@ public abstract class Pcre2Tests {
         api.generalContextFree(gcontext);
     }
 
+    @Test
+    public void setCharacterTablesWithCustomTables() {
+        // Create compile context
+        long ccontext = api.compileContextCreate(0);
+        assertTrue(ccontext != 0, "Compile context creation should succeed");
+
+        // Create custom character tables
+        long tables = api.maketables(0);
+        assertTrue(tables != 0, "maketables should return non-zero pointer for character tables");
+
+        // Set custom character tables - should always return 0
+        int result = api.setCharacterTables(ccontext, tables);
+        assertEquals(0, result, "setCharacterTables should return 0");
+
+        // Compile a pattern using the compile context with custom tables
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+        long code = api.compile("[a-z]+", 0, errorcode, erroroffset, ccontext);
+        assertTrue(code != 0, "Pattern compilation with custom tables should succeed");
+
+        // Clean up
+        api.codeFree(code);
+        api.compileContextFree(ccontext);
+        api.maketablesFree(0, tables);
+    }
+
+    @Test
+    public void setCharacterTablesWithNullTables() {
+        // Create compile context
+        long ccontext = api.compileContextCreate(0);
+        assertTrue(ccontext != 0, "Compile context creation should succeed");
+
+        // Set tables to 0 (use default tables) - should always return 0
+        int result = api.setCharacterTables(ccontext, 0);
+        assertEquals(0, result, "setCharacterTables with 0 should return 0");
+
+        // Compile a pattern using the compile context with default tables
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+        long code = api.compile("[a-z]+", 0, errorcode, erroroffset, ccontext);
+        assertTrue(code != 0, "Pattern compilation with default tables should succeed");
+
+        // Clean up
+        api.codeFree(code);
+        api.compileContextFree(ccontext);
+    }
+
 }
