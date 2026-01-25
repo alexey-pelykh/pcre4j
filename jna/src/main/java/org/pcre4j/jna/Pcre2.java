@@ -411,6 +411,45 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int patternConvert(String pattern, int options, long[] buffer, long[] blength, long cvcontext) {
+        if (pattern == null) {
+            throw new IllegalArgumentException("pattern must not be null");
+        }
+        if (buffer == null || buffer.length < 1) {
+            throw new IllegalArgumentException("buffer must be an array of length 1");
+        }
+        if (blength == null || blength.length < 1) {
+            throw new IllegalArgumentException("blength must be an array of length 1");
+        }
+
+        final var pszPattern = pattern.getBytes(StandardCharsets.UTF_8);
+        final var patternLength = new Pointer(pszPattern.length);
+        final var bufferRef = new PointerByReference(new Pointer(buffer[0]));
+        final var blengthRef = new LongByReference(blength[0]);
+        final var pCvContext = new Pointer(cvcontext);
+
+        final var result = library.pcre2_pattern_convert(
+                pszPattern,
+                patternLength,
+                options,
+                bufferRef,
+                blengthRef,
+                pCvContext
+        );
+
+        buffer[0] = Pointer.nativeValue(bufferRef.getValue());
+        blength[0] = blengthRef.getValue();
+
+        return result;
+    }
+
+    @Override
+    public void convertedPatternFree(long convertedPattern) {
+        final var pConvertedPattern = new Pointer(convertedPattern);
+        library.pcre2_converted_pattern_free(pConvertedPattern);
+    }
+
+    @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
@@ -1073,6 +1112,16 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_convert_context_create(Pointer gcontext);
         Pointer pcre2_convert_context_copy(Pointer cvcontext);
         void pcre2_convert_context_free(Pointer cvcontext);
+
+        int pcre2_pattern_convert(
+                byte[] pattern,
+                Pointer length,
+                int options,
+                PointerByReference buffer,
+                LongByReference blength,
+                Pointer cvcontext
+        );
+        void pcre2_converted_pattern_free(Pointer convertedPattern);
 
         int pcre2_match(
                 Pointer code,

@@ -3849,4 +3849,107 @@ public abstract class Pcre2Tests {
         api.jitFreeUnusedMemory(0);
     }
 
+    @Test
+    public void patternConvertGlob() {
+        // Test converting a glob pattern to PCRE2
+        // The glob pattern "*.txt" should be converted to a PCRE2 pattern
+
+        // First, get the required buffer size by passing buffer[0] = 0
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        int result = api.patternConvert(
+                "*.txt",
+                IPcre2.CONVERT_GLOB,
+                buffer,
+                blength,
+                0
+        );
+        assertEquals(0, result, "patternConvert should return 0 on success");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer after conversion");
+        assertTrue(blength[0] > 0, "blength should contain the pattern length");
+
+        // The buffer was allocated by PCRE2, so we need to free it
+        api.convertedPatternFree(buffer[0]);
+    }
+
+    @Test
+    public void patternConvertPosixExtended() {
+        // Test converting a POSIX Extended Regular Expression to PCRE2
+        // The POSIX ERE "^[a-z]+$" should be converted
+
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        int result = api.patternConvert(
+                "^[a-z]+$",
+                IPcre2.CONVERT_POSIX_EXTENDED,
+                buffer,
+                blength,
+                0
+        );
+        assertEquals(0, result, "patternConvert should return 0 on success");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer after conversion");
+        assertTrue(blength[0] > 0, "blength should contain the pattern length");
+
+        api.convertedPatternFree(buffer[0]);
+    }
+
+    @Test
+    public void patternConvertWithContext() {
+        // Test using a convert context
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        int result = api.patternConvert(
+                "file?.log",
+                IPcre2.CONVERT_GLOB,
+                buffer,
+                blength,
+                cvcontext
+        );
+        assertEquals(0, result, "patternConvert should return 0 on success");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer after conversion");
+
+        api.convertedPatternFree(buffer[0]);
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void convertedPatternFreeNull() {
+        // Test that convertedPatternFree handles null pointer gracefully
+        api.convertedPatternFree(0);
+    }
+
+    @Test
+    public void patternConvertNullPatternThrows() {
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        assertThrows(IllegalArgumentException.class, () ->
+                api.patternConvert(null, IPcre2.CONVERT_GLOB, buffer, blength, 0)
+        );
+    }
+
+    @Test
+    public void patternConvertNullBufferThrows() {
+        long[] blength = new long[]{0};
+
+        assertThrows(IllegalArgumentException.class, () ->
+                api.patternConvert("*.txt", IPcre2.CONVERT_GLOB, null, blength, 0)
+        );
+    }
+
+    @Test
+    public void patternConvertNullBlengthThrows() {
+        long[] buffer = new long[]{0};
+
+        assertThrows(IllegalArgumentException.class, () ->
+                api.patternConvert("*.txt", IPcre2.CONVERT_GLOB, buffer, null, 0)
+        );
+    }
+
 }

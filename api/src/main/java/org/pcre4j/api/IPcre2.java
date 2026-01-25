@@ -1075,6 +1075,62 @@ public interface IPcre2 {
     public void convertContextFree(long cvcontext);
 
     /**
+     * Convert a foreign pattern (glob or POSIX) to a PCRE2 regular expression.
+     * <p>
+     * This experimental function converts glob patterns or POSIX regular expressions into PCRE2 patterns.
+     * The conversion is useful for tools that need to accept multiple pattern syntaxes.
+     * <p>
+     * The {@code options} parameter specifies what type of pattern is being converted:
+     * <ul>
+     * <li>{@link #CONVERT_POSIX_BASIC} - Convert POSIX Basic Regular Expression</li>
+     * <li>{@link #CONVERT_POSIX_EXTENDED} - Convert POSIX Extended Regular Expression</li>
+     * <li>{@link #CONVERT_GLOB} - Convert glob pattern</li>
+     * <li>{@link #CONVERT_GLOB_NO_WILD_SEPARATOR} - Glob with no wildcard for separator</li>
+     * <li>{@link #CONVERT_GLOB_NO_STARSTAR} - Glob without ** support</li>
+     * </ul>
+     * <p>
+     * Additionally, {@link #CONVERT_UTF} can be set to indicate UTF encoding, and
+     * {@link #CONVERT_NO_UTF_CHECK} can be set to skip UTF validity checking.
+     * <p>
+     * When {@code buffer} contains 0, the function returns only the required buffer length without
+     * performing the conversion. When {@code buffer} contains a non-zero pointer, that pointer must
+     * point to a buffer of sufficient size, with the size specified in {@code blength}.
+     * <p>
+     * When this function allocates memory (buffer initially contains 0 and is updated with a pointer),
+     * the memory must be freed using {@link #convertedPatternFree(long)}.
+     *
+     * @param pattern   the foreign pattern to convert (UTF-8 encoded)
+     * @param options   conversion options specifying the pattern type and behavior
+     * @param buffer    an array of length 1; on input, contains 0 to request allocation or a pointer to
+     *                  a caller-provided buffer; on output, may contain a pointer to the converted pattern
+     * @param blength   an array of length 1; on input when using a caller-provided buffer, contains the buffer
+     *                  size; on output, contains the length of the converted pattern (excluding null terminator)
+     * @param cvcontext a convert context handle for additional options, or 0 to use defaults
+     * @return 0 on success, otherwise a negative error code:
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed,
+     *         {@link #ERROR_BADOPTION} if invalid options were specified,
+     *         {@link #ERROR_CONVERT_SYNTAX} if the pattern has invalid syntax
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_pattern_convert.html">pcre2_pattern_convert</a>
+     */
+    public int patternConvert(String pattern, int options, long[] buffer, long[] blength, long cvcontext);
+
+    /**
+     * Free memory allocated by {@link #patternConvert(String, int, long[], long[], long)}.
+     * <p>
+     * This function frees memory that was allocated by {@code pcre2_pattern_convert()} when it created
+     * a converted pattern. If the argument is 0 (null pointer), the function returns immediately
+     * without doing anything.
+     * <p>
+     * Note: Only call this function on pointers that were allocated by {@code pcre2_pattern_convert()}.
+     * Do not call it on buffers that were provided by the caller.
+     *
+     * @param convertedPattern the pointer to the converted pattern to free (may be 0, in which case the
+     *                         function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_converted_pattern_free.html">pcre2_converted_pattern_free</a>
+     */
+    public void convertedPatternFree(long convertedPattern);
+
+    /**
      * Match a compiled pattern against a subject string.
      *
      * @param code        the compiled pattern handle
