@@ -3989,4 +3989,53 @@ public abstract class Pcre2Tests {
         api.convertContextFree(cvcontext);
     }
 
+    @Test
+    public void setGlobSeparatorForwardSlash() {
+        // Test setting forward slash as separator (valid)
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        int result = api.setGlobSeparator(cvcontext, '/');
+        assertEquals(0, result, "setGlobSeparator should return 0 for forward slash");
+
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void setGlobSeparatorBackslash() {
+        // Test setting backslash as separator (valid)
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        int result = api.setGlobSeparator(cvcontext, '\\');
+        assertEquals(0, result, "setGlobSeparator should return 0 for backslash");
+
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void setGlobSeparatorDot() {
+        // Test setting dot as separator (valid)
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        int result = api.setGlobSeparator(cvcontext, '.');
+        assertEquals(0, result, "setGlobSeparator should return 0 for dot");
+
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void setGlobSeparatorInvalid() {
+        // Test setting an invalid separator character
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        // 'a' is not a valid separator, should return ERROR_BADDATA
+        int result = api.setGlobSeparator(cvcontext, 'a');
+        assertEquals(IPcre2.ERROR_BADDATA, result, "setGlobSeparator should return ERROR_BADDATA for invalid char");
+
+        api.convertContextFree(cvcontext);
+    }
+
 }

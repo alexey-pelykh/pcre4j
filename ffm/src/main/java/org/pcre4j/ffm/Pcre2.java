@@ -72,6 +72,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_convert_context_free;
 
     private final MethodHandle pcre2_set_glob_escape;
+    private final MethodHandle pcre2_set_glob_separator;
 
     private final MethodHandle pcre2_pattern_convert;
     private final MethodHandle pcre2_converted_pattern_free;
@@ -398,6 +399,14 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_convert_context*
                         ValueLayout.JAVA_INT // uint32_t escape_char
+                )
+        );
+
+        pcre2_set_glob_separator = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_glob_separator" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_convert_context*
+                        ValueLayout.JAVA_INT // uint32_t separator_char
                 )
         );
 
@@ -1373,6 +1382,20 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_glob_escape.invokeExact(
                     pCvContext,
                     escapeChar
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setGlobSeparator(long cvcontext, int separatorChar) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCvContext = MemorySegment.ofAddress(cvcontext);
+
+            return (int) pcre2_set_glob_separator.invokeExact(
+                    pCvContext,
+                    separatorChar
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);
