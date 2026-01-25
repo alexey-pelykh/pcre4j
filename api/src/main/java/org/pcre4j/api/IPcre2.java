@@ -1093,6 +1093,22 @@ public interface IPcre2 {
     public int setGlobEscape(long cvcontext, int escapeChar);
 
     /**
+     * Set the path separator character for glob pattern conversion.
+     * <p>
+     * This is part of the experimental pattern conversion functions. It sets the component separator character
+     * that is used during glob pattern conversion. This affects how path-like patterns are parsed.
+     * <p>
+     * The separator character must be one of forward slash (/), backslash (\), or dot (.). On Windows systems,
+     * backslash is the default separator; on other platforms, forward slash is the default.
+     *
+     * @param cvcontext     the convert context handle
+     * @param separatorChar the separator character to use (must be '/', '\\', or '.')
+     * @return 0 on success, or {@link #ERROR_BADDATA} if the separator character is invalid
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_glob_separator.html">pcre2_set_glob_separator</a>
+     */
+    public int setGlobSeparator(long cvcontext, int separatorChar);
+
+    /**
      * Convert a foreign pattern (glob or POSIX) to a PCRE2 regular expression.
      * <p>
      * This experimental function converts glob patterns or POSIX regular expressions into PCRE2 patterns.
