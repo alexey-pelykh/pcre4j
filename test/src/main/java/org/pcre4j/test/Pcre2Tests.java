@@ -3952,4 +3952,41 @@ public abstract class Pcre2Tests {
         );
     }
 
+    @Test
+    public void setGlobEscapeValid() {
+        // Test setting a valid escape character (backslash)
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        int result = api.setGlobEscape(cvcontext, '\\');
+        assertEquals(0, result, "setGlobEscape should return 0 for valid punctuation character");
+
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void setGlobEscapeDisable() {
+        // Test disabling escape processing by setting to 0
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        int result = api.setGlobEscape(cvcontext, 0);
+        assertEquals(0, result, "setGlobEscape should return 0 when disabling escapes");
+
+        api.convertContextFree(cvcontext);
+    }
+
+    @Test
+    public void setGlobEscapeInvalid() {
+        // Test setting an invalid escape character (non-punctuation)
+        long cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        // 'a' is not a punctuation character, should return ERROR_BADDATA
+        int result = api.setGlobEscape(cvcontext, 'a');
+        assertEquals(IPcre2.ERROR_BADDATA, result, "setGlobEscape should return ERROR_BADDATA for invalid character");
+
+        api.convertContextFree(cvcontext);
+    }
+
 }
