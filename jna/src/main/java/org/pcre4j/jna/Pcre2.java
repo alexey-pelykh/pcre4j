@@ -411,6 +411,12 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setGlobEscape(long cvcontext, int escapeChar) {
+        final var pCvContext = new Pointer(cvcontext);
+        return library.pcre2_set_glob_escape(pCvContext, escapeChar);
+    }
+
+    @Override
     public int patternConvert(String pattern, int options, long[] buffer, long[] blength, long cvcontext) {
         if (pattern == null) {
             throw new IllegalArgumentException("pattern must not be null");
@@ -1112,6 +1118,8 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_convert_context_create(Pointer gcontext);
         Pointer pcre2_convert_context_copy(Pointer cvcontext);
         void pcre2_convert_context_free(Pointer cvcontext);
+
+        int pcre2_set_glob_escape(Pointer cvcontext, int escapeChar);
 
         int pcre2_pattern_convert(
                 byte[] pattern,

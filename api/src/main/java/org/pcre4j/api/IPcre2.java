@@ -1075,6 +1075,24 @@ public interface IPcre2 {
     public void convertContextFree(long cvcontext);
 
     /**
+     * Set the escape character for glob pattern conversion.
+     * <p>
+     * This is part of the experimental pattern conversion functions. It sets the escape character that is recognized
+     * during glob pattern conversion. The escape character allows special glob characters to be treated as literals.
+     * <p>
+     * The default escape character is the grave accent (`) on Windows systems and the backslash (\) on other platforms.
+     * Setting the escape character to zero disables escape processing entirely.
+     * <p>
+     * The escape character must be zero (to disable) or a punctuation character with a code point less than 256.
+     *
+     * @param cvcontext  the convert context handle
+     * @param escapeChar the escape character to use, or 0 to disable escape processing
+     * @return 0 on success, or {@link #ERROR_BADDATA} if the escape character is invalid
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_glob_escape.html">pcre2_set_glob_escape</a>
+     */
+    public int setGlobEscape(long cvcontext, int escapeChar);
+
+    /**
      * Convert a foreign pattern (glob or POSIX) to a PCRE2 regular expression.
      * <p>
      * This experimental function converts glob patterns or POSIX regular expressions into PCRE2 patterns.
