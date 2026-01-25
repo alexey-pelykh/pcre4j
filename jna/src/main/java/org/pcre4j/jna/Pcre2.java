@@ -391,6 +391,26 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public long convertContextCreate(long gcontext) {
+        final var pGContext = new Pointer(gcontext);
+        final var pCvContext = library.pcre2_convert_context_create(pGContext);
+        return Pointer.nativeValue(pCvContext);
+    }
+
+    @Override
+    public long convertContextCopy(long cvcontext) {
+        final var pCvContext = new Pointer(cvcontext);
+        final var pNewCvContext = library.pcre2_convert_context_copy(pCvContext);
+        return Pointer.nativeValue(pNewCvContext);
+    }
+
+    @Override
+    public void convertContextFree(long cvcontext) {
+        final var pCvContext = new Pointer(cvcontext);
+        library.pcre2_convert_context_free(pCvContext);
+    }
+
+    @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
@@ -1049,6 +1069,10 @@ public class Pcre2 implements IPcre2 {
         Pointer pcre2_match_context_create(Pointer gcontext);
         Pointer pcre2_match_context_copy(Pointer mcontext);
         void pcre2_match_context_free(Pointer mcontext);
+
+        Pointer pcre2_convert_context_create(Pointer gcontext);
+        Pointer pcre2_convert_context_copy(Pointer cvcontext);
+        void pcre2_convert_context_free(Pointer cvcontext);
 
         int pcre2_match(
                 Pointer code,

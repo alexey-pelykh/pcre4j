@@ -67,6 +67,10 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_match_context_copy;
     private final MethodHandle pcre2_match_context_free;
 
+    private final MethodHandle pcre2_convert_context_create;
+    private final MethodHandle pcre2_convert_context_copy;
+    private final MethodHandle pcre2_convert_context_free;
+
     private final MethodHandle pcre2_match;
     private final MethodHandle pcre2_dfa_match;
 
@@ -360,6 +364,27 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_match_context_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // pcre2_match_context*
+                )
+        );
+
+        pcre2_convert_context_create = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_convert_context_create" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_convert_context*
+                        ValueLayout.ADDRESS // pcre2_general_context*
+                )
+        );
+
+        pcre2_convert_context_copy = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_convert_context_copy" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.ADDRESS, // pcre2_convert_context*
+                        ValueLayout.ADDRESS // pcre2_convert_context*
+                )
+        );
+
+        pcre2_convert_context_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_convert_context_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // pcre2_convert_context*
                 )
         );
 
@@ -1259,6 +1284,49 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_match_context_free.invokeExact(
                     pMatchContext
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long convertContextCreate(long gcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var pGContext = MemorySegment.ofAddress(gcontext);
+
+            final var pCvContext = (MemorySegment) pcre2_convert_context_create.invokeExact(
+                    pGContext
+            );
+
+            return pCvContext.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public long convertContextCopy(long cvcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCvContext = MemorySegment.ofAddress(cvcontext);
+
+            final var pNewCvContext = (MemorySegment) pcre2_convert_context_copy.invokeExact(
+                    pCvContext
+            );
+
+            return pNewCvContext.address();
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void convertContextFree(long cvcontext) {
+        try (var arena = Arena.ofConfined()) {
+            final var pCvContext = MemorySegment.ofAddress(cvcontext);
+
+            pcre2_convert_context_free.invokeExact(
+                    pCvContext
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

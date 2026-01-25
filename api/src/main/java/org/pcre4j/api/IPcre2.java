@@ -1043,6 +1043,38 @@ public interface IPcre2 {
     public void matchContextFree(long mcontext);
 
     /**
+     * Create a new convert context.
+     * <p>
+     * A convert context is used to hold parameters for the pattern conversion functions
+     * {@code pcre2_pattern_convert()} which can convert glob patterns or POSIX patterns
+     * to PCRE2 regular expressions.
+     *
+     * @param gcontext the general context handle or 0 to use default memory management
+     * @return the convert context handle, or 0 if memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_create.html">pcre2_convert_context_create</a>
+     */
+    public long convertContextCreate(long gcontext);
+
+    /**
+     * Create a copy of a convert context.
+     *
+     * @param cvcontext the convert context handle to copy
+     * @return the new convert context handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_copy.html">pcre2_convert_context_copy</a>
+     */
+    public long convertContextCopy(long cvcontext);
+
+    /**
+     * Free a convert context.
+     * <p>
+     * If the argument is 0 (null pointer), the function returns immediately without doing anything.
+     *
+     * @param cvcontext the convert context handle (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_free.html">pcre2_convert_context_free</a>
+     */
+    public void convertContextFree(long cvcontext);
+
+    /**
      * Match a compiled pattern against a subject string.
      *
      * @param code        the compiled pattern handle
