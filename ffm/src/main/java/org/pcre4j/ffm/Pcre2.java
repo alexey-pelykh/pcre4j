@@ -71,6 +71,9 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_convert_context_copy;
     private final MethodHandle pcre2_convert_context_free;
 
+    private final MethodHandle pcre2_pattern_convert;
+    private final MethodHandle pcre2_converted_pattern_free;
+
     private final MethodHandle pcre2_match;
     private final MethodHandle pcre2_dfa_match;
 
@@ -385,6 +388,25 @@ public class Pcre2 implements IPcre2 {
                 SYMBOL_LOOKUP.find("pcre2_convert_context_free" + suffix).orElseThrow(),
                 FunctionDescriptor.ofVoid(
                         ValueLayout.ADDRESS // pcre2_convert_context*
+                )
+        );
+
+        pcre2_pattern_convert = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_pattern_convert" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // PCRE2_SPTR pattern
+                        ValueLayout.ADDRESS, // PCRE2_SIZE length
+                        ValueLayout.JAVA_INT, // uint32_t options
+                        ValueLayout.ADDRESS, // PCRE2_UCHAR** buffer
+                        ValueLayout.ADDRESS, // PCRE2_SIZE* blength
+                        ValueLayout.ADDRESS  // pcre2_convert_context*
+                )
+        );
+
+        pcre2_converted_pattern_free = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_converted_pattern_free" + suffix).orElseThrow(),
+                FunctionDescriptor.ofVoid(
+                        ValueLayout.ADDRESS // PCRE2_UCHAR*
                 )
         );
 
@@ -1327,6 +1349,58 @@ public class Pcre2 implements IPcre2 {
 
             pcre2_convert_context_free.invokeExact(
                     pCvContext
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int patternConvert(String pattern, int options, long[] buffer, long[] blength, long cvcontext) {
+        if (pattern == null) {
+            throw new IllegalArgumentException("pattern must not be null");
+        }
+        if (buffer == null || buffer.length < 1) {
+            throw new IllegalArgumentException("buffer must be an array of length 1");
+        }
+        if (blength == null || blength.length < 1) {
+            throw new IllegalArgumentException("blength must be an array of length 1");
+        }
+
+        try (var arena = Arena.ofConfined()) {
+            final var pszPattern = arena.allocateUtf8String(pattern);
+            final var patternLength = MemorySegment.ofAddress(pszPattern.byteSize() - 1);
+            final var pBuffer = arena.allocate(ValueLayout.ADDRESS);
+            pBuffer.set(ValueLayout.ADDRESS, 0, MemorySegment.ofAddress(buffer[0]));
+            final var pBlength = arena.allocate(ValueLayout.JAVA_LONG);
+            pBlength.set(ValueLayout.JAVA_LONG, 0, blength[0]);
+            final var pCvContext = MemorySegment.ofAddress(cvcontext);
+
+            final var result = (int) pcre2_pattern_convert.invokeExact(
+                    pszPattern,
+                    patternLength,
+                    options,
+                    pBuffer,
+                    pBlength,
+                    pCvContext
+            );
+
+            buffer[0] = pBuffer.get(ValueLayout.ADDRESS, 0).address();
+            blength[0] = pBlength.get(ValueLayout.JAVA_LONG, 0);
+
+            return result;
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void convertedPatternFree(long convertedPattern) {
+        try (var arena = Arena.ofConfined()) {
+            final var pConvertedPattern = MemorySegment.ofAddress(convertedPattern);
+
+            pcre2_converted_pattern_free.invokeExact(
+                    pConvertedPattern
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

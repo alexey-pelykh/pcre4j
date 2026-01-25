@@ -19,6 +19,7 @@ import com.sun.jna.Pointer;
 import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
 
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -150,5 +151,55 @@ public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
 
         // Clean up
         api.codeFree(code);
+    }
+
+    @Test
+    public void patternConvertEndToEnd() {
+        // End-to-end test: convert a glob pattern, compile the result, and use it to match
+
+        // Convert glob pattern "*.txt" to PCRE2
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        int convertResult = api.patternConvert(
+                "*.txt",
+                IPcre2.CONVERT_GLOB,
+                buffer,
+                blength,
+                0
+        );
+        assertEquals(0, convertResult, "patternConvert should succeed");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer");
+        assertTrue(blength[0] > 0, "Pattern length should be positive");
+
+        // Read the converted pattern from native memory
+        Pointer pConvertedPattern = new Pointer(buffer[0]);
+        String convertedPattern = new String(
+                pConvertedPattern.getByteArray(0, (int) blength[0]),
+                StandardCharsets.UTF_8
+        );
+
+        // Compile the converted pattern
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+        long code = api.compile(convertedPattern, 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Converted pattern should compile successfully: " + convertedPattern);
+
+        // Create match data
+        long matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        // Test that the pattern matches "file.txt"
+        int matchResult = api.match(code, "file.txt", 0, 0, matchData, 0);
+        assertTrue(matchResult > 0, "Pattern should match 'file.txt', result=" + matchResult);
+
+        // Test that the pattern does NOT match "file.log"
+        matchResult = api.match(code, "file.log", 0, 0, matchData, 0);
+        assertEquals(IPcre2.ERROR_NOMATCH, matchResult, "Pattern should not match 'file.log'");
+
+        // Clean up
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+        api.convertedPatternFree(buffer[0]);
     }
 }
