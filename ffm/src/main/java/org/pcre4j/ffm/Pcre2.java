@@ -82,6 +82,7 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_set_max_pattern_length;
     private final MethodHandle pcre2_set_compile_extra_options;
     private final MethodHandle pcre2_set_character_tables;
+    private final MethodHandle pcre2_set_compile_recursion_guard;
     private final MethodHandle pcre2_set_match_limit;
     private final MethodHandle pcre2_set_depth_limit;
     private final MethodHandle pcre2_set_heap_limit;
@@ -470,6 +471,15 @@ public class Pcre2 implements IPcre2 {
                 FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
                         ValueLayout.ADDRESS, // pcre2_compile_context*
                         ValueLayout.ADDRESS // const uint8_t*
+                )
+        );
+
+        pcre2_set_compile_recursion_guard = LINKER.downcallHandle(
+                SYMBOL_LOOKUP.find("pcre2_set_compile_recursion_guard" + suffix).orElseThrow(),
+                FunctionDescriptor.of(ValueLayout.JAVA_INT, // int
+                        ValueLayout.ADDRESS, // pcre2_compile_context*
+                        ValueLayout.ADDRESS, // int (*)(uint32_t, void *)
+                        ValueLayout.ADDRESS // void*
                 )
         );
 
@@ -1490,6 +1500,23 @@ public class Pcre2 implements IPcre2 {
             return (int) pcre2_set_character_tables.invokeExact(
                     pCContext,
                     pTables
+            );
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public int setCompileRecursionGuard(long ccontext, long guardFunction, long userData) {
+        try {
+            final var pCContext = MemorySegment.ofAddress(ccontext);
+            final var pGuardFunction = MemorySegment.ofAddress(guardFunction);
+            final var pUserData = MemorySegment.ofAddress(userData);
+
+            return (int) pcre2_set_compile_recursion_guard.invokeExact(
+                    pCContext,
+                    pGuardFunction,
+                    pUserData
             );
         } catch (Throwable e) {
             throw new RuntimeException(e);

@@ -533,6 +533,14 @@ public class Pcre2 implements IPcre2 {
     }
 
     @Override
+    public int setCompileRecursionGuard(long ccontext, long guardFunction, long userData) {
+        final var pCContext = new Pointer(ccontext);
+        final var pGuardFunction = new Pointer(guardFunction);
+        final var pUserData = new Pointer(userData);
+        return library.pcre2_set_compile_recursion_guard(pCContext, pGuardFunction, pUserData);
+    }
+
+    @Override
     public int setMatchLimit(long mcontext, int limit) {
         final var pMContext = new Pointer(mcontext);
         return library.pcre2_set_match_limit(pMContext, limit);
@@ -1081,6 +1089,8 @@ public class Pcre2 implements IPcre2 {
         int pcre2_set_compile_extra_options(Pointer ccontext, int extraOptions);
 
         int pcre2_set_character_tables(Pointer ccontext, Pointer tables);
+
+        int pcre2_set_compile_recursion_guard(Pointer ccontext, Pointer guardFunction, Pointer userData);
 
         int pcre2_set_match_limit(Pointer mcontext, int value);
 

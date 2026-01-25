@@ -1270,6 +1270,31 @@ public interface IPcre2 {
     public int setCharacterTables(long ccontext, long tables);
 
     /**
+     * Set a compile recursion guard function within a compile context.
+     * <p>
+     * This function registers a guard callback that is called during {@link #compile} whenever it starts to
+     * compile a parenthesized part of a pattern. The guard function can be used to check for available stack
+     * space and prevent stack overflow crashes during compilation of deeply nested patterns.
+     * <p>
+     * The guard callback signature is: {@code int (*)(uint32_t, void *)}.
+     * <ul>
+     * <li>The first argument is the current parenthesis nesting depth.</li>
+     * <li>The second argument is the user data pointer passed to this function.</li>
+     * <li>The callback should return zero to allow compilation to continue, or non-zero to abort with
+     *     {@link #ERROR_RECURSELOOP}.</li>
+     * </ul>
+     * <p>
+     * Passing 0 as the guard function removes any previously set guard.
+     *
+     * @param ccontext      the compile context handle
+     * @param guardFunction a pointer to the guard callback function, or 0 to remove the guard
+     * @param userData      a pointer to user data that will be passed to the guard callback
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_compile_recursion_guard.html">pcre2_set_compile_recursion_guard</a>
+     */
+    public int setCompileRecursionGuard(long ccontext, long guardFunction, long userData);
+
+    /**
      * Set the match limit within a match context.
      * <p>
      * The match limit is used to limit the amount of backtracking during a match.
