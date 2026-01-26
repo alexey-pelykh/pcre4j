@@ -15,6 +15,7 @@
 package org.pcre4j.test;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2UtfWidth;
 
 /**
  * {@link IPcre2} implementation tests.
@@ -33,6 +34,7 @@ import org.pcre4j.api.IPcre2;
  *   <li>{@link Pcre2JitContractTest} - JIT compilation operations</li>
  *   <li>{@link Pcre2PatternConvertContractTest} - Pattern conversion (glob, POSIX)</li>
  *   <li>{@link Pcre2MiscContractTest} - Miscellaneous operations</li>
+ *   <li>{@link Pcre2UtfWidthContractTest} - UTF width support (UTF-8, UTF-16, UTF-32)</li>
  * </ul>
  */
 public abstract class Pcre2Tests implements
@@ -46,7 +48,8 @@ public abstract class Pcre2Tests implements
         Pcre2SerializationContractTest<IPcre2>,
         Pcre2JitContractTest<IPcre2>,
         Pcre2PatternConvertContractTest<IPcre2>,
-        Pcre2MiscContractTest<IPcre2> {
+        Pcre2MiscContractTest<IPcre2>,
+        Pcre2UtfWidthContractTest<IPcre2> {
 
     protected final IPcre2 api;
 
@@ -62,4 +65,15 @@ public abstract class Pcre2Tests implements
     public IPcre2 getApi() {
         return api;
     }
+
+    /**
+     * Creates a new PCRE2 API instance with the specified UTF width.
+     * <p>
+     * Subclasses must implement this to provide backend-specific instantiation.
+     *
+     * @param width the UTF width
+     * @return a new PCRE2 API instance configured for the specified width
+     */
+    @Override
+    public abstract IPcre2 createApi(Pcre2UtfWidth width);
 }

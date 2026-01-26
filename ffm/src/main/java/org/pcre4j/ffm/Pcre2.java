@@ -15,8 +15,11 @@
 package org.pcre4j.ffm;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.lang.foreign.*;
 import java.lang.invoke.MethodHandle;
 import java.nio.ByteBuffer;
@@ -118,27 +121,65 @@ public class Pcre2 implements IPcre2 {
     private final MethodHandle pcre2_serialize_free;
     private final MethodHandle pcre2_serialize_get_number_of_codes;
 
+    private final Charset charset;
+    private final int codeUnitSize;
+
     /**
-     * Constructs a new PCRE2 API using the common library name "pcre2-8".
+     * Constructs a new PCRE2 API using the common library name "pcre2-8" with UTF-8 encoding.
      */
     public Pcre2() {
+        this(Pcre2UtfWidth.UTF8);
+    }
+
+    /**
+     * Constructs a new PCRE2 API using the specified UTF width.
+     *
+     * @param width the UTF width configuration
+     */
+    public Pcre2(Pcre2UtfWidth width) {
         this(
-                System.getProperty("pcre2.library.name", "pcre2-8"),
-                System.getProperty("pcre2.function.suffix", "_8")
+                System.getProperty("pcre2.library.name", width.libraryName()),
+                System.getProperty("pcre2.function.suffix", width.functionSuffix()),
+                width.charset(),
+                width.codeUnitSize()
         );
     }
 
     /**
-     * Constructs a new PCRE2 API using the specified library name and function suffix.
+     * Constructs a new PCRE2 API using the specified library name and function suffix with UTF-8 encoding.
+     * <p>
+     * This constructor is provided for backward compatibility.
      *
      * @param library the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
      *                "libpcre2-8.dylib" on macOS) or an absolute path to the library file
      * @param suffix  the function suffix (e.g. "_8" as in "pcre2_compile_8")
      */
     public Pcre2(String library, String suffix) {
+        this(library, suffix, StandardCharsets.UTF_8, 1);
+    }
+
+    /**
+     * Constructs a new PCRE2 API using the specified library name, function suffix, charset, and code unit size.
+     *
+     * @param library      the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
+     *                     "libpcre2-8.dylib" on macOS) or an absolute path to the library file
+     * @param suffix       the function suffix (e.g. "_8" as in "pcre2_compile_8")
+     * @param charset      the charset for string encoding/decoding
+     * @param codeUnitSize the code unit size in bytes (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+     */
+    public Pcre2(String library, String suffix, Charset charset, int codeUnitSize) {
         if (library == null) {
             throw new IllegalArgumentException("library must not be null");
         }
+        if (charset == null) {
+            throw new IllegalArgumentException("charset must not be null");
+        }
+        if (codeUnitSize != 1 && codeUnitSize != 2 && codeUnitSize != 4) {
+            throw new IllegalArgumentException("codeUnitSize must be 1, 2, or 4");
+        }
+
+        this.charset = charset;
+        this.codeUnitSize = codeUnitSize;
         if (suffix == null) {
             throw new IllegalArgumentException("suffix must not be null");
         }
@@ -936,8 +977,8 @@ public class Pcre2 implements IPcre2 {
         }
 
         try (var arena = Arena.ofConfined()) {
-            final var pszPattern = arena.allocateUtf8String(pattern);
-            final var patternSize = MemorySegment.ofAddress(pszPattern.byteSize() - 1);
+            final var pszPattern = allocateString(arena, pattern);
+            final var patternSize = MemorySegment.ofAddress(getStringLength(pszPattern));
             final var pErrorCode = arena.allocateArray(ValueLayout.JAVA_INT, 1);
             final var pErrorOffset = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
             final var pContext = MemorySegment.ofAddress(ccontext);
@@ -1160,8 +1201,8 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszSubject = arena.allocateUtf8String(subject);
-            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var pszSubject = allocateString(arena, subject);
+            final var subjectLength = MemorySegment.ofAddress(getStringLength(pszSubject));
             final var startOffset = MemorySegment.ofAddress(startoffset);
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
@@ -1415,8 +1456,8 @@ public class Pcre2 implements IPcre2 {
         }
 
         try (var arena = Arena.ofConfined()) {
-            final var pszPattern = arena.allocateUtf8String(pattern);
-            final var patternLength = MemorySegment.ofAddress(pszPattern.byteSize() - 1);
+            final var pszPattern = allocateString(arena, pattern);
+            final var patternLength = MemorySegment.ofAddress(getStringLength(pszPattern));
             final var pBuffer = arena.allocate(ValueLayout.ADDRESS);
             pBuffer.set(ValueLayout.ADDRESS, 0, MemorySegment.ofAddress(buffer[0]));
             final var pBlength = arena.allocate(ValueLayout.JAVA_LONG);
@@ -1462,8 +1503,8 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszSubject = arena.allocateUtf8String(subject);
-            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var pszSubject = allocateString(arena, subject);
+            final var subjectLength = MemorySegment.ofAddress(getStringLength(pszSubject));
             final var startOffset = MemorySegment.ofAddress(startoffset);
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
@@ -1508,8 +1549,8 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszSubject = arena.allocateUtf8String(subject);
-            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var pszSubject = allocateString(arena, subject);
+            final var subjectLength = MemorySegment.ofAddress(getStringLength(pszSubject));
             final var startOffset = MemorySegment.ofAddress(startoffset);
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
@@ -1816,13 +1857,13 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszSubject = arena.allocateUtf8String(subject);
-            final var subjectLength = MemorySegment.ofAddress(pszSubject.byteSize() - 1);
+            final var pszSubject = allocateString(arena, subject);
+            final var subjectLength = MemorySegment.ofAddress(getStringLength(pszSubject));
             final var startOffset = MemorySegment.ofAddress(startoffset);
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
-            final var pszReplacement = arena.allocateUtf8String(replacement);
-            final var replacementLength = MemorySegment.ofAddress(pszReplacement.byteSize() - 1);
+            final var pszReplacement = allocateString(arena, replacement);
+            final var replacementLength = MemorySegment.ofAddress(getStringLength(pszReplacement));
             final var pOutputBuffer = MemorySegment.ofBuffer(outputbuffer);
             final var pOutputLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
             pOutputLength.set(ValueLayout.JAVA_LONG, 0, outputlength[0]);
@@ -1926,7 +1967,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
-            final var pszName = arena.allocateUtf8String(name);
+            final var pszName = allocateString(arena, name);
             final var pBufferPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
             final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
 
@@ -1963,7 +2004,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
-            final var pszName = arena.allocateUtf8String(name);
+            final var pszName = allocateString(arena, name);
             final var pBuffer = MemorySegment.ofBuffer(buffer);
             final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
             pBuffLen.set(ValueLayout.JAVA_LONG, 0, bufflen[0]);
@@ -1991,7 +2032,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
-            final var pszName = arena.allocateUtf8String(name);
+            final var pszName = allocateString(arena, name);
 
             if (length == null) {
                 return (int) pcre2_substring_length_byname.invokeExact(
@@ -2126,7 +2167,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszName = arena.allocateUtf8String(name);
+            final var pszName = allocateString(arena, name);
 
             return (int) pcre2_substring_number_from_name.invokeExact(
                     pCode,
@@ -2145,7 +2186,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pszName = arena.allocateUtf8String(name);
+            final var pszName = allocateString(arena, name);
 
             final var pFirst = first != null
                     ? arena.allocate(ValueLayout.ADDRESS)
@@ -2316,5 +2357,44 @@ public class Pcre2 implements IPcre2 {
         } catch (Throwable e) {
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Allocates a null-terminated string in native memory using the configured charset.
+     * <p>
+     * The null terminator size matches the code unit size (1 byte for UTF-8, 2 bytes for UTF-16,
+     * 4 bytes for UTF-32).
+     *
+     * @param arena the arena to allocate from
+     * @param str   the string to allocate
+     * @return a memory segment containing the null-terminated encoded string
+     */
+    private MemorySegment allocateString(Arena arena, String str) {
+        if (codeUnitSize == 1) {
+            // For UTF-8, use the built-in method which adds null terminator
+            return arena.allocateUtf8String(str);
+        } else {
+            // For UTF-16 and UTF-32, encode manually with null terminator
+            final var bytes = str.getBytes(charset);
+            // Allocate extra bytes for null terminator (2 bytes for UTF-16, 4 bytes for UTF-32)
+            final var segment = arena.allocate(bytes.length + codeUnitSize);
+            segment.copyFrom(MemorySegment.ofArray(bytes));
+            // Remaining bytes are already 0 (Java initializes to 0)
+            return segment;
+        }
+    }
+
+    /**
+     * Gets the length of a string in code units, excluding the null terminator.
+     * <p>
+     * All strings allocated by {@link #allocateString} have null terminators sized to match
+     * the code unit size.
+     *
+     * @param segment the memory segment containing the null-terminated encoded string
+     * @return the length in code units (excluding null terminator)
+     */
+    private long getStringLength(MemorySegment segment) {
+        // All strings have null terminator: subtract codeUnitSize bytes, then divide by codeUnitSize
+        return (segment.byteSize() - codeUnitSize) / codeUnitSize;
     }
 }

@@ -22,10 +22,12 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
+import org.pcre4j.api.Pcre2UtfWidth;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
@@ -40,30 +42,74 @@ public class Pcre2 implements IPcre2 {
     private final Library library;
 
     /**
-     * Constructs a new PCRE2 API using the common library name "pcre2-8".
+     * The charset used for encoding strings to pass to PCRE2.
+     */
+    private final Charset charset;
+
+    /**
+     * The size of a code unit in bytes (1 for UTF-8, 2 for UTF-16, 4 for UTF-32).
+     */
+    private final int codeUnitSize;
+
+    /**
+     * Constructs a new PCRE2 API using the common library name "pcre2-8" (UTF-8).
      */
     public Pcre2() {
+        this(Pcre2UtfWidth.UTF8);
+    }
+
+    /**
+     * Constructs a new PCRE2 API using the specified UTF width.
+     *
+     * @param width the UTF width to use (UTF8, UTF16, or UTF32)
+     */
+    public Pcre2(Pcre2UtfWidth width) {
         this(
-                System.getProperty("pcre2.library.name", "pcre2-8"),
-                System.getProperty("pcre2.function.suffix", "_8")
+                System.getProperty("pcre2.library.name", width.libraryName()),
+                System.getProperty("pcre2.function.suffix", width.functionSuffix()),
+                width.charset(),
+                width.codeUnitSize()
         );
     }
 
     /**
      * Constructs a new PCRE2 API using the specified library name and function suffix.
+     * <p>
+     * This constructor uses UTF-8 encoding for backward compatibility.
      *
      * @param library the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
      *                "libpcre2-8.dylib" on macOS) or an absolute path to the library file
      * @param suffix  the function suffix (e.g. "_8" as in "pcre2_compile_8")
      */
     public Pcre2(String library, String suffix) {
+        this(library, suffix, StandardCharsets.UTF_8, 1);
+    }
+
+    /**
+     * Constructs a new PCRE2 API using the specified library name, function suffix, charset, and code unit size.
+     *
+     * @param library      the library name (e.g. "pcre2-8" for "pcre2-8.dll" on Windows, "libpcre2-8.so" on Linux,
+     *                     "libpcre2-8.dylib" on macOS) or an absolute path to the library file
+     * @param suffix       the function suffix (e.g. "_8" as in "pcre2_compile_8")
+     * @param charset      the charset to use for encoding strings
+     * @param codeUnitSize the size of a code unit in bytes
+     */
+    public Pcre2(String library, String suffix, Charset charset, int codeUnitSize) {
         if (library == null) {
             throw new IllegalArgumentException("library must not be null");
         }
         if (suffix == null) {
             throw new IllegalArgumentException("suffix must not be null");
         }
+        if (charset == null) {
+            throw new IllegalArgumentException("charset must not be null");
+        }
+        if (codeUnitSize != 1 && codeUnitSize != 2 && codeUnitSize != 4) {
+            throw new IllegalArgumentException("codeUnitSize must be 1, 2, or 4");
+        }
 
+        this.charset = charset;
+        this.codeUnitSize = codeUnitSize;
         this.library = Native.load(
                 library,
                 Library.class,
@@ -176,8 +222,8 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("erroroffset must be an array of length 1");
         }
 
-        final var pszPattern = pattern.getBytes(StandardCharsets.UTF_8);
-        final var patternSize = new Pointer(pszPattern.length);
+        final var pszPattern = pattern.getBytes(charset);
+        final var patternSize = new Pointer(pszPattern.length / codeUnitSize);
         final var errorCodeRef = new IntByReference();
         final var errorOffsetRef = new LongByReference();
         final var pCContext = new Pointer(ccontext);
@@ -303,8 +349,8 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
-        final var subjectLength = new Pointer(pszSubject.length);
+        final var pszSubject = subject.getBytes(charset);
+        final var subjectLength = new Pointer(pszSubject.length / codeUnitSize);
         final var startOffset = new Pointer(startoffset);
         final var pMatchData = new Pointer(matchData);
         final var pMContext = new Pointer(mcontext);
@@ -434,8 +480,8 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("blength must be an array of length 1");
         }
 
-        final var pszPattern = pattern.getBytes(StandardCharsets.UTF_8);
-        final var patternLength = new Pointer(pszPattern.length);
+        final var pszPattern = pattern.getBytes(charset);
+        final var patternLength = new Pointer(pszPattern.length / codeUnitSize);
         final var bufferRef = new PointerByReference(new Pointer(buffer[0]));
         final var blengthRef = new LongByReference(blength[0]);
         final var pCvContext = new Pointer(cvcontext);
@@ -468,8 +514,8 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
-        final var subjectLength = new Pointer(pszSubject.length);
+        final var pszSubject = subject.getBytes(charset);
+        final var subjectLength = new Pointer(pszSubject.length / codeUnitSize);
         final var startOffset = new Pointer(startoffset);
         final var pMatchData = new Pointer(matchData);
         final var pMContext = new Pointer(mcontext);
@@ -510,8 +556,8 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
-        final var subjectLength = new Pointer(pszSubject.length);
+        final var pszSubject = subject.getBytes(charset);
+        final var subjectLength = new Pointer(pszSubject.length / codeUnitSize);
         final var startOffset = new Pointer(startoffset);
         final var pMatchData = new Pointer(matchData);
         final var pMContext = new Pointer(mcontext);
@@ -673,13 +719,13 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var pszSubject = subject.getBytes(StandardCharsets.UTF_8);
-        final var subjectLength = new Pointer(pszSubject.length);
+        final var pszSubject = subject.getBytes(charset);
+        final var subjectLength = new Pointer(pszSubject.length / codeUnitSize);
         final var startOffset = new Pointer(startoffset);
         final var pMatchData = new Pointer(matchData);
         final var pMContext = new Pointer(mcontext);
-        final var pszReplacement = replacement.getBytes(StandardCharsets.UTF_8);
-        final var replacementLength = new Pointer(pszReplacement.length);
+        final var pszReplacement = replacement.getBytes(charset);
+        final var replacementLength = new Pointer(pszReplacement.length / codeUnitSize);
         final var pOutputBuffer = Native.getDirectBufferPointer(outputbuffer);
         final var outputLengthRef = new LongByReference(outputlength[0]);
 
@@ -769,10 +815,11 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pMatchData = new Pointer(matchData);
-        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        final var nameBytes = name.getBytes(charset);
+        // Null terminator size must match code unit size (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+        final var pszName = new byte[nameBytes.length + codeUnitSize];
         System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
-        pszName[nameBytes.length] = 0; // null terminator
+        // Remaining bytes are already 0 (Java initializes arrays to 0)
         final var bufferPtrRef = new PointerByReference();
         final var buffLenRef = new LongByReference();
 
@@ -805,10 +852,11 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pMatchData = new Pointer(matchData);
-        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        final var nameBytes = name.getBytes(charset);
+        // Null terminator size must match code unit size (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+        final var pszName = new byte[nameBytes.length + codeUnitSize];
         System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
-        pszName[nameBytes.length] = 0; // null terminator
+        // Remaining bytes are already 0 (Java initializes arrays to 0)
         final var pBuffer = Native.getDirectBufferPointer(buffer);
         final var buffLenRef = new LongByReference(bufflen[0]);
 
@@ -831,10 +879,11 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pMatchData = new Pointer(matchData);
-        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        final var nameBytes = name.getBytes(charset);
+        // Null terminator size must match code unit size (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+        final var pszName = new byte[nameBytes.length + codeUnitSize];
         System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
-        pszName[nameBytes.length] = 0; // null terminator
+        // Remaining bytes are already 0 (Java initializes arrays to 0)
 
         if (length == null) {
             return library.pcre2_substring_length_byname(pMatchData, pszName, null);
@@ -913,10 +962,11 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        final var nameBytes = name.getBytes(charset);
+        // Null terminator size must match code unit size (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+        final var pszName = new byte[nameBytes.length + codeUnitSize];
         System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
-        pszName[nameBytes.length] = 0; // null terminator
+        // Remaining bytes are already 0 (Java initializes arrays to 0)
 
         return library.pcre2_substring_number_from_name(pCode, pszName);
     }
@@ -928,10 +978,11 @@ public class Pcre2 implements IPcre2 {
         }
 
         final var pCode = new Pointer(code);
-        final var nameBytes = name.getBytes(StandardCharsets.UTF_8);
-        final var pszName = new byte[nameBytes.length + 1]; // +1 for null terminator
+        final var nameBytes = name.getBytes(charset);
+        // Null terminator size must match code unit size (1 for UTF-8, 2 for UTF-16, 4 for UTF-32)
+        final var pszName = new byte[nameBytes.length + codeUnitSize];
         System.arraycopy(nameBytes, 0, pszName, 0, nameBytes.length);
-        pszName[nameBytes.length] = 0; // null terminator
+        // Remaining bytes are already 0 (Java initializes arrays to 0)
 
         final PointerByReference firstRef = first != null ? new PointerByReference() : null;
         final PointerByReference lastRef = last != null ? new PointerByReference() : null;
