@@ -1,7 +1,13 @@
 coverage:
   status:
+    project:
+      default:
+        target: 50%
     patch:
       default:
         target: 70%
-        paths:
-          - "!test/**"
+
+ignore:
+  - "test/**"
+  - "**/test/**"
+  - "**/org/pcre4j/test/**"
