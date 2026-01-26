@@ -16,6 +16,7 @@ package org.pcre4j.ffm;
 
 import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -36,6 +37,11 @@ public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
 
     public Pcre2Tests() {
         super(new Pcre2());
+    }
+
+    @Override
+    public IPcre2 createApi(Pcre2UtfWidth width) {
+        return new Pcre2(width);
     }
 
     /**

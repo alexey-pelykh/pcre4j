@@ -63,7 +63,7 @@ jobs:
           sudo apt-get install -y build-essential
           curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ matrix.pcre2-version }}/pcre2-${{ matrix.pcre2-version }}.tar.gz | tar xz
           cd pcre2-${{ matrix.pcre2-version }}
-          ./configure --prefix=/opt/pcre2 --enable-jit
+          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
           make -j$(nproc)
           sudo make install
 
@@ -118,7 +118,7 @@ jobs:
           sudo apt-get install -y build-essential
           curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz | tar xz
           cd pcre2-10.47
-          ./configure --prefix=/opt/pcre2 --enable-jit
+          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
           make -j$(nproc)
           sudo make install
 

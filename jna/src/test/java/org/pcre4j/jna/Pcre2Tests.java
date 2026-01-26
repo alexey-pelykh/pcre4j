@@ -18,6 +18,7 @@ import com.sun.jna.Callback;
 import com.sun.jna.Pointer;
 import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -32,6 +33,11 @@ public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
     public Pcre2Tests() {
         super(new Pcre2());
         this.pcre2 = (Pcre2) api;
+    }
+
+    @Override
+    public IPcre2 createApi(Pcre2UtfWidth width) {
+        return new Pcre2(width);
     }
 
     /**
