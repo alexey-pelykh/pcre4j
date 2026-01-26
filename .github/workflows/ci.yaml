@@ -26,7 +26,7 @@ jobs:
           - oracle
 #          - dragonwell
         java-version: [ 21 ]
-        pcre2-version: [ '10.42', '10.43', '10.45' ]
+        pcre2-version: [ '10.42', '10.43', '10.47' ]
 
     runs-on: ${{ matrix.os }}
 
@@ -110,14 +110,14 @@ jobs:
         id: cache-pcre2
         with:
           path: /opt/pcre2
-          key: pcre2-10.45-ubuntu-24.04
+          key: pcre2-10.47-ubuntu-24.04
 
       - name: Build PCRE2 from source
         if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
         run: |
           sudo apt-get install -y build-essential
-          curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.45/pcre2-10.45.tar.gz | tar xz
-          cd pcre2-10.45
+          curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz | tar xz
+          cd pcre2-10.47
           ./configure --prefix=/opt/pcre2 --enable-jit
           make -j$(nproc)
           sudo make install
