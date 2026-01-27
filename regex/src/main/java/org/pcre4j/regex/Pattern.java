@@ -65,8 +65,20 @@ public class Pattern {
      */
     public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
 
+    /**
+     * A {@link java.util.regex.Pattern#COMMENTS}-compatible flag implemented via
+     * {@link org.pcre4j.Pcre2CompileOption#EXTENDED}
+     * <p>
+     * Permits whitespace and comments in the pattern. In this mode, whitespace is ignored except when escaped or
+     * inside a character class, and comments starting with {@code #} are ignored until end of line.
+     * </p>
+     * <p>
+     * Comments mode can also be enabled via the embedded flag expression {@code (?x)}.
+     * </p>
+     */
+    public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
+
     // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
-    // TODO: public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
     // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
@@ -110,6 +122,9 @@ public class Pattern {
         }
         if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
             compileOptions.add(Pcre2CompileOption.UCP);
+        }
+        if ((flags & COMMENTS) != 0) {
+            compileOptions.add(Pcre2CompileOption.EXTENDED);
         }
 
         final var compileContext = new Pcre2CompileContext(api, null);
