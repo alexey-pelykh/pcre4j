@@ -159,13 +159,13 @@ jobs:
           path: build/gh-pages
 
       - name: Stage snapshot artifacts
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         run: >
           ./gradlew publishAllPublicationsToStagingDeployRepository
           -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
       - name: Publish snapshots to Maven Central
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_NEXUS2_SNAPSHOTS_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
