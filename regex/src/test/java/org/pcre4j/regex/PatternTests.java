@@ -158,4 +158,100 @@ public class PatternTests {
         assertTrue(Pattern.compile(api, Pattern.quote(inputWithSlashE)).matcher(inputWithSlashE).matches());
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void commentsWhitespaceIgnored(IPcre2 api) {
+        // Whitespace in pattern should be ignored with COMMENTS flag
+        var regex = "a b c";
+        var input = "abc";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.COMMENTS
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.COMMENTS
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void commentsHashComments(IPcre2 api) {
+        // Comments starting with # should be ignored until end of line
+        var regex = "abc # this is a comment\ndef";
+        var input = "abcdef";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.COMMENTS
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.COMMENTS
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void commentsEscapedWhitespace(IPcre2 api) {
+        // Escaped whitespace should be matched literally
+        var regex = "a\\ b";
+        var input = "a b";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.COMMENTS
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.COMMENTS
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void commentsWhitespaceInCharacterClass(IPcre2 api) {
+        // Escaped whitespace inside character class should be matched literally
+        // Note: In PCRE2's EXTENDED mode, whitespace inside character classes is preserved,
+        // but in Java's COMMENTS mode, whitespace inside character classes is also ignored.
+        // Using escaped space [\\ ] works consistently in both.
+        var regex = "[\\ ]";
+        var input = " ";
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.COMMENTS
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.COMMENTS
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void commentsEmbeddedFlag(IPcre2 api) {
+        // Embedded (?x) flag should enable comments mode
+        var regex = "(?x)a b c";
+        var input = "abc";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
 }
