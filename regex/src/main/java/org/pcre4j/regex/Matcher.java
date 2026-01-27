@@ -21,7 +21,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims
@@ -764,7 +766,30 @@ public class Matcher implements java.util.regex.MatchResult {
         return reset();
     }
 
-    // TODO: results()
+    /**
+     * Returns a stream of match results for each subsequence of the input sequence that matches the pattern.
+     * <p>
+     * The match results occur in the same order as the matching subsequences in the input sequence.
+     * <p>
+     * Each match result is produced as if by {@link #toMatchResult()}.
+     * <p>
+     * This method does not reset this matcher. Matching starts on initiation of the terminal stream operation
+     * either at the beginning of this matcher's region, or, if the matcher has not since been reset, at the
+     * first character not matched by a previous match.
+     * <p>
+     * If the match results are used after the matcher has been modified (via {@link #find()}, {@link #reset()},
+     * etc.), the behavior is undefined.
+     *
+     * @return a sequential stream of match results
+     * @since 9
+     */
+    public Stream<java.util.regex.MatchResult> results() {
+        return Stream.iterate(
+                find() ? toMatchResult() : null,
+                Objects::nonNull,
+                mr -> find() ? toMatchResult() : null
+        );
+    }
 
     /**
      * Returns the start index of the most recent match
