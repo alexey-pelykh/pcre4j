@@ -90,6 +90,13 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private int appendPos;
 
+    /**
+     * Whether the boundaries of this matcher's region are treated as anchors.
+     * When true (default), {@code ^} and {@code $} match at region boundaries.
+     * When false, they only match at the true start/end of input.
+     */
+    private boolean anchoringBounds = true;
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
@@ -461,7 +468,19 @@ public class Matcher implements java.util.regex.MatchResult {
         return pattern.code.captureCount();
     }
 
-    // TODO: hasAnchoringBounds()
+    /**
+     * Queries the anchoring of region bounds for this matcher.
+     * <p>
+     * This method returns {@code true} if this matcher uses <i>anchoring</i> bounds, {@code false} otherwise.
+     * <p>
+     * By default, a matcher uses anchoring bounds.
+     *
+     * @return {@code true} if this matcher is using anchoring bounds, {@code false} otherwise
+     * @see #useAnchoringBounds(boolean)
+     */
+    public boolean hasAnchoringBounds() {
+        return anchoringBounds;
+    }
 
     /**
      * Returns {@code true} if the matcher has found a match, otherwise {@code false}
@@ -493,10 +512,14 @@ public class Matcher implements java.util.regex.MatchResult {
             matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED);
         }
 
+        // Apply anchoring bounds options
+        matchOptions.addAll(getMatchOptions());
+
+        final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(lookingAtCode);
         final var result = lookingAtCode.match(
-                input.subSequence(0, regionEnd).toString(),
-                regionStart,
+                regionSubject.subject(),
+                regionSubject.startOffset(),
                 matchOptions,
                 matchData,
                 matchContext
@@ -510,9 +533,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
-
+        processMatchResult(matchData, regionSubject);
         return true;
     }
 
@@ -532,10 +553,14 @@ public class Matcher implements java.util.regex.MatchResult {
             matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
         }
 
+        // Apply anchoring bounds options
+        matchOptions.addAll(getMatchOptions());
+
+        final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(matchingCode);
         final var result = matchingCode.match(
-                input.subSequence(0, regionEnd).toString(),
-                regionStart,
+                regionSubject.subject(),
+                regionSubject.startOffset(),
                 matchOptions,
                 matchData,
                 matchContext
@@ -549,9 +574,7 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
-
+        processMatchResult(matchData, regionSubject);
         return true;
     }
 
@@ -872,7 +895,27 @@ public class Matcher implements java.util.regex.MatchResult {
                 "]";
     }
 
-    // TODO: useAnchoringBounds(boolean b)
+    /**
+     * Sets the anchoring of region bounds for this matcher.
+     * <p>
+     * Invoking this method with an argument of {@code true} will set this matcher to use <i>anchoring</i> bounds.
+     * If the boolean argument is {@code false}, then <i>non-anchoring</i> bounds will be used.
+     * <p>
+     * Using anchoring bounds, the boundaries of this matcher's region match anchors such as {@code ^} and {@code $}.
+     * <p>
+     * Without anchoring bounds, the boundaries of this matcher's region will not match anchors such as {@code ^}
+     * and {@code $}.
+     * <p>
+     * By default, a matcher uses anchoring bounds.
+     *
+     * @param b a boolean indicating whether or not to use anchoring bounds
+     * @return this matcher
+     * @see #hasAnchoringBounds()
+     */
+    public Matcher useAnchoringBounds(boolean b) {
+        anchoringBounds = b;
+        return this;
+    }
 
     /**
      * Changes the pattern that this matcher uses to against the input
@@ -909,11 +952,12 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return {@code true} if a match is found, otherwise {@code false}
      */
     private boolean search(int start) {
+        final var regionSubject = getRegionSubject(start);
         final var matchData = new Pcre2MatchData(pattern.code);
         final var result = pattern.code.match(
-                input.subSequence(0, regionEnd).toString(),
-                start,
-                EnumSet.noneOf(Pcre2MatchOption.class),
+                regionSubject.subject(),
+                regionSubject.startOffset(),
+                getMatchOptions(),
                 matchData,
                 matchContext
         );
@@ -926,10 +970,89 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
-
+        processMatchResult(matchData, regionSubject);
         return true;
+    }
+
+    /**
+     * Get the match options based on the current anchoring bounds setting.
+     *
+     * @return the set of match options to use
+     */
+    private EnumSet<Pcre2MatchOption> getMatchOptions() {
+        final var options = EnumSet.noneOf(Pcre2MatchOption.class);
+        if (!anchoringBounds) {
+            if (regionStart > 0) {
+                options.add(Pcre2MatchOption.NOTBOL);
+            }
+            if (regionEnd < input.length()) {
+                options.add(Pcre2MatchOption.NOTEOL);
+            }
+        }
+        return options;
+    }
+
+    /**
+     * Holds the subject string and coordinate mapping for region-aware matching.
+     * <p>
+     * When matching with a region, PCRE2 needs to receive only the region substring
+     * so that word boundaries (\b) don't see outside the region. This matches Java's
+     * default behavior where transparent bounds are disabled. The indexAdjustment is
+     * used to convert match indices back to the full input coordinate space.
+     *
+     * @param subject the subject string to match against
+     * @param startOffset the offset within subject to start matching
+     * @param indexAdjustment the value to add to match indices to convert to full input coordinates
+     */
+    private record RegionSubject(String subject, int startOffset, int indexAdjustment) {}
+
+    /**
+     * Creates a RegionSubject for matching, handling region boundaries.
+     * <p>
+     * Always uses only the region substring so that \b (word boundary) doesn't see outside the region.
+     * This matches Java's default behavior where transparent bounds are disabled.
+     * The difference between anchoring enabled/disabled is handled by NOTBOL/NOTEOL flags.
+     *
+     * @param matchStartInInput the start position for matching in input coordinates
+     * @return the RegionSubject containing the subject string and coordinate mapping
+     */
+    private RegionSubject getRegionSubject(int matchStartInInput) {
+        if (regionStart > 0) {
+            return new RegionSubject(
+                    input.substring(regionStart, regionEnd),
+                    matchStartInInput - regionStart,
+                    regionStart
+            );
+        } else {
+            return new RegionSubject(
+                    input.subSequence(0, regionEnd).toString(),
+                    matchStartInInput,
+                    0
+            );
+        }
+    }
+
+    /**
+     * Process match results: convert ovector to string indices and adjust for region offset.
+     *
+     * @param matchData the match data containing the ovector
+     * @param regionSubject the region subject used for matching
+     */
+    private void processMatchResult(Pcre2MatchData matchData, RegionSubject regionSubject) {
+        lastMatchData = matchData;
+        final var subjectBytes = regionSubject.subject().getBytes(StandardCharsets.UTF_8);
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(
+                regionSubject.subject(), subjectBytes, matchData.ovector()
+        );
+
+        // Adjust indices back to full input coordinate space
+        if (regionSubject.indexAdjustment() > 0) {
+            for (int i = 0; i < lastMatchIndices.length; i++) {
+                if (lastMatchIndices[i] >= 0) {
+                    lastMatchIndices[i] += regionSubject.indexAdjustment();
+                }
+            }
+        }
     }
 
     /**
