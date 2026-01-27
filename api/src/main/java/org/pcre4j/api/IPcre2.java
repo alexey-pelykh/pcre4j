@@ -718,6 +718,40 @@ public interface IPcre2 {
     public void generalContextFree(long gcontext);
 
     /**
+     * Build character tables in the current locale.
+     * <p>
+     * This function builds a set of character tables for character values less than 256. These can be used to support
+     * a locale that is different from the default. When pcre2_compile() is called with a compile context that contains
+     * a pointer to character tables, the tables are used for pattern compilation.
+     * <p>
+     * The character tables are built using the current locale. The functions isprint(), isupper(), islower(),
+     * isalnum(), isalpha(), iscntrl(), isdigit(), isgraph(), ispunct(), isspace(), isxdigit() and tolower() are used.
+     * <p>
+     * The memory for the tables is obtained via the general context if one is provided, or via malloc() otherwise.
+     * The memory should be freed by calling {@link #maketablesFree} when the tables are no longer needed.
+     *
+     * @param gcontext the general context handle for memory allocation, or 0 to use default
+     * @return a pointer to the character tables, or 0 if memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_maketables.html">pcre2_maketables</a>
+     */
+    public long maketables(long gcontext);
+
+    /**
+     * Free character tables that were obtained from {@link #maketables}.
+     * <p>
+     * This function frees the memory that was used to hold the character tables. If the tables argument is 0 (null),
+     * the function returns immediately without doing anything.
+     * <p>
+     * The general context must be the same as the one that was used when pcre2_maketables() was called (or 0 if
+     * that was 0). Otherwise the behaviour is undefined.
+     *
+     * @param gcontext the general context handle that was used for allocation, or 0 if default was used
+     * @param tables   the pointer to the character tables to free (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_maketables_free.html">pcre2_maketables_free</a>
+     */
+    public void maketablesFree(long gcontext, long tables);
+
+    /**
      * Create a new compile context.
      *
      * @param gcontext the general context handle or 0
@@ -754,12 +788,58 @@ public interface IPcre2 {
     public long compile(String pattern, int options, int[] errorcode, long[] erroroffset, long ccontext);
 
     /**
+     * Create a copy of a compiled pattern.
+     * <p>
+     * This function makes a copy of the memory used for a compiled pattern, excluding any memory used by the JIT
+     * compiler. Without a subsequent call to {@link #jitCompile(long, int)}, the copy can be used only for
+     * non-JIT matching.
+     *
+     * @param code the compiled pattern handle
+     * @return the new compiled pattern handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_code_copy.html">pcre2_code_copy</a>
+     */
+    public long codeCopy(long code);
+
+    /**
+     * Create a copy of a compiled pattern and its character tables.
+     * <p>
+     * This function makes a copy of the memory used for a compiled pattern, including any character tables that were
+     * passed to {@link #compile(String, int, int[], long[], long)} via a compile context. Without a subsequent call to
+     * {@link #jitCompile(long, int)}, the copy can be used only for non-JIT matching.
+     * <p>
+     * Unlike {@link #codeCopy(long)}, which makes a copy that references the same character tables as the original,
+     * this function creates a completely independent copy. If the original was compiled without external tables (i.e.,
+     * {@link #setCharacterTables(long, long)} was not called), the copy will also not have external tables.
+     *
+     * @param code the compiled pattern handle
+     * @return the new compiled pattern handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_code_copy_with_tables.html">pcre2_code_copy_with_tables</a>
+     */
+    public long codeCopyWithTables(long code);
+
+    /**
      * Free a compiled pattern resources.
      *
      * @param code the compiled pattern handle
      * @see <a href="https://www.pcre.org/current/doc/html/pcre2_code_free.html">pcre2_code_free</a>
      */
     public void codeFree(long code);
+
+    /**
+     * Enumerate callouts in a compiled pattern.
+     * <p>
+     * This function scans a compiled pattern and calls the callback function for each callout in the pattern.
+     * The callback receives a pointer to a callout enumeration block containing information about the callout,
+     * and a user-supplied data pointer. The callback should return zero to continue enumeration; returning
+     * any other value stops the enumeration and that value becomes the function's return value.
+     *
+     * @param code        the compiled pattern handle
+     * @param callback    a callback function handle
+     * @param calloutData a value to be passed to the callback function
+     * @return 0 for successful completion, or a non-zero value if the callback returns non-zero or an error occurs
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_callout_enumerate.html">pcre2_callout_enumerate</a>
+     */
+    public int calloutEnumerate(long code, long callback, long calloutData);
 
     /**
      * Get the error message for the given error code.
@@ -897,6 +977,24 @@ public interface IPcre2 {
     public void jitStackAssign(long mcontext, long callback, long data);
 
     /**
+     * Free unused JIT executable memory.
+     * <p>
+     * When JIT compilation is enabled, PCRE2 allocates executable memory for the JIT-compiled code. This memory
+     * is normally held until the compiled patterns are freed. However, the JIT compiler may also allocate some
+     * additional memory that is no longer needed after compilation. This function releases that unused memory.
+     * <p>
+     * In a multithreaded application, this function should be called in a thread-safe manner. It is safe to call
+     * this function even if JIT support is not available (it will simply do nothing).
+     * <p>
+     * If a general context is provided, it must be the same context that was used when creating the JIT-compiled
+     * patterns, as it may have custom memory management functions.
+     *
+     * @param gcontext the general context handle that was used for JIT compilation, or 0 if default was used
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_jit_free_unused_memory.html">pcre2_jit_free_unused_memory</a>
+     */
+    public void jitFreeUnusedMemory(long gcontext);
+
+    /**
      * Create a new match data block.
      *
      * @param ovecsize the size of the ovector
@@ -945,6 +1043,128 @@ public interface IPcre2 {
     public void matchContextFree(long mcontext);
 
     /**
+     * Create a new convert context.
+     * <p>
+     * A convert context is used to hold parameters for the pattern conversion functions
+     * {@code pcre2_pattern_convert()} which can convert glob patterns or POSIX patterns
+     * to PCRE2 regular expressions.
+     *
+     * @param gcontext the general context handle or 0 to use default memory management
+     * @return the convert context handle, or 0 if memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_create.html">pcre2_convert_context_create</a>
+     */
+    public long convertContextCreate(long gcontext);
+
+    /**
+     * Create a copy of a convert context.
+     *
+     * @param cvcontext the convert context handle to copy
+     * @return the new convert context handle, or 0 if the input is 0 or memory allocation fails
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_copy.html">pcre2_convert_context_copy</a>
+     */
+    public long convertContextCopy(long cvcontext);
+
+    /**
+     * Free a convert context.
+     * <p>
+     * If the argument is 0 (null pointer), the function returns immediately without doing anything.
+     *
+     * @param cvcontext the convert context handle (may be 0, in which case the function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_convert_context_free.html">pcre2_convert_context_free</a>
+     */
+    public void convertContextFree(long cvcontext);
+
+    /**
+     * Set the escape character for glob pattern conversion.
+     * <p>
+     * This is part of the experimental pattern conversion functions. It sets the escape character that is recognized
+     * during glob pattern conversion. The escape character allows special glob characters to be treated as literals.
+     * <p>
+     * The default escape character is the grave accent (`) on Windows systems and the backslash (\) on other platforms.
+     * Setting the escape character to zero disables escape processing entirely.
+     * <p>
+     * The escape character must be zero (to disable) or a punctuation character with a code point less than 256.
+     *
+     * @param cvcontext  the convert context handle
+     * @param escapeChar the escape character to use, or 0 to disable escape processing
+     * @return 0 on success, or {@link #ERROR_BADDATA} if the escape character is invalid
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_glob_escape.html">pcre2_set_glob_escape</a>
+     */
+    public int setGlobEscape(long cvcontext, int escapeChar);
+
+    /**
+     * Set the path separator character for glob pattern conversion.
+     * <p>
+     * This is part of the experimental pattern conversion functions. It sets the component separator character
+     * that is used during glob pattern conversion. This affects how path-like patterns are parsed.
+     * <p>
+     * The separator character must be one of forward slash (/), backslash (\), or dot (.). On Windows systems,
+     * backslash is the default separator; on other platforms, forward slash is the default.
+     *
+     * @param cvcontext     the convert context handle
+     * @param separatorChar the separator character to use (must be '/', '\\', or '.')
+     * @return 0 on success, or {@link #ERROR_BADDATA} if the separator character is invalid
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_glob_separator.html">pcre2_set_glob_separator</a>
+     */
+    public int setGlobSeparator(long cvcontext, int separatorChar);
+
+    /**
+     * Convert a foreign pattern (glob or POSIX) to a PCRE2 regular expression.
+     * <p>
+     * This experimental function converts glob patterns or POSIX regular expressions into PCRE2 patterns.
+     * The conversion is useful for tools that need to accept multiple pattern syntaxes.
+     * <p>
+     * The {@code options} parameter specifies what type of pattern is being converted:
+     * <ul>
+     * <li>{@link #CONVERT_POSIX_BASIC} - Convert POSIX Basic Regular Expression</li>
+     * <li>{@link #CONVERT_POSIX_EXTENDED} - Convert POSIX Extended Regular Expression</li>
+     * <li>{@link #CONVERT_GLOB} - Convert glob pattern</li>
+     * <li>{@link #CONVERT_GLOB_NO_WILD_SEPARATOR} - Glob with no wildcard for separator</li>
+     * <li>{@link #CONVERT_GLOB_NO_STARSTAR} - Glob without ** support</li>
+     * </ul>
+     * <p>
+     * Additionally, {@link #CONVERT_UTF} can be set to indicate UTF encoding, and
+     * {@link #CONVERT_NO_UTF_CHECK} can be set to skip UTF validity checking.
+     * <p>
+     * When {@code buffer} contains 0, the function returns only the required buffer length without
+     * performing the conversion. When {@code buffer} contains a non-zero pointer, that pointer must
+     * point to a buffer of sufficient size, with the size specified in {@code blength}.
+     * <p>
+     * When this function allocates memory (buffer initially contains 0 and is updated with a pointer),
+     * the memory must be freed using {@link #convertedPatternFree(long)}.
+     *
+     * @param pattern   the foreign pattern to convert (UTF-8 encoded)
+     * @param options   conversion options specifying the pattern type and behavior
+     * @param buffer    an array of length 1; on input, contains 0 to request allocation or a pointer to
+     *                  a caller-provided buffer; on output, may contain a pointer to the converted pattern
+     * @param blength   an array of length 1; on input when using a caller-provided buffer, contains the buffer
+     *                  size; on output, contains the length of the converted pattern (excluding null terminator)
+     * @param cvcontext a convert context handle for additional options, or 0 to use defaults
+     * @return 0 on success, otherwise a negative error code:
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed,
+     *         {@link #ERROR_BADOPTION} if invalid options were specified,
+     *         {@link #ERROR_CONVERT_SYNTAX} if the pattern has invalid syntax
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_pattern_convert.html">pcre2_pattern_convert</a>
+     */
+    public int patternConvert(String pattern, int options, long[] buffer, long[] blength, long cvcontext);
+
+    /**
+     * Free memory allocated by {@link #patternConvert(String, int, long[], long[], long)}.
+     * <p>
+     * This function frees memory that was allocated by {@code pcre2_pattern_convert()} when it created
+     * a converted pattern. If the argument is 0 (null pointer), the function returns immediately
+     * without doing anything.
+     * <p>
+     * Note: Only call this function on pointers that were allocated by {@code pcre2_pattern_convert()}.
+     * Do not call it on buffers that were provided by the caller.
+     *
+     * @param convertedPattern the pointer to the converted pattern to free (may be 0, in which case the
+     *                         function does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_converted_pattern_free.html">pcre2_converted_pattern_free</a>
+     */
+    public void convertedPatternFree(long convertedPattern);
+
+    /**
      * Match a compiled pattern against a subject string.
      *
      * @param code        the compiled pattern handle
@@ -959,12 +1179,74 @@ public interface IPcre2 {
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext);
 
     /**
+     * Match a compiled pattern against a subject string using the alternative DFA matching algorithm.
+     * <p>
+     * DFA (Deterministic Finite Automaton) matching finds all possible matches at a given point in the subject string.
+     * This is useful for lexers and tokenizers. Note that DFA matching is not Perl-compatible.
+     * <p>
+     * Unlike the standard {@link #match} function, DFA matching requires a workspace array for internal use.
+     * The workspace must be an array of integers, and its size should be at least 20 elements for simple patterns,
+     * though more complex patterns may require larger workspaces.
+     * <p>
+     * Important differences from standard matching:
+     * <ul>
+     *   <li>The output vector contains matched strings in reverse order (longest first)</li>
+     *   <li>Capturing parentheses are not supported (only the overall match is returned)</li>
+     *   <li>The {@link #DFA_RESTART} option can be used to continue after a partial match</li>
+     *   <li>The {@link #DFA_SHORTEST} option can be used to return only the shortest match</li>
+     * </ul>
+     *
+     * @param code        the compiled pattern handle
+     * @param subject     the subject string
+     * @param startoffset the starting offset in the subject string
+     * @param options     option bits (may include {@link #DFA_RESTART}, {@link #DFA_SHORTEST},
+     *                    {@link #PARTIAL_SOFT}, {@link #PARTIAL_HARD})
+     * @param matchData   the match data handle
+     * @param mcontext    the match context handle (may be 0)
+     * @param workspace   an array of integers used as working space by the matching algorithm
+     * @param wscount     the number of elements in the workspace array
+     * @return the number of matched substrings, zero if the output vector is too small,
+     *         or a negative error code:
+     *         {@link #ERROR_NOMATCH} if no match was found,
+     *         {@link #ERROR_DFA_WSSIZE} if the workspace is too small,
+     *         {@link #ERROR_DFA_RECURSE} if recursion is used in the pattern,
+     *         {@link #ERROR_DFA_UCOND} if an unsupported condition is used,
+     *         {@link #ERROR_DFA_UFUNC} if an unsupported function is used,
+     *         {@link #ERROR_DFA_UITEM} if an unsupported pattern item is encountered,
+     *         {@link #ERROR_DFA_BADRESTART} if {@link #DFA_RESTART} is used incorrectly
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_dfa_match.html">pcre2_dfa_match</a>
+     */
+    public int dfaMatch(
+            long code,
+            String subject,
+            int startoffset,
+            int options,
+            long matchData,
+            long mcontext,
+            int[] workspace,
+            int wscount
+    );
+
+    /**
      * Get number of the offset pairs in the output vector of the match data
      *
      * @param matchData the match data handle
      * @return the number of the offset pairs
      */
     public int getOvectorCount(long matchData);
+
+    /**
+     * Get the size of a match data block in bytes.
+     * <p>
+     * This function returns the size of the match data block that was obtained by a call to
+     * {@code pcre2_match_data_create()} or {@code pcre2_match_data_create_from_pattern()}.
+     * This is the size of the opaque data block.
+     *
+     * @param matchData the match data handle
+     * @return the size of the match data block in bytes
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_match_data_size.html">pcre2_get_match_data_size</a>
+     */
+    public long getMatchDataSize(long matchData);
 
     /**
      * Get the output vector of the match data
@@ -975,6 +1257,41 @@ public interface IPcre2 {
     public void getOvector(long matchData, long[] ovector);
 
     /**
+     * Get the starting character offset from a match.
+     * <p>
+     * After a successful match, this function returns the code unit offset of the character at which the successful
+     * match started. For non-partial matches, this may differ from {@code ovector[0]} if the pattern uses the
+     * {@code \K} escape sequence, which resets the start of the matched string.
+     * <p>
+     * After a partial match, this value is always the same as {@code ovector[0]} because {@code \K} does not affect
+     * the result of a partial match.
+     *
+     * @param matchData the match data handle from a successful match
+     * @return the code unit offset of the character at which the match started
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_startchar.html">pcre2_get_startchar</a>
+     */
+    public long getStartchar(long matchData);
+
+    /**
+     * Get the last (*MARK), (*PRUNE), or (*THEN) name that was encountered during matching.
+     * <p>
+     * After a successful match, a partial match (error code {@code PCRE2_ERROR_PARTIAL}), or a failure to match
+     * (error code {@code PCRE2_ERROR_NOMATCH}), this function returns the name from the last encountered
+     * {@code (*MARK)}, {@code (*PRUNE)}, or {@code (*THEN)} item in the pattern. The name is a zero-terminated string.
+     * <p>
+     * If no mark name was set during the match, or if the pattern does not contain any mark items, this function
+     * returns 0 (NULL pointer).
+     * <p>
+     * For a successful match, the returned name is the last mark encountered on the matching path. For a failed match,
+     * the returned name is the last mark passed on the main matching path before the overall match failure.
+     *
+     * @param matchData the match data handle from a match operation
+     * @return the address of a zero-terminated string containing the mark name, or 0 if no mark name is available
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_get_mark.html">pcre2_get_mark</a>
+     */
+    public long getMark(long matchData);
+
+    /**
      * Set the newline convention within a compile context
      *
      * @param ccontext the compile context handle
@@ -982,6 +1299,122 @@ public interface IPcre2 {
      * @return 0 on success, otherwise a negative error code
      */
     public int setNewline(long ccontext, int newline);
+
+    /**
+     * Set what \R matches within a compile context.
+     * <p>
+     * The value must be {@link #BSR_UNICODE} (to match any Unicode line ending) or {@link #BSR_ANYCRLF}
+     * (to match only CR, LF, or CRLF).
+     *
+     * @param ccontext the compile context handle
+     * @param value    the BSR value ({@link #BSR_UNICODE} or {@link #BSR_ANYCRLF})
+     * @return 0 on success, otherwise a negative error code
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_bsr.html">pcre2_set_bsr</a>
+     */
+    public int setBsr(long ccontext, int value);
+
+    /**
+     * Set the parentheses nesting limit within a compile context.
+     * <p>
+     * This limit is used to prevent patterns with excessive parentheses nesting from consuming
+     * too many resources during compilation. The default limit is 250, but this can be changed
+     * at build time.
+     *
+     * @param ccontext the compile context handle
+     * @param limit    the maximum depth of nested parentheses allowed in a pattern
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_parens_nest_limit.html">pcre2_set_parens_nest_limit</a>
+     */
+    public int setParensNestLimit(long ccontext, int limit);
+
+    /**
+     * Set the maximum length of pattern that can be compiled.
+     * <p>
+     * This function sets the maximum length (in code units) of the pattern string that can be
+     * passed to {@code pcre2_compile()}. If a pattern longer than this limit is passed, the
+     * compile function will immediately return an error.
+     * <p>
+     * By default, there is no limit (the value is the maximum that a PCRE2_SIZE variable can hold).
+     * This function can be used to set a lower limit for security purposes, to prevent excessively
+     * long patterns from being processed.
+     *
+     * @param ccontext the compile context handle
+     * @param length   the maximum pattern length in code units
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_max_pattern_length.html">pcre2_set_max_pattern_length</a>
+     */
+    public int setMaxPatternLength(long ccontext, long length);
+
+    /**
+     * Set additional compile options within a compile context.
+     * <p>
+     * This function sets additional option bits for {@code pcre2_compile()} that are housed in a compile context.
+     * It completely replaces all the bits. The extra options are:
+     * <ul>
+     * <li>{@link #EXTRA_ALLOW_SURROGATE_ESCAPES} - Allow surrogate escapes in UTF-8 mode</li>
+     * <li>{@link #EXTRA_BAD_ESCAPE_IS_LITERAL} - Treat unrecognized escapes as literal</li>
+     * <li>{@link #EXTRA_MATCH_WORD} - Pattern matches whole words</li>
+     * <li>{@link #EXTRA_MATCH_LINE} - Pattern matches whole lines</li>
+     * <li>{@link #EXTRA_ESCAPED_CR_IS_LF} - Interpret escaped CR as LF</li>
+     * <li>{@link #EXTRA_ALT_BSUX} - Extended alternate handling of &#92;u, &#92;U, and &#92;x</li>
+     * <li>{@link #EXTRA_ALLOW_LOOKAROUND_BSK} - Allow \K in lookaround assertions</li>
+     * <li>{@link #EXTRA_CASELESS_RESTRICT} - Restrict caseless matching to same-script</li>
+     * <li>{@link #EXTRA_ASCII_BSD} - Use ASCII for \d in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_BSS} - Use ASCII for \s in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_BSW} - Use ASCII for \w in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_POSIX} - Use ASCII for POSIX classes in Unicode mode</li>
+     * <li>{@link #EXTRA_ASCII_DIGIT} - Use ASCII for \d (alias for EXTRA_ASCII_BSD)</li>
+     * </ul>
+     *
+     * @param ccontext     the compile context handle
+     * @param extraOptions the extra compile options bit flags
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_compile_extra_options.html">pcre2_set_compile_extra_options</a>
+     */
+    public int setCompileExtraOptions(long ccontext, int extraOptions);
+
+    /**
+     * Set custom character tables for pattern compilation within a compile context.
+     * <p>
+     * This function sets a pointer to custom character tables within a compile context. The tables can be
+     * generated using {@link #maketables} or the {@code pcre2_dftables} maintenance command.
+     * <p>
+     * When {@link #compile} is called with a compile context that contains a pointer to character tables,
+     * those tables are used for pattern compilation instead of the default tables built into PCRE2.
+     * <p>
+     * Passing 0 as the tables pointer causes the compile context to use the default character tables.
+     *
+     * @param ccontext the compile context handle
+     * @param tables   a pointer to character tables (from {@link #maketables}), or 0 to use default tables
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_character_tables.html">pcre2_set_character_tables</a>
+     */
+    public int setCharacterTables(long ccontext, long tables);
+
+    /**
+     * Set a compile recursion guard function within a compile context.
+     * <p>
+     * This function registers a guard callback that is called during {@link #compile} whenever it starts to
+     * compile a parenthesized part of a pattern. The guard function can be used to check for available stack
+     * space and prevent stack overflow crashes during compilation of deeply nested patterns.
+     * <p>
+     * The guard callback signature is: {@code int (*)(uint32_t, void *)}.
+     * <ul>
+     * <li>The first argument is the current parenthesis nesting depth.</li>
+     * <li>The second argument is the user data pointer passed to this function.</li>
+     * <li>The callback should return zero to allow compilation to continue, or non-zero to abort with
+     *     {@link #ERROR_RECURSELOOP}.</li>
+     * </ul>
+     * <p>
+     * Passing 0 as the guard function removes any previously set guard.
+     *
+     * @param ccontext      the compile context handle
+     * @param guardFunction a pointer to the guard callback function, or 0 to remove the guard
+     * @param userData      a pointer to user data that will be passed to the guard callback
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_compile_recursion_guard.html">pcre2_set_compile_recursion_guard</a>
+     */
+    public int setCompileRecursionGuard(long ccontext, long guardFunction, long userData);
 
     /**
      * Set the match limit within a match context.
@@ -1034,6 +1467,27 @@ public interface IPcre2 {
      * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_offset_limit.html">pcre2_set_offset_limit</a>
      */
     public int setOffsetLimit(long mcontext, long limit);
+
+    /**
+     * Set up a callout function within a match context.
+     * <p>
+     * This function sets a callout function for the match context. The callout function is called during matching
+     * whenever a callout point is reached in the pattern. Callout points are either automatically generated
+     * (when compiled with {@link #AUTO_CALLOUT}) or explicitly placed in the pattern using (?C) or (?Cn) syntax.
+     * <p>
+     * The callout function receives a pointer to a callout block structure containing information about the
+     * current match state, and a user-supplied data pointer. The function should return zero to continue
+     * matching, or a non-zero value to abort the match with that value as the match result.
+     * <p>
+     * Passing 0 as the callback disables callouts.
+     *
+     * @param mcontext    the match context handle
+     * @param callback    a callback function handle, or 0 to disable callouts
+     * @param calloutData a value to be passed to the callback function
+     * @return 0 always
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_callout.html">pcre2_set_callout</a>
+     */
+    public int setCallout(long mcontext, long callback, long calloutData);
 
     /**
      * Match a compiled pattern against a subject string and perform substitution.
@@ -1219,6 +1673,125 @@ public interface IPcre2 {
      * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_number_from_name.html">pcre2_substring_number_from_name</a>
      */
     public int substringNumberFromName(long code, String name);
+
+    /**
+     * Find the first and last name table entries for a given capture group name.
+     * <p>
+     * This function locates entries in the name-to-number mapping table for named capture groups.
+     * When duplicate names are allowed (via DUPNAMES option), a name may map to multiple group numbers.
+     * This function returns pointers to the first and last table entries for the given name.
+     * <p>
+     * Each entry in the name table consists of a fixed-size record containing the group number followed by
+     * the null-terminated name. The entry size can be obtained via {@link #patternInfo} with
+     * {@link #INFO_NAMEENTRYSIZE}.
+     *
+     * @param code  the compiled pattern handle
+     * @param name  the name of the capturing group to look up
+     * @param first an array of length 1 to receive the pointer to the first matching entry,
+     *              or null to just get a group number (returns any matching group number)
+     * @param last  an array of length 1 to receive the pointer to the last matching entry,
+     *              or null if not needed
+     * @return On success: the length of each entry in code units (when first is not null),
+     *         or a group number (when first is null and the name is found).
+     *         On failure: {@link #ERROR_NOSUBSTRING} if the name is not found
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_substring_nametable_scan.html">pcre2_substring_nametable_scan</a>
+     */
+    public int substringNametableScan(long code, String name, long[] first, long[] last);
+
+    /**
+     * Serialize one or more compiled patterns to a byte array.
+     * <p>
+     * This function serializes one or more compiled patterns into a contiguous block of memory
+     * that can be saved to a file or other storage. The serialized data can later be restored
+     * using {@code pcre2_serialize_decode()}.
+     * <p>
+     * The memory for the serialized data is obtained using the general context's memory
+     * management functions (or {@code malloc()} if no context is provided). The caller
+     * must free this memory using {@code pcre2_serialize_free()} when done.
+     * <p>
+     * <b>Important restrictions:</b>
+     * <ul>
+     *   <li>Serialized data is architecture-specific and cannot be transferred between
+     *       machines with different characteristics (e.g., different byte order or pointer size)</li>
+     *   <li>The same PCRE2 version must be used for encoding and decoding</li>
+     *   <li>Patterns compiled with different character tables cannot be serialized together</li>
+     * </ul>
+     *
+     * @param codes           an array of compiled pattern handles to serialize
+     * @param numberOfCodes   the number of patterns to serialize (must be positive)
+     * @param serializedBytes an array of length 1 to receive the pointer to the serialized data
+     * @param serializedSize  an array of length 1 to receive the size of the serialized data in bytes
+     * @param gcontext        the general context handle for memory allocation, or 0 to use default
+     * @return the number of serialized patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADDATA} if {@code numberOfCodes} is zero or negative
+     *         {@link #ERROR_BADMAGIC} if one of the patterns has an invalid magic number
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed
+     *         {@link #ERROR_NULL} if any argument (except gcontext) is null
+     *         {@link #ERROR_MIXEDTABLES} if patterns were compiled with different character tables
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_encode.html">pcre2_serialize_encode</a>
+     */
+    public int serializeEncode(long[] codes, int numberOfCodes, long[] serializedBytes, long[] serializedSize,
+            long gcontext);
+
+    /**
+     * Deserialize compiled patterns from a byte array.
+     * <p>
+     * This function decodes a serialized set of compiled patterns, recreating up to {@code numberOfCodes}
+     * patterns from the serialized data. The decoded patterns are stored in the {@code codes} array.
+     * <p>
+     * The serialized data must have been created by {@link #serializeEncode} on a system with compatible
+     * characteristics (same PCRE2 version, code unit width, byte order, and pointer size).
+     * <p>
+     * The memory for the decoded patterns is obtained using the general context's memory management
+     * functions (or {@code malloc()} if no context is provided). Each decoded pattern must be freed
+     * separately using {@link #codeFree}.
+     *
+     * @param codes          an array to receive the decoded compiled pattern handles
+     * @param numberOfCodes  the number of slots available in the codes array (must be positive)
+     * @param bytes          the serialized byte data (as obtained from {@link #serializeEncode})
+     * @param gcontext       the general context handle for memory allocation, or 0 to use default
+     * @return the number of decoded patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADDATA} if {@code numberOfCodes} is zero or less
+     *         {@link #ERROR_BADMAGIC} if the data does not start with the correct bytes (possibly corrupted
+     *                                 or from a different system endianness)
+     *         {@link #ERROR_BADMODE} if the code unit size or PCRE2 version does not match
+     *         {@link #ERROR_NOMEMORY} if memory allocation failed
+     *         {@link #ERROR_NULL} if {@code codes} or {@code bytes} is null
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_decode.html">pcre2_serialize_decode</a>
+     */
+    public int serializeDecode(long[] codes, int numberOfCodes, byte[] bytes, long gcontext);
+
+    /**
+     * Free memory that was allocated by {@link #serializeEncode} for holding a serialized byte stream.
+     * <p>
+     * This function deallocates the memory for a serialized set of compiled patterns. If the
+     * argument is 0 (null pointer), the function returns without doing anything.
+     *
+     * @param bytes the pointer to the serialized byte stream to free (may be 0, in which case the function
+     *              does nothing)
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_free.html">pcre2_serialize_free</a>
+     */
+    public void serializeFree(long bytes);
+
+    /**
+     * Get the number of serialized patterns in a byte stream.
+     * <p>
+     * This function examines a serialized byte stream (created by {@link #serializeEncode}) and returns
+     * the number of compiled patterns contained in it. This is useful when the number of patterns is not
+     * known in advance, for example when loading serialized data from a file.
+     * <p>
+     * The function does not decode or otherwise process the patterns; it simply reads the count from the
+     * header of the serialized data.
+     *
+     * @param bytes the serialized byte data (as obtained from {@link #serializeEncode})
+     * @return the number of serialized patterns on success, otherwise a negative error code:
+     *         {@link #ERROR_BADMAGIC} if the data does not start with the correct bytes (possibly corrupted
+     *                                 or from a different system endianness)
+     *         {@link #ERROR_BADMODE} if the code unit size or PCRE2 version does not match
+     *         {@link #ERROR_NULL} if {@code bytes} is null
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_serialize_get_number_of_codes.html">pcre2_serialize_get_number_of_codes</a>
+     */
+    public int serializeGetNumberOfCodes(byte[] bytes);
 
     /**
      * Read bytes from a native memory pointer.

@@ -17,7 +17,6 @@ repositories {
 dependencies {
     jacocoAggregation(project(":api"))
     jacocoAggregation(project(":lib"))
-    jacocoAggregation(project(":test"))
     jacocoAggregation(project(":jna"))
     jacocoAggregation(project(":ffm"))
     jacocoAggregation(project(":regex"))

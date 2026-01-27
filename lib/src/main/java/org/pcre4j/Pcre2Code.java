@@ -489,6 +489,49 @@ public class Pcre2Code {
     }
 
     /**
+     * Scan the name table for all group numbers associated with a given capture group name.
+     * <p>
+     * This method is particularly useful when duplicate names are allowed (via DUPNAMES option),
+     * as a name may map to multiple group numbers. The returned array contains all group numbers
+     * associated with the specified name, in ascending order.
+     *
+     * @param name the name of the capturing group to look up
+     * @return an array of group numbers (1-based indices) associated with the name
+     * @throws IllegalArgumentException if name is null
+     * @throws Pcre2NoSubstringError    if the name does not correspond to any capturing group
+     */
+    public int[] scanNametable(String name) {
+        if (name == null) {
+            throw new IllegalArgumentException("name must not be null");
+        }
+
+        final long[] first = new long[1];
+        final long[] last = new long[1];
+        final var entrySize = api.substringNametableScan(handle, name, first, last);
+        if (entrySize == IPcre2.ERROR_NOSUBSTRING) {
+            throw new Pcre2NoSubstringError("Named group '" + name + "' does not exist");
+        }
+        if (entrySize < 0) {
+            throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, entrySize));
+        }
+
+        // Calculate the number of entries
+        final var numEntries = (int) ((last[0] - first[0]) / entrySize) + 1;
+        final int[] groupNumbers = new int[numEntries];
+
+        // Read the group numbers from each entry
+        // Each entry starts with a 2-byte group number (big-endian)
+        for (int i = 0; i < numEntries; i++) {
+            final var entryStart = first[0] + ((long) i * entrySize);
+            final var bytes = api.readBytes(entryStart, 2);
+            // Group number is stored as big-endian 16-bit value
+            groupNumbers[i] = ((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF);
+        }
+
+        return groupNumbers;
+    }
+
+    /**
      * Match this compiled pattern against a given subject string.
      *
      * @param subject      the subject string to match this pattern against
