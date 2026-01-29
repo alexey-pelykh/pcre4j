@@ -3669,4 +3669,73 @@ public class MatcherTests {
         assertFalse(pcre4jMatcher.hitEnd());
     }
 
+    // Empty region anchor semantics tests (regression tests for issue #69)
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyRegionAtEndWithAnchors_find(IPcre2 api) {
+        // Regression test for issue #69: ^$ pattern should match empty region at end of input
+        var regex = "^$";
+        var input = "abc";
+
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        javaMatcher.region(3, 3);
+
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.region(3, 3);
+
+        var javaResult = javaMatcher.find();
+        var pcre4jResult = pcre4jMatcher.find();
+        assertEquals(javaResult, pcre4jResult);
+        assertTrue(javaResult); // Java returns true for ^$ matching empty region
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyRegionAtEndWithAnchors_matches(IPcre2 api) {
+        // Regression test for issue #69: ^$ pattern should match empty region at end of input
+        var regex = "^$";
+        var input = "abc";
+
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        javaMatcher.region(3, 3);
+
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.region(3, 3);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyRegionAtStartWithAnchors_find(IPcre2 api) {
+        // Test ^$ pattern with empty region at start of input
+        var regex = "^$";
+        var input = "abc";
+
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        javaMatcher.region(0, 0);
+
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.region(0, 0);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void emptyRegionInMiddleWithAnchors_find(IPcre2 api) {
+        // Test ^$ pattern with empty region in middle of input
+        var regex = "^$";
+        var input = "abc";
+
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        javaMatcher.region(1, 1);
+
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.region(1, 1);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+    }
+
 }
