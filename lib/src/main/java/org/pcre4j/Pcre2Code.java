@@ -291,10 +291,23 @@ public class Pcre2Code {
 
 //   TODO: PCRE2_INFO_EXTRAOPTIONS    Extra options that were passed in the compile context
 //   TODO: PCRE2_INFO_FIRSTBITMAP     Bitmap of first code units, or NULL
-//   TODO: PCRE2_INFO_FIRSTCODETYPE   Type of start-of-match information
-//                                0 nothing set
-//                                1 first code unit is set
-//                                2 start of string or after newline
+
+    /**
+     * Get the type of start-of-match information.
+     * <p>
+     * This indicates how the pattern is anchored at the start:
+     * <ul>
+     *   <li>0 - nothing set (pattern not anchored to start)</li>
+     *   <li>1 - first code unit is set (pattern starts with a specific character)</li>
+     *   <li>2 - start of string or after newline (pattern is anchored with ^ or similar)</li>
+     * </ul>
+     *
+     * @return the first code type (0, 1, or 2)
+     */
+    public int firstCodeType() {
+        return getPatternIntInfo(IPcre2.INFO_FIRSTCODETYPE);
+    }
+
 //   TODO: PCRE2_INFO_FIRSTCODEUNIT   First code unit when type is 1
 
     /**
