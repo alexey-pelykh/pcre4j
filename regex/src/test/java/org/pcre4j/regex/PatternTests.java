@@ -254,4 +254,162 @@ public class PatternTests {
         assertTrue(pcre4jMatcher.matches());
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseFlagValue(IPcre2 api) {
+        // Verify UNICODE_CASE flag has the correct value (0x40)
+        assertEquals(java.util.regex.Pattern.UNICODE_CASE, Pattern.UNICODE_CASE);
+        assertEquals(0x40, Pattern.UNICODE_CASE);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseKelvinSign(IPcre2 api) {
+        // Test Unicode case folding with Kelvin sign (U+212A)
+        // In Unicode case folding, Kelvin sign matches k/K
+        var regex = "k";
+        var input = "\u212A"; // Kelvin sign
+
+        // Java requires UNICODE_CASE for this to match
+        var javaMatcherWithoutUnicodeCase = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+        ).matcher(input);
+        var javaMatcherWithUnicodeCase = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        // PCRE4J with UTF mode always does Unicode case folding
+        var pcre4jMatcherWithoutUnicodeCase = Pattern.compile(
+                api,
+                regex,
+                Pattern.CASE_INSENSITIVE
+        ).matcher(input);
+        var pcre4jMatcherWithUnicodeCase = Pattern.compile(
+                api,
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        // Java without UNICODE_CASE: no match
+        assertFalse(javaMatcherWithoutUnicodeCase.matches());
+        // Java with UNICODE_CASE: match
+        assertTrue(javaMatcherWithUnicodeCase.matches());
+
+        // PCRE4J always matches (UTF mode enables Unicode case folding by default)
+        // Note: This is a documented behavioral difference from java.util.regex
+        assertTrue(pcre4jMatcherWithoutUnicodeCase.matches());
+        assertTrue(pcre4jMatcherWithUnicodeCase.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseLongS(IPcre2 api) {
+        // Test Unicode case folding with Long S (U+017F)
+        // In Unicode case folding, Long S (ſ) matches s/S
+        var regex = "s";
+        var input = "\u017F"; // Long S
+
+        // Java requires UNICODE_CASE for this to match
+        var javaMatcherWithoutUnicodeCase = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.CASE_INSENSITIVE
+        ).matcher(input);
+        var javaMatcherWithUnicodeCase = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        // PCRE4J with UTF mode always does Unicode case folding
+        var pcre4jMatcherWithoutUnicodeCase = Pattern.compile(
+                api,
+                regex,
+                Pattern.CASE_INSENSITIVE
+        ).matcher(input);
+        var pcre4jMatcherWithUnicodeCase = Pattern.compile(
+                api,
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        // Java without UNICODE_CASE: no match
+        assertFalse(javaMatcherWithoutUnicodeCase.matches());
+        // Java with UNICODE_CASE: match
+        assertTrue(javaMatcherWithUnicodeCase.matches());
+
+        // PCRE4J always matches (UTF mode enables Unicode case folding by default)
+        // Note: This is a documented behavioral difference from java.util.regex
+        assertTrue(pcre4jMatcherWithoutUnicodeCase.matches());
+        assertTrue(pcre4jMatcherWithUnicodeCase.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseWithEmbeddedCaseInsensitiveFlag(IPcre2 api) {
+        // Test that embedded (?i) flag with UTF mode provides Unicode case folding
+        // In PCRE4J with UTF mode, Unicode case folding is always enabled
+        var regex = "(?i)k"; // case-insensitive via embedded flag
+        var input = "\u212A"; // Kelvin sign
+
+        // PCRE4J with UTF always does Unicode case folding
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseBasicCaseInsensitive(IPcre2 api) {
+        // Test basic case-insensitive matching still works
+        var regex = "hello";
+        var input = "HELLO";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.CASE_INSENSITIVE | java.util.regex.Pattern.UNICODE_CASE
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseFlagsMethod(IPcre2 api) {
+        // Verify flags() method returns UNICODE_CASE when set
+        var regex = "test";
+        int flags = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+
+        var pattern = Pattern.compile(api, regex, flags);
+        assertEquals(flags, pattern.flags());
+        assertTrue((pattern.flags() & Pattern.UNICODE_CASE) != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void unicodeCaseAloneHasNoEffect(IPcre2 api) {
+        // UNICODE_CASE without CASE_INSENSITIVE should not enable case-insensitive matching
+        var regex = "k";
+        var input = "K";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                regex,
+                java.util.regex.Pattern.UNICODE_CASE
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                regex,
+                Pattern.UNICODE_CASE
+        ).matcher(input);
+
+        // Both should NOT match - UNICODE_CASE alone doesn't enable case-insensitive matching
+        assertFalse(javaMatcher.matches());
+        assertFalse(pcre4jMatcher.matches());
+    }
+
 }

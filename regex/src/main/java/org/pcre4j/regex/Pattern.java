@@ -78,8 +78,25 @@ public class Pattern {
      */
     public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
 
+    /**
+     * A {@link java.util.regex.Pattern#UNICODE_CASE}-compatible flag that enables Unicode-aware case folding.
+     * <p>
+     * When this flag is specified, case-insensitive matching (when enabled by the {@link #CASE_INSENSITIVE} flag)
+     * is done in a manner consistent with the Unicode Standard. By default in {@link java.util.regex.Pattern},
+     * case-insensitive matching assumes that only characters in the US-ASCII charset are being matched.
+     * </p>
+     * <p>
+     * <strong>Implementation Note:</strong> PCRE2 with UTF mode (which PCRE4J always enables) already performs
+     * Unicode-aware case folding when {@link #CASE_INSENSITIVE} is used. This flag is provided for API
+     * compatibility with {@link java.util.regex.Pattern} and has no additional effect on PCRE2's behavior
+     * since Unicode case folding is already enabled by default.
+     * </p>
+     *
+     * @see #CASE_INSENSITIVE
+     */
+    public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
+
     // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
-    // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
     /* package-private */ final Pcre2Code lookingAtCode;
@@ -126,6 +143,8 @@ public class Pattern {
         if ((flags & COMMENTS) != 0) {
             compileOptions.add(Pcre2CompileOption.EXTENDED);
         }
+        // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
+        // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
 
         final var compileContext = new Pcre2CompileContext(api, null);
         if ((flags & UNIX_LINES) != 0) {
