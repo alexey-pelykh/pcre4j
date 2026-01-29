@@ -18,6 +18,7 @@ import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
@@ -123,6 +124,28 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private Pcre2Code anchoringBoundsCode = null;
 
+    /**
+     * For CANON_EQ mode: the NFD-normalized input string used for matching.
+     * Null when CANON_EQ is not enabled.
+     */
+    private String normalizedInput = null;
+
+    /**
+     * For CANON_EQ mode: maps each index in normalizedInput to the corresponding index in the original input.
+     * normalizedToOriginalIndex[nfdIndex] gives the original string index that the NFD character at nfdIndex
+     * corresponds to. This is used to convert match indices from NFD space back to original string space.
+     * Null when CANON_EQ is not enabled.
+     */
+    private int[] normalizedToOriginalIndex = null;
+
+    /**
+     * For CANON_EQ mode: maps each index in the original input to the corresponding index in normalizedInput.
+     * originalToNormalizedIndex[origIndex] gives the NFD string index that corresponds to the original
+     * character at origIndex. This is used to convert region boundaries from original to NFD space.
+     * Null when CANON_EQ is not enabled.
+     */
+    private int[] originalToNormalizedIndex = null;
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
@@ -137,7 +160,82 @@ public class Matcher implements java.util.regex.MatchResult {
         this.input = input.toString();
         this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
 
+        // Initialize CANON_EQ support if the flag is set
+        if ((pattern.flags() & Pattern.CANON_EQ) != 0) {
+            initializeCanonEqSupport();
+        }
+
         reset();
+    }
+
+    /**
+     * Initialize the NFD normalization support for CANON_EQ mode.
+     * Creates the normalized input string and the bidirectional index mappings.
+     */
+    private void initializeCanonEqSupport() {
+        // Normalize input to NFD form
+        this.normalizedInput = Normalizer.normalize(input, Normalizer.Form.NFD);
+
+        // Build index mappings between original and normalized strings
+        // We iterate through both strings simultaneously, tracking how characters map
+        buildIndexMappings();
+    }
+
+    /**
+     * Builds bidirectional index mappings between the original input and its NFD-normalized form.
+     * <p>
+     * The algorithm works by iterating through the original string character by character,
+     * normalizing each character individually, and tracking how the indices map.
+     * <p>
+     * For example, with input "café" (where é is precomposed U+00E9):
+     * - Original: c(0) a(1) f(2) é(3) - length 4
+     * - NFD:      c(0) a(1) f(2) e(3) ́(4) - length 5 (é decomposes to e + combining accent)
+     * <p>
+     * The mappings would be:
+     * - normalizedToOriginalIndex: [0, 1, 2, 3, 3] (both NFD chars 3 and 4 map to original char 3)
+     * - originalToNormalizedIndex: [0, 1, 2, 3, 5] (original char 3 maps to NFD char 3, end maps to 5)
+     */
+    private void buildIndexMappings() {
+        final int origLen = input.length();
+        final int normLen = normalizedInput.length();
+
+        // originalToNormalizedIndex: for each position in original (including end position)
+        this.originalToNormalizedIndex = new int[origLen + 1];
+
+        // normalizedToOriginalIndex: for each position in normalized
+        this.normalizedToOriginalIndex = new int[normLen];
+
+        int normIdx = 0;
+        for (int origIdx = 0; origIdx < origLen; ) {
+            // Get the code point at origIdx
+            final int codePoint = input.codePointAt(origIdx);
+            final int charCount = Character.charCount(codePoint);
+
+            // Record where this original position maps to in normalized string
+            originalToNormalizedIndex[origIdx] = normIdx;
+
+            // Normalize this single code point
+            final String origChar = input.substring(origIdx, origIdx + charCount);
+            final String normChar = Normalizer.normalize(origChar, Normalizer.Form.NFD);
+
+            // All characters in the normalized form of this code point map back to origIdx
+            for (int i = 0; i < normChar.length(); i++) {
+                if (normIdx < normLen) {
+                    normalizedToOriginalIndex[normIdx] = origIdx;
+                    normIdx++;
+                }
+            }
+
+            // Handle surrogate pairs - both chars of a surrogate pair map to same position
+            if (charCount == 2 && origIdx + 1 < origLen) {
+                originalToNormalizedIndex[origIdx + 1] = originalToNormalizedIndex[origIdx];
+            }
+
+            origIdx += charCount;
+        }
+
+        // The end position of original maps to end of normalized
+        originalToNormalizedIndex[origLen] = normLen;
     }
 
     /**
@@ -776,6 +874,19 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public String replaceAll(String replacement) {
         reset();
+
+        // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
+        // is normalized but the input string we're operating on is the original.
+        // We must use find() + appendReplacement() which handles the index mapping properly.
+        if (normalizedInput != null) {
+            final var sb = new StringBuilder();
+            while (find()) {
+                appendReplacement(sb, replacement);
+            }
+            appendTail(sb);
+            return sb.toString();
+        }
+
         return pattern.code.substitute(
                 input.substring(regionStart, regionEnd),
                 0,
@@ -825,6 +936,20 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public String replaceFirst(String replacement) {
         reset();
+
+        // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
+        // is normalized but the input string we're operating on is the original.
+        // We must use find() + appendReplacement() which handles the index mapping properly.
+        if (normalizedInput != null) {
+            if (!find()) {
+                return input.substring(regionStart, regionEnd);
+            }
+            final var sb = new StringBuilder();
+            appendReplacement(sb, replacement);
+            appendTail(sb);
+            return sb.toString();
+        }
+
         return pattern.code.substitute(
                 input.substring(regionStart, regionEnd),
                 0,
@@ -899,6 +1024,16 @@ public class Matcher implements java.util.regex.MatchResult {
     public Matcher reset(CharSequence input) {
         this.input = input.toString();
         this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
+
+        // Reinitialize CANON_EQ support if the flag is set
+        if ((pattern.flags() & Pattern.CANON_EQ) != 0) {
+            initializeCanonEqSupport();
+        } else {
+            this.normalizedInput = null;
+            this.normalizedToOriginalIndex = null;
+            this.originalToNormalizedIndex = null;
+        }
+
         return reset();
     }
 
@@ -1254,8 +1389,13 @@ public class Matcher implements java.util.regex.MatchResult {
      * @param subject the subject string to match against
      * @param startOffset the offset within subject to start matching
      * @param indexAdjustment the value to add to match indices to convert to full input coordinates
+     * @param useCanonEqMapping if true, match indices are in NFD space and need conversion to original
      */
-    private record RegionSubject(String subject, int startOffset, int indexAdjustment) {}
+    private record RegionSubject(String subject, int startOffset, int indexAdjustment, boolean useCanonEqMapping) {
+        RegionSubject(String subject, int startOffset, int indexAdjustment) {
+            this(subject, startOffset, indexAdjustment, false);
+        }
+    }
 
     /**
      * Creates a RegionSubject for matching, handling region boundaries.
@@ -1267,11 +1407,19 @@ public class Matcher implements java.util.regex.MatchResult {
      * When transparent bounds are disabled (opaque, the default), only the region substring is
      * passed so that lookbehind and word boundaries (\b) cannot see outside the region.
      * The difference between anchoring enabled/disabled is handled by NOTBOL/NOTEOL flags.
+     * <p>
+     * When CANON_EQ is enabled, the normalized input is used for matching and indices are
+     * converted between original and normalized coordinate spaces.
      *
      * @param matchStartInInput the start position for matching in input coordinates
      * @return the RegionSubject containing the subject string and coordinate mapping
      */
     private RegionSubject getRegionSubject(int matchStartInInput) {
+        // Handle CANON_EQ mode: use normalized input and convert indices
+        if (normalizedInput != null) {
+            return getRegionSubjectCanonEq(matchStartInInput);
+        }
+
         if (transparentBounds) {
             // Transparent bounds: pass the full input string so that lookahead can see beyond
             // regionEnd and lookbehind can see before regionStart
@@ -1299,6 +1447,47 @@ public class Matcher implements java.util.regex.MatchResult {
     }
 
     /**
+     * Creates a RegionSubject for CANON_EQ mode, using the normalized input.
+     * Converts all indices from original to normalized coordinate space.
+     *
+     * @param matchStartInInput the start position for matching in original input coordinates
+     * @return the RegionSubject containing the normalized subject string
+     */
+    private RegionSubject getRegionSubjectCanonEq(int matchStartInInput) {
+        // Convert indices from original to normalized space
+        final int normMatchStart = originalToNormalizedIndex[matchStartInInput];
+        final int normRegionStart = originalToNormalizedIndex[regionStart];
+        final int normRegionEnd = originalToNormalizedIndex[regionEnd];
+
+        if (transparentBounds) {
+            // Transparent bounds: pass the full normalized input
+            return new RegionSubject(
+                    normalizedInput,
+                    normMatchStart,
+                    0,
+                    true
+            );
+        } else {
+            // Opaque bounds: pass only the region substring of normalized input
+            if (normRegionStart > 0) {
+                return new RegionSubject(
+                        normalizedInput.substring(normRegionStart, normRegionEnd),
+                        normMatchStart - normRegionStart,
+                        normRegionStart,
+                        true
+                );
+            } else {
+                return new RegionSubject(
+                        normalizedInput.substring(0, normRegionEnd),
+                        normMatchStart,
+                        0,
+                        true
+                );
+            }
+        }
+    }
+
+    /**
      * Get a constrained region subject for transparent bounds matching when the initial match
      * extends beyond regionEnd. This allows lookbehind to see before regionStart while
      * constraining the actual match to end at or before regionEnd.
@@ -1307,6 +1496,18 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return the constrained region subject
      */
     private RegionSubject getConstrainedRegionSubject(int matchStartInInput) {
+        // Handle CANON_EQ mode
+        if (normalizedInput != null) {
+            final int normMatchStart = originalToNormalizedIndex[matchStartInInput];
+            final int normRegionEnd = originalToNormalizedIndex[regionEnd];
+            return new RegionSubject(
+                    normalizedInput.substring(0, normRegionEnd),
+                    normMatchStart,
+                    0,
+                    true
+            );
+        }
+
         // Pass substring from 0 to regionEnd, preserving lookbehind context
         // while constraining the match end position
         return new RegionSubject(
@@ -1709,6 +1910,7 @@ public class Matcher implements java.util.regex.MatchResult {
 
     /**
      * Process match results: convert ovector to string indices and adjust for region offset.
+     * When CANON_EQ is enabled, also converts indices from NFD space to original string space.
      *
      * @param matchData the match data containing the ovector
      * @param regionSubject the region subject used for matching
@@ -1728,6 +1930,92 @@ public class Matcher implements java.util.regex.MatchResult {
                 }
             }
         }
+
+        // For CANON_EQ mode: convert indices from NFD space to original string space
+        if (regionSubject.useCanonEqMapping() && normalizedToOriginalIndex != null) {
+            // Save the NFD indices (already adjusted for region offset) before converting to original space
+            final int[] nfdIndices = lastMatchIndices.clone();
+
+            for (int i = 0; i < lastMatchIndices.length; i++) {
+                if (lastMatchIndices[i] >= 0) {
+                    final int normIdx = lastMatchIndices[i];
+                    if (normIdx < normalizedToOriginalIndex.length) {
+                        lastMatchIndices[i] = normalizedToOriginalIndex[normIdx];
+                    } else if (normIdx == normalizedToOriginalIndex.length) {
+                        // End of normalized string maps to end of original string
+                        lastMatchIndices[i] = input.length();
+                    }
+                }
+            }
+
+            // For match end indices (odd positions in the array), we need to ensure they
+            // point to the position AFTER the last matching character in the original string.
+            // The normalizedToOriginalIndex maps to the START of each character, so for
+            // end positions we need to advance to the next character boundary.
+            for (int i = 1; i < lastMatchIndices.length; i += 2) {
+                if (lastMatchIndices[i] >= 0 && lastMatchIndices[i] < input.length()) {
+                    // Use the saved NFD indices (already includes region offset adjustment)
+                    final int nfdEndIdx = nfdIndices[i];
+
+                    if (nfdEndIdx <= normalizedInput.length()) {
+                        // Find the original index for this end position
+                        // We need to map from the end of the match in NFD space to original space
+                        lastMatchIndices[i] = convertNfdEndIndexToOriginal(nfdEndIdx);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Converts an end index from NFD space to original string space.
+     * <p>
+     * For end positions, we need to find where in the original string the NFD position maps to.
+     * If the NFD position is at a combining character, we need to map to the end of the
+     * corresponding base character + combining sequence in the original string.
+     *
+     * @param nfdEndIndex the end index in NFD space
+     * @return the corresponding end index in original string space
+     */
+    private int convertNfdEndIndexToOriginal(int nfdEndIndex) {
+        if (nfdEndIndex >= normalizedInput.length()) {
+            return input.length();
+        }
+        if (nfdEndIndex <= 0) {
+            return 0;
+        }
+
+        // The normalizedToOriginalIndex gives us the start of the original character
+        // that the NFD character at that index belongs to. For an end index, we want
+        // to find where the character sequence ends in the original.
+
+        // Get the original index that this NFD position maps to
+        final int origIdx = normalizedToOriginalIndex[nfdEndIndex];
+
+        // If the next NFD character maps to the same original position, we're in the middle
+        // of a decomposed character. Keep advancing until we find the next original character.
+        // But since this is an END index, we want the position AFTER the character.
+
+        // If the previous NFD character mapped to the same original position,
+        // then we're at the end of a decomposed sequence, return the next original position
+        if (nfdEndIndex > 0 && normalizedToOriginalIndex[nfdEndIndex - 1] == origIdx) {
+            // We're at or after a combining character that belongs to origIdx
+            // Find the next different original index
+            int nextOrigIdx = origIdx;
+            for (int i = nfdEndIndex; i < normalizedInput.length(); i++) {
+                if (normalizedToOriginalIndex[i] != origIdx) {
+                    nextOrigIdx = normalizedToOriginalIndex[i];
+                    break;
+                }
+            }
+            if (nextOrigIdx == origIdx) {
+                // Reached end of string
+                return input.length();
+            }
+            return nextOrigIdx;
+        }
+
+        return origIdx;
     }
 
     /**

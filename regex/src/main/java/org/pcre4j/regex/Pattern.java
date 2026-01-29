@@ -17,6 +17,7 @@ package org.pcre4j.regex;
 import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -96,7 +97,42 @@ public class Pattern {
      */
     public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
 
-    // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
+    /**
+     * A {@link java.util.regex.Pattern#CANON_EQ}-compatible flag that enables canonical equivalence matching.
+     * <p>
+     * When this flag is specified, two characters will be considered to match if, and only if, their full
+     * canonical decompositions match. For example, the expression {@code "a\u030A"} (a + combining ring above)
+     * will match the string {@code "\u00E5"} (å, precomposed) when this flag is specified.
+     * </p>
+     * <p>
+     * By default, matching does not take canonical equivalence into account.
+     * </p>
+     * <p>
+     * There is no embedded flag character for enabling canonical equivalence.
+     * </p>
+     * <p>
+     * <strong>Implementation Note:</strong> This flag is implemented by normalizing both the pattern and input
+     * to NFD (Canonical Decomposition) form using {@link java.text.Normalizer} before matching. Match indices
+     * are mapped back to the original input string positions. This approach may impose a performance penalty.
+     * </p>
+     * <p>
+     * <strong>Limitations:</strong> The NFD normalization approach provides correct behavior for most common
+     * canonical equivalence cases. However, there are known differences from {@link java.util.regex.Pattern}'s
+     * implementation:
+     * </p>
+     * <ul>
+     *   <li><strong>Character classes:</strong> Character classes containing precomposed characters (e.g.,
+     *       {@code [éè]}) will not correctly match the decomposed forms of those characters. The NFD
+     *       normalization transforms the character class contents, changing the regex semantics. For
+     *       reliable canonical equivalence with character classes, use decomposed forms in the pattern.</li>
+     *   <li><strong>Complex patterns:</strong> Patterns with alternations or backreferences where
+     *       canonically equivalent forms have different lengths may behave differently than
+     *       {@link java.util.regex.Pattern}.</li>
+     * </ul>
+     *
+     * @see java.text.Normalizer
+     */
+    public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
     /* package-private */ final Pcre2Code lookingAtCode;
@@ -124,6 +160,15 @@ public class Pattern {
         this.regex = regex;
         this.flags = flags;
 
+        // When CANON_EQ is set, normalize the pattern to NFD form for compilation
+        // The original regex is preserved in this.regex for pattern() method
+        final String compiledRegex;
+        if ((flags & CANON_EQ) != 0) {
+            compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
+        } else {
+            compiledRegex = regex;
+        }
+
         final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
         if ((flags & CASE_INSENSITIVE) != 0) {
             compileOptions.add(Pcre2CompileOption.CASELESS);
@@ -145,6 +190,7 @@ public class Pattern {
         }
         // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
         // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
+        // Note: CANON_EQ flag is handled above by normalizing the pattern to NFD form.
 
         final var compileContext = new Pcre2CompileContext(api, null);
         if ((flags & UNIX_LINES) != 0) {
@@ -158,7 +204,7 @@ public class Pattern {
             if (Pcre4jUtils.isJitSupported(api) && isJitAllowed) {
                 this.code = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         compileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -169,7 +215,7 @@ public class Pattern {
                 matchingCompileOptions.add(Pcre2CompileOption.ENDANCHORED);
                 this.matchingCode = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         matchingCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -179,7 +225,7 @@ public class Pattern {
                 lookingAtCompileOptions.add(Pcre2CompileOption.ANCHORED);
                 this.lookingAtCode = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         lookingAtCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -187,7 +233,7 @@ public class Pattern {
             } else {
                 this.code = new Pcre2Code(
                         api,
-                        regex,
+                        compiledRegex,
                         compileOptions,
                         compileContext
                 );

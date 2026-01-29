@@ -412,4 +412,529 @@ public class PatternTests {
         assertFalse(pcre4jMatcher.matches());
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqFlagValue(IPcre2 api) {
+        // Verify CANON_EQ flag has the correct value (0x80)
+        assertEquals(java.util.regex.Pattern.CANON_EQ, Pattern.CANON_EQ);
+        assertEquals(0x80, Pattern.CANON_EQ);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqPrecomposedPatternMatchesDecomposedInput(IPcre2 api) {
+        // Test canonical equivalence: precomposed pattern matches decomposed input
+        // Pattern: é (U+00E9, precomposed)
+        // Input: e + combining acute accent (U+0065 U+0301, decomposed)
+        var precomposedPattern = "\u00E9";  // é
+        var decomposedInput = "e\u0301";     // e + combining acute accent
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                precomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                precomposedPattern,
+                Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqDecomposedPatternMatchesPrecomposedInput(IPcre2 api) {
+        // Test canonical equivalence: decomposed pattern matches precomposed input
+        // Pattern: a + combining ring above (U+0061 U+030A, decomposed)
+        // Input: å (U+00E5, precomposed)
+        var decomposedPattern = "a\u030A";  // a + combining ring above
+        var precomposedInput = "\u00E5";    // å
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                decomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(precomposedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                decomposedPattern,
+                Pattern.CANON_EQ
+        ).matcher(precomposedInput);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithoutFlagNoMatch(IPcre2 api) {
+        // Without CANON_EQ, precomposed and decomposed should NOT match
+        var precomposedPattern = "\u00E9";  // é
+        var decomposedInput = "e\u0301";     // e + combining acute accent
+
+        var javaMatcher = java.util.regex.Pattern.compile(precomposedPattern).matcher(decomposedInput);
+        var pcre4jMatcher = Pattern.compile(api, precomposedPattern).matcher(decomposedInput);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertFalse(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqFindInMiddleOfString(IPcre2 api) {
+        // Test find() with canonical equivalence
+        var precomposedPattern = "caf\u00E9";  // café with precomposed é
+        var decomposedInput = "I love cafe\u0301!";  // café with decomposed é
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                precomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                precomposedPattern,
+                Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+        assertTrue(pcre4jMatcher.hasMatch());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqReplaceAll(IPcre2 api) {
+        // Test replaceAll() with canonical equivalence
+        var precomposedPattern = "caf\u00E9";
+        // Input: café with decomposed é AND café with precomposed é
+        var mixedInput = "cafe\u0301 and caf\u00E9";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                precomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(mixedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                precomposedPattern,
+                Pattern.CANON_EQ
+        ).matcher(mixedInput);
+
+        assertEquals(javaMatcher.replaceAll("tea"), pcre4jMatcher.replaceAll("tea"));
+        assertEquals("tea and tea", pcre4jMatcher.reset().replaceAll("tea"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqReplaceFirst(IPcre2 api) {
+        // Test replaceFirst() with canonical equivalence
+        var precomposedPattern = "caf\u00E9";
+        var mixedInput = "cafe\u0301 and caf\u00E9";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                precomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(mixedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                precomposedPattern,
+                Pattern.CANON_EQ
+        ).matcher(mixedInput);
+
+        assertEquals(javaMatcher.replaceFirst("tea"), pcre4jMatcher.replaceFirst("tea"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqSplit(IPcre2 api) {
+        // Test split() with canonical equivalence
+        var precomposedPattern = "\u00E9";  // é
+        // Input: a + é (decomposed) + b + é (precomposed) + c
+        var mixedInput = "ae\u0301b\u00E9c";
+
+        var javaPattern = java.util.regex.Pattern.compile(
+                precomposedPattern,
+                java.util.regex.Pattern.CANON_EQ
+        );
+        var pcre4jPattern = Pattern.compile(
+                api,
+                precomposedPattern,
+                Pattern.CANON_EQ
+        );
+
+        assertArrayEquals(javaPattern.split(mixedInput), pcre4jPattern.split(mixedInput));
+        assertArrayEquals(new String[]{"a", "b", "c"}, pcre4jPattern.split(mixedInput));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithCaseInsensitive(IPcre2 api) {
+        // Test CANON_EQ combined with CASE_INSENSITIVE
+        var upperPrecomposed = "\u00C9";  // É (uppercase)
+        var lowerDecomposed = "e\u0301";  // é (lowercase, decomposed)
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                upperPrecomposed,
+                java.util.regex.Pattern.CANON_EQ | java.util.regex.Pattern.CASE_INSENSITIVE
+        ).matcher(lowerDecomposed);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                upperPrecomposed,
+                Pattern.CANON_EQ | Pattern.CASE_INSENSITIVE
+        ).matcher(lowerDecomposed);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqGroupCapture(IPcre2 api) {
+        // Test that captured groups return correct text
+        var groupPattern = "(caf\u00E9)";  // café in a capture group
+        var decomposedInput = "cafe\u0301";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                groupPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                groupPattern,
+                Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+
+        assertTrue(javaMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+        // Group 1 should return the actual matched text from input (decomposed form)
+        assertEquals(javaMatcher.group(1), pcre4jMatcher.group(1));
+        assertEquals(decomposedInput, pcre4jMatcher.group(1));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqFlagsMethod(IPcre2 api) {
+        // Verify flags() method returns CANON_EQ when set
+        var regex = "test";
+        int flags = Pattern.CANON_EQ | Pattern.CASE_INSENSITIVE;
+
+        var pattern = Pattern.compile(api, regex, flags);
+        assertEquals(flags, pattern.flags());
+        assertTrue((pattern.flags() & Pattern.CANON_EQ) != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqAlternationPattern(IPcre2 api) {
+        // Test CANON_EQ with alternation pattern (instead of character class)
+        // Alternation works correctly with NFD normalization
+        var alternationPattern = "\u00E9|\u00E8";  // é|è - alternation
+        var precomposedInput = "\u00E9";  // é precomposed
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                alternationPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(precomposedInput);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                alternationPattern,
+                Pattern.CANON_EQ
+        ).matcher(precomposedInput);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+
+        // Also test with decomposed input
+        var decomposedInput = "e\u0301";  // é decomposed
+        javaMatcher = java.util.regex.Pattern.compile(
+                alternationPattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+        pcre4jMatcher = Pattern.compile(
+                api,
+                alternationPattern,
+                Pattern.CANON_EQ
+        ).matcher(decomposedInput);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqMultipleCombiningMarks(IPcre2 api) {
+        // Test with multiple combining marks
+        // ế (U+1EBF) = e with circumflex and acute
+        var precomposed = "\u1EBF";
+        var decomposed = "e\u0302\u0301";  // e + combining circumflex + combining acute
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                precomposed,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(decomposed);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                precomposed,
+                Pattern.CANON_EQ
+        ).matcher(decomposed);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithRegion(IPcre2 api) {
+        // Test CANON_EQ with region (non-zero regionStart)
+        var pattern = "caf\u00E9";  // café with precomposed é
+        var input = "XXXcafe\u0301YYY";  // café with decomposed é surrounded by other chars
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        javaMatcher.region(3, 8);  // Region covers "café" (decomposed)
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+        pcre4jMatcher.region(3, 8);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithRegionFind(IPcre2 api) {
+        // Test CANON_EQ with region using find()
+        var pattern = "\u00E9";  // é precomposed
+        var input = "ae\u0301b\u00E9c";  // a + é(decomposed) + b + é(precomposed) + c
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        javaMatcher.region(0, 3);  // Region covers "aé" (decomposed)
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+        pcre4jMatcher.region(0, 3);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+        assertTrue(pcre4jMatcher.hasMatch());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithTransparentBounds(IPcre2 api) {
+        // Test CANON_EQ with transparent bounds
+        var pattern = "(?<=a)e\u0301";  // lookbehind for 'a' + decomposed é
+        var input = "ae\u0301b";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        javaMatcher.region(1, 3);
+        javaMatcher.useTransparentBounds(true);
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+        pcre4jMatcher.region(1, 3);
+        pcre4jMatcher.useTransparentBounds(true);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqResetWithNewInput(IPcre2 api) {
+        // Test that reset(CharSequence) properly reinitializes CANON_EQ support
+        var pattern = "\u00E9";  // é precomposed
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher("test");
+
+        // Reset with decomposed input
+        pcre4jMatcher.reset("e\u0301");
+        assertTrue(pcre4jMatcher.matches());
+
+        // Reset with precomposed input
+        pcre4jMatcher.reset("\u00E9");
+        assertTrue(pcre4jMatcher.matches());
+
+        // Reset with non-matching input
+        pcre4jMatcher.reset("a");
+        assertFalse(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqMultipleFinds(IPcre2 api) {
+        // Test multiple find() calls with CANON_EQ
+        var pattern = "\u00E9";  // é
+        // Three é characters: decomposed, precomposed, decomposed
+        var input = "e\u0301 \u00E9 e\u0301";
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        int javaCount = 0;
+        while (javaMatcher.find()) javaCount++;
+
+        int pcre4jCount = 0;
+        while (pcre4jMatcher.find()) pcre4jCount++;
+
+        assertEquals(javaCount, pcre4jCount);
+        assertEquals(3, pcre4jCount);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqLookingAt(IPcre2 api) {
+        // Test lookingAt() with CANON_EQ
+        var pattern = "caf\u00E9";  // café
+        var input = "cafe\u0301 is good";  // café (decomposed) + rest
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
+        assertTrue(pcre4jMatcher.lookingAt());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqAtEndOfString(IPcre2 api) {
+        // Test CANON_EQ when match is at end of string
+        var pattern = "\u00E9$";  // é at end
+        var input = "cafe\u0301";  // café with decomposed é at end
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        assertEquals(javaMatcher.find(), pcre4jMatcher.find());
+        assertTrue(pcre4jMatcher.hasMatch());
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqToMatchResult(IPcre2 api) {
+        // Test toMatchResult() preserves correct indices with CANON_EQ
+        var pattern = "caf\u00E9";
+        var input = "I love cafe\u0301!";
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        assertTrue(pcre4jMatcher.find());
+        var result = pcre4jMatcher.toMatchResult();
+
+        assertEquals(pcre4jMatcher.start(), result.start());
+        assertEquals(pcre4jMatcher.end(), result.end());
+        assertEquals(pcre4jMatcher.group(), result.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqAppendReplacement(IPcre2 api) {
+        // Test appendReplacement with CANON_EQ
+        var pattern = "\u00E9";  // é
+        var input = "cafe\u0301 caf\u00E9";  // two cafés
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        var sb = new StringBuilder();
+        while (pcre4jMatcher.find()) {
+            pcre4jMatcher.appendReplacement(sb, "E");
+        }
+        pcre4jMatcher.appendTail(sb);
+
+        assertEquals("cafE cafE", sb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqWithSurrogatePairs(IPcre2 api) {
+        // Test CANON_EQ with surrogate pairs (characters outside BMP)
+        // 𝄞 (U+1D11E, Musical Symbol G Clef) - doesn't decompose but tests surrogate handling
+        var pattern = "test\uD834\uDD1Eend";  // test + G clef + end
+        var input = "test\uD834\uDD1Eend";
+
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        assertTrue(pcre4jMatcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void canonEqMixedSurrogatesAndCombining(IPcre2 api) {
+        // Test with both surrogate pairs and combining characters
+        var pattern = "\uD834\uDD1E\u00E9";  // G clef + é (precomposed)
+        var input = "\uD834\uDD1Ee\u0301";   // G clef + é (decomposed)
+
+        var javaMatcher = java.util.regex.Pattern.compile(
+                pattern,
+                java.util.regex.Pattern.CANON_EQ
+        ).matcher(input);
+        var pcre4jMatcher = Pattern.compile(
+                api,
+                pattern,
+                Pattern.CANON_EQ
+        ).matcher(input);
+
+        assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+    }
+
 }
