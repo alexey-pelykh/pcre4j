@@ -97,6 +97,20 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private boolean anchoringBounds = true;
 
+    /**
+     * Whether the boundaries of this matcher's region are transparent.
+     * When true, lookahead and lookbehind can see beyond region boundaries.
+     * When false (default), lookaround cannot see outside the region.
+     */
+    private boolean transparentBounds = false;
+
+    /**
+     * Lazily compiled code for anchoring bounds mode that transforms the pattern
+     * to use \G instead of ^ and removes $ for post-hoc verification.
+     * This is needed because PCRE2's ^ always matches at position 0, not at startOffset.
+     */
+    private Pcre2Code anchoringBoundsCode = null;
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
@@ -492,7 +506,19 @@ public class Matcher implements java.util.regex.MatchResult {
         return lastMatchData != null;
     }
 
-    // TODO: hasTransparentBounds()
+    /**
+     * Queries the transparency of region bounds for this matcher.
+     * <p>
+     * This method returns {@code true} if this matcher uses <i>transparent</i> bounds, {@code false} otherwise.
+     * <p>
+     * By default, a matcher uses opaque region boundaries.
+     *
+     * @return {@code true} if this matcher is using transparent bounds, {@code false} otherwise
+     * @see #useTransparentBounds(boolean)
+     */
+    public boolean hasTransparentBounds() {
+        return transparentBounds;
+    }
 
     // TODO: hitEnd()
 
@@ -545,12 +571,21 @@ public class Matcher implements java.util.regex.MatchResult {
     public boolean matches() {
         final Pcre2Code matchingCode;
         final EnumSet<Pcre2MatchOption> matchOptions;
-        if (pattern.matchingCode != null) {
+        if (pattern.matchingCode != null && !transparentBounds) {
+            // Use the pre-compiled JIT code with ANCHORED and ENDANCHORED baked in
+            // but only when transparent bounds is disabled, because ENDANCHORED
+            // would anchor to end of full input rather than regionEnd
             matchingCode = pattern.matchingCode;
             matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
         } else {
             matchingCode = pattern.code;
-            matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
+            // For transparent bounds, we can't use ENDANCHORED with full input because it would
+            // anchor to end of input, not regionEnd. We'll manually verify match end instead.
+            if (transparentBounds) {
+                matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED);
+            } else {
+                matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
+            }
         }
 
         // Apply anchoring bounds options
@@ -570,11 +605,44 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.matchingCode.api(), result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(
+                    pattern.matchingCode != null ? pattern.matchingCode.api() : pattern.code.api(), result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
         processMatchResult(matchData, regionSubject);
+
+        // For transparent bounds, manually verify the match covers exactly the region
+        if (transparentBounds) {
+            if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                // Match doesn't span exactly the region, try with constrained subject
+                final var constrainedSubject = getConstrainedRegionSubject(regionStart);
+                final var constrainedMatchData = new Pcre2MatchData(matchingCode);
+                // Use ENDANCHORED for constrained subject since it ends at regionEnd
+                final var constrainedOptions = EnumSet.copyOf(matchOptions);
+                constrainedOptions.add(Pcre2MatchOption.ENDANCHORED);
+                final var constrainedResult = matchingCode.match(
+                        constrainedSubject.subject(),
+                        constrainedSubject.startOffset(),
+                        constrainedOptions,
+                        constrainedMatchData,
+                        matchContext
+                );
+                if (constrainedResult < 1) {
+                    lastMatchData = null;
+                    lastMatchIndices = null;
+                    return false;
+                }
+                processMatchResult(constrainedMatchData, constrainedSubject);
+                // Verify constrained match spans the region
+                if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                    lastMatchData = null;
+                    lastMatchIndices = null;
+                    return false;
+                }
+            }
+        }
+
         return true;
     }
 
@@ -938,40 +1006,172 @@ public class Matcher implements java.util.regex.MatchResult {
         }
         this.groupNameToIndex = newPattern.namedGroups();
 
+        // Clear cached transformed pattern since the pattern changed
+        this.anchoringBoundsCode = null;
+
         reset();
 
         return this;
     }
 
-    // TODO: useTransparentBounds(boolean b)
+    /**
+     * Sets the transparency of region bounds for this matcher.
+     * <p>
+     * Invoking this method with an argument of {@code true} will set this matcher to use <i>transparent</i> bounds.
+     * If the boolean argument is {@code false}, then <i>opaque</i> bounds will be used.
+     * <p>
+     * Using transparent bounds, the boundaries of this matcher's region are transparent to lookahead, lookbehind,
+     * and boundary matching constructs. Those constructs can see beyond the boundaries of the region to see if a
+     * match is appropriate.
+     * <p>
+     * Using opaque bounds, the boundaries of this matcher's region are opaque to lookahead, lookbehind, and
+     * boundary matching constructs that may try to see beyond them. Those constructs cannot look past the boundaries
+     * so they will fail to match anything outside of the region.
+     * <p>
+     * By default, a matcher uses opaque bounds.
+     *
+     * @param b a boolean indicating whether to use opaque or transparent regions
+     * @return this matcher
+     * @see #hasTransparentBounds()
+     */
+    public Matcher useTransparentBounds(boolean b) {
+        transparentBounds = b;
+        return this;
+    }
 
     /**
-     * Find next match of the pattern in the input starting from the specified index
+     * Find next match of the pattern in the input starting from the specified index.
+     * <p>
+     * <b>Algorithm Overview:</b>
+     * <ol>
+     *   <li><b>Transparent + Anchoring bounds path</b>: When both are enabled and searching from
+     *       regionStart, try a transformed pattern where ^ becomes \G (matches at startOffset)
+     *       and $ is removed (verified post-hoc). This handles the case where PCRE2's ^ would
+     *       match at position 0, not regionStart. If this path succeeds with match ending at
+     *       regionEnd, return success. Otherwise fall through to normal matching.</li>
+     *   <li><b>Normal matching</b>: Match using the original pattern against the region subject
+     *       (full input for transparent bounds, region substring for opaque bounds).</li>
+     *   <li><b>Region boundary enforcement</b>: For transparent bounds, if the match extends
+     *       beyond regionEnd, retry with a constrained subject (truncated at regionEnd) to find
+     *       a shorter valid match. If no valid match exists, advance searchStart and retry.</li>
+     * </ol>
      *
      * @param start the index to start searching from in the input
      * @return {@code true} if a match is found, otherwise {@code false}
      */
     private boolean search(int start) {
-        final var regionSubject = getRegionSubject(start);
-        final var matchData = new Pcre2MatchData(pattern.code);
-        final var result = pattern.code.match(
-                regionSubject.subject(),
-                regionSubject.startOffset(),
-                getMatchOptions(),
-                matchData,
-                matchContext
-        );
-        if (result < 1) {
-            if (result == IPcre2.ERROR_NOMATCH) {
-                return false;
+        int searchStart = start;
+        while (searchStart <= regionEnd) {
+            final var regionSubject = getRegionSubject(searchStart);
+            final var matchOptions = getMatchOptions();
+
+            // PATH 1: Transparent + Anchoring bounds special handling
+            //
+            // Problem: PCRE2's ^ always matches at position 0, but Java's ^ with anchoring bounds
+            // should match at regionStart. With transparent bounds we pass the full input, so ^
+            // would incorrectly match at position 0 instead of regionStart.
+            //
+            // Solution: Transform pattern (^ -> \G, remove $) and verify $ constraint post-hoc.
+            // \G matches at startOffset which is regionStart, achieving the correct behavior.
+            //
+            // Note: MULTILINE patterns are excluded because ^ should also match after newlines,
+            // which \G cannot replicate.
+            if (transparentBounds && anchoringBounds && searchStart == regionStart) {
+                final var abCode = getOrCreateAnchoringBoundsCode();
+                if (abCode != null) {
+                    // Use the transformed pattern (^ replaced with \G, $ removed)
+                    final var matchData = new Pcre2MatchData(abCode);
+                    final var result = abCode.match(
+                            input,
+                            searchStart,
+                            matchOptions,
+                            matchData,
+                            matchContext
+                    );
+                    if (result >= 1) {
+                        // Process to get match indices
+                        processMatchResult(matchData, new RegionSubject(input, searchStart, 0));
+
+                        // Check if the original pattern contained $ anchor (outside character classes)
+                        // If so, we must verify the match ends at regionEnd (simulates $ at regionEnd)
+                        final boolean originalHadDollar = patternContainsDollarAnchor(pattern.pattern());
+                        if (!originalHadDollar) {
+                            // No $ in original pattern - the match is valid as long as it ends within region
+                            if (lastMatchIndices[1] <= regionEnd) {
+                                return true;
+                            }
+                        } else {
+                            // Original had $ which was removed, so verify match ends at regionEnd
+                            if (lastMatchIndices[1] == regionEnd) {
+                                return true;
+                            }
+                        }
+
+                        // Match doesn't satisfy anchor constraints. Reset and fall through to
+                        // normal matching which may find a match without anchor constraints.
+                        lastMatchData = null;
+                        lastMatchIndices = null;
+                    }
+                    // If no match with transformed pattern, fall through to normal matching.
+                    // This allows patterns without ^ to still find matches.
+                }
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
-            throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
-        }
+            // PATH 2: Normal matching with original pattern
+            final var matchData = new Pcre2MatchData(pattern.code);
+            final var result = pattern.code.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    matchOptions,
+                    matchData,
+                    matchContext
+            );
+            if (result < 1) {
+                if (result == IPcre2.ERROR_NOMATCH) {
+                    return false;
+                }
 
-        processMatchResult(matchData, regionSubject);
-        return true;
+                final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+                throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
+            }
+
+            processMatchResult(matchData, regionSubject);
+
+            // PATH 3: Region boundary enforcement for transparent bounds
+            //
+            // When transparent bounds are enabled, the full input is passed to PCRE2,
+            // so we need to verify the match doesn't extend beyond regionEnd.
+            if (transparentBounds && lastMatchIndices[1] > regionEnd) {
+                // Match extends beyond region end. Try matching with constrained subject
+                // to see if there's a valid shorter match (e.g., for greedy quantifiers).
+                // This preserves lookbehind (which sees before regionStart) while constraining
+                // the actual match to end within the region.
+                final var constrainedSubject = getConstrainedRegionSubject(searchStart);
+                final var constrainedMatchData = new Pcre2MatchData(pattern.code);
+                final var constrainedResult = pattern.code.match(
+                        constrainedSubject.subject(),
+                        constrainedSubject.startOffset(),
+                        matchOptions,
+                        constrainedMatchData,
+                        matchContext
+                );
+
+                if (constrainedResult >= 1) {
+                    // Found a valid match within the constrained region
+                    processMatchResult(constrainedMatchData, constrainedSubject);
+                    return true;
+                }
+
+                // No valid match at this position, try next position
+                lastMatchData = null;
+                lastMatchIndices = null;
+                searchStart = searchStart + 1;
+                continue;
+            }
+
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -1009,27 +1209,246 @@ public class Matcher implements java.util.regex.MatchResult {
     /**
      * Creates a RegionSubject for matching, handling region boundaries.
      * <p>
-     * Always uses only the region substring so that \b (word boundary) doesn't see outside the region.
-     * This matches Java's default behavior where transparent bounds are disabled.
+     * When transparent bounds are enabled, the full input string is passed to PCRE2 so that
+     * lookahead and lookbehind can see beyond the region. Matches are validated after matching
+     * to ensure they don't extend beyond the region end.
+     * <p>
+     * When transparent bounds are disabled (opaque, the default), only the region substring is
+     * passed so that lookbehind and word boundaries (\b) cannot see outside the region.
      * The difference between anchoring enabled/disabled is handled by NOTBOL/NOTEOL flags.
      *
      * @param matchStartInInput the start position for matching in input coordinates
      * @return the RegionSubject containing the subject string and coordinate mapping
      */
     private RegionSubject getRegionSubject(int matchStartInInput) {
-        if (regionStart > 0) {
+        if (transparentBounds) {
+            // Transparent bounds: pass the full input string so that lookahead can see beyond
+            // regionEnd and lookbehind can see before regionStart
             return new RegionSubject(
-                    input.substring(regionStart, regionEnd),
-                    matchStartInInput - regionStart,
-                    regionStart
-            );
-        } else {
-            return new RegionSubject(
-                    input.subSequence(0, regionEnd).toString(),
+                    input,
                     matchStartInInput,
                     0
             );
+        } else {
+            // Opaque bounds (default): pass only the region substring
+            if (regionStart > 0) {
+                return new RegionSubject(
+                        input.substring(regionStart, regionEnd),
+                        matchStartInInput - regionStart,
+                        regionStart
+                );
+            } else {
+                return new RegionSubject(
+                        input.substring(0, regionEnd),
+                        matchStartInInput,
+                        0
+                );
+            }
         }
+    }
+
+    /**
+     * Get a constrained region subject for transparent bounds matching when the initial match
+     * extends beyond regionEnd. This allows lookbehind to see before regionStart while
+     * constraining the actual match to end at or before regionEnd.
+     *
+     * @param matchStartInInput the starting position for matching in input coordinates
+     * @return the constrained region subject
+     */
+    private RegionSubject getConstrainedRegionSubject(int matchStartInInput) {
+        // Pass substring from 0 to regionEnd, preserving lookbehind context
+        // while constraining the match end position
+        return new RegionSubject(
+                input.substring(0, regionEnd),
+                matchStartInInput,
+                0
+        );
+    }
+
+    /**
+     * Gets or creates a compiled pattern variant for anchoring bounds mode.
+     * <p>
+     * This transforms the pattern to handle Java's anchoring bounds semantics:
+     * <ul>
+     *   <li>{@code ^} is replaced with {@code \G} (matches at startOffset, not position 0)</li>
+     *   <li>{@code $} is removed (match end position is verified post-hoc)</li>
+     * </ul>
+     * <p>
+     * This is necessary because PCRE2's {@code ^} always matches at position 0 of the subject,
+     * while Java's {@code ^} with anchoring bounds matches at regionStart.
+     *
+     * @return the compiled anchoring bounds code, or null if transformation is not needed
+     */
+    private Pcre2Code getOrCreateAnchoringBoundsCode() {
+        if (anchoringBoundsCode != null) {
+            return anchoringBoundsCode;
+        }
+
+        // In MULTILINE mode, ^ matches at line boundaries (after newlines), not just at start.
+        // The \G transformation only matches at startOffset, which breaks multiline semantics.
+        // Skip transformation for MULTILINE patterns and fall back to normal matching.
+        if ((pattern.flags() & Pattern.MULTILINE) != 0) {
+            return null;
+        }
+
+        final var originalPattern = pattern.pattern();
+        final var transformed = transformPatternForAnchoringBounds(originalPattern);
+
+        // If no transformation needed, return null to indicate using the original pattern
+        if (transformed.equals(originalPattern)) {
+            return null;
+        }
+
+        // Compile the transformed pattern
+        try {
+            final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
+            // Copy relevant flags from the original pattern
+            final int flags = pattern.flags();
+            if ((flags & Pattern.CASE_INSENSITIVE) != 0) {
+                compileOptions.add(Pcre2CompileOption.CASELESS);
+            }
+            if ((flags & Pattern.DOTALL) != 0) {
+                compileOptions.add(Pcre2CompileOption.DOTALL);
+            }
+            if ((flags & Pattern.LITERAL) != 0) {
+                compileOptions.add(Pcre2CompileOption.LITERAL);
+            }
+            // Note: MULTILINE patterns return early (line 1281), so this flag is never set here.
+            // The check is kept for completeness in case the early return logic changes.
+            if ((flags & Pattern.UNICODE_CHARACTER_CLASS) != 0) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
+            if ((flags & Pattern.COMMENTS) != 0) {
+                compileOptions.add(Pcre2CompileOption.EXTENDED);
+            }
+
+            final var compileContext = new Pcre2CompileContext(pattern.code.api(), null);
+            if ((flags & Pattern.UNIX_LINES) != 0) {
+                compileContext.setNewline(Pcre2Newline.LF);
+            } else {
+                compileContext.setNewline(Pcre2Newline.ANY);
+            }
+
+            anchoringBoundsCode = new Pcre2Code(
+                    pattern.code.api(),
+                    transformed,
+                    compileOptions,
+                    compileContext
+            );
+            return anchoringBoundsCode;
+        } catch (Pcre2CompileError e) {
+            // If transformation produces invalid pattern, fall back to original
+            return null;
+        }
+    }
+
+    /**
+     * Transforms a regex pattern for anchoring bounds mode.
+     * <p>
+     * Replaces {@code ^} with {@code \G} and removes {@code $} (outside character classes).
+     * The {@code \G} assertion matches at startOffset (where matching begins), which is
+     * what Java's {@code ^} does with anchoring bounds enabled. The {@code $} removal
+     * is compensated by post-hoc verification that the match ends at regionEnd.
+     * <p>
+     * Handles POSIX character classes like {@code [[:alpha:]]} correctly by tracking
+     * nested bracket depth.
+     *
+     * @param pattern the original pattern
+     * @return the transformed pattern
+     */
+    private static String transformPatternForAnchoringBounds(String pattern) {
+        final var sb = new StringBuilder(pattern.length() + 10);
+        int charClassDepth = 0;  // Track nested character class depth for POSIX classes
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                sb.append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                sb.append(c);
+                escaped = true;
+                continue;
+            }
+
+            // Handle POSIX character classes like [[:alpha:]] - they contain nested brackets
+            // Also handles regular character classes
+            if (c == '[') {
+                charClassDepth++;
+                sb.append(c);
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                sb.append(c);
+                continue;
+            }
+
+            if (charClassDepth == 0) {
+                if (c == '^') {
+                    // Replace ^ with \G (matches at startOffset)
+                    sb.append("\\G");
+                    continue;
+                }
+                if (c == '$') {
+                    // Remove $ (will verify match end position post-hoc)
+                    continue;
+                }
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Checks if a regex pattern contains a $ anchor outside of character classes.
+     * This is used to determine if the match end position must be verified post-hoc
+     * when using the transformed pattern for anchoring bounds.
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern contains a $ anchor outside character classes
+     */
+    private static boolean patternContainsDollarAnchor(String pattern) {
+        int charClassDepth = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+
+            if (charClassDepth == 0 && c == '$') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
