@@ -197,7 +197,9 @@ the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/22
 to invoke the `pcre2` shared library. For this backend to work, the `pcre2` shared library must be installed on the
 system and be visible via `java.library.path`.
 
-Note that Java 22 or later is required for the FFM backend as the Foreign Function & Memory API was finalized in Java 22.
+The `ffm` module is packaged as a Multi-Release JAR supporting both:
+- **Java 21**: Requires `--enable-preview` flag (FFM was a preview feature)
+- **Java 22+**: No special flags required (FFM is finalized)
 
 ## Javadoc
 

@@ -38,16 +38,6 @@ configurations {
     implementation {
         resolutionStrategy.failOnVersionConflict()
     }
-    testCompileClasspath {
-        attributes {
-            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 22)
-        }
-    }
-    testRuntimeClasspath {
-        attributes {
-            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 22)
-        }
-    }
 }
 
 sourceSets {
@@ -61,7 +51,7 @@ java {
     targetCompatibility = JavaVersion.VERSION_21
 
     toolchain {
-        languageVersion = JavaLanguageVersion.of(22)
+        languageVersion = JavaLanguageVersion.of(21)
     }
 
     withSourcesJar()
@@ -70,6 +60,7 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    jvmArgs("--enable-preview")
 
     systemProperty(
         "jna.library.path", listOf(
@@ -96,6 +87,10 @@ tasks.test {
     }
 
     finalizedBy(tasks.jacocoTestReport)
+}
+
+tasks.named<JavaCompile>("compileTestJava") {
+    options.compilerArgs.add("--enable-preview")
 }
 
 tasks.jacocoTestReport {
