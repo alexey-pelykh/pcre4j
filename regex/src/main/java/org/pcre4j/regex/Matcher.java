@@ -1369,6 +1369,8 @@ public class Matcher implements java.util.regex.MatchResult {
             if ((flags & Pattern.UNICODE_CHARACTER_CLASS) != 0) {
                 compileOptions.add(Pcre2CompileOption.UCP);
             }
+            // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
+            // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
             if ((flags & Pattern.COMMENTS) != 0) {
                 compileOptions.add(Pcre2CompileOption.EXTENDED);
             }
