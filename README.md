@@ -173,7 +173,7 @@ public class Usage {
             );
         }
 
-        api.codeFree(code);
+        pcre2.codeFree(code);
     }
 }
 ```
