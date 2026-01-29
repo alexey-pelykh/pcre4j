@@ -193,12 +193,13 @@ shared library. For this backend to work, the `pcre2` shared library must be ins
 ### `ffm`
 
 The `ffm` backend uses
-the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/21/core/foreign-function-and-memory-api.html)
+the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html)
 to invoke the `pcre2` shared library. For this backend to work, the `pcre2` shared library must be installed on the
 system and be visible via `java.library.path`.
 
-Note that `--enable-preview` must be passed to the Java compiler to enable the preview features for this backend to be
-used.
+The `ffm` module is packaged as a Multi-Release JAR supporting both:
+- **Java 21**: Requires `--enable-preview` flag (FFM was a preview feature)
+- **Java 22+**: No special flags required (FFM is finalized)
 
 ## Javadoc
 
