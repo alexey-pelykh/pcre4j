@@ -3218,4 +3218,455 @@ public class MatcherTests {
         assertTrue(javaResult);
     }
 
+    // hitEnd() and requireEnd() tests
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndBeforeMatchOperation(IPcre2 api) {
+        // Before any match operation, hitEnd should return false
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testing");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("testing");
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndBeforeMatchOperation(IPcre2 api) {
+        // Before any match operation, requireEnd should return false
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testing");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("testing");
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertFalse(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndAfterPartialMatch(IPcre2 api) {
+        // Pattern "AAB" against input "AA" - no full match, but partial match exists
+        var javaMatcher = java.util.regex.Pattern.compile("AAB").matcher("AA");
+        var pcre4jMatcher = Pattern.compile(api, "AAB").matcher("AA");
+
+        assertFalse(javaMatcher.matches());
+        assertFalse(pcre4jMatcher.matches());
+
+        // hitEnd should be true because more input could lead to a match
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertTrue(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndAfterSuccessfulMatchAtEnd(IPcre2 api) {
+        // Pattern "test" matches exactly at end of input - hitEnd is false in Java
+        // because the literal pattern matched completely
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndAfterSuccessfulMatchNotAtEnd(IPcre2 api) {
+        // Pattern matches but not at the end - hitEnd should be false
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test123");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("test123");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithNoMatchNoPartial(IPcre2 api) {
+        // Pattern cannot possibly match - hitEnd is still true in Java because
+        // the search engine had to examine the entire input to determine no match
+        var javaMatcher = java.util.regex.Pattern.compile("xyz").matcher("abc");
+        var pcre4jMatcher = Pattern.compile(api, "xyz").matcher("abc");
+
+        assertFalse(javaMatcher.find());
+        assertFalse(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertTrue(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithDollarAnchor(IPcre2 api) {
+        // Pattern with $ anchor matching at end - requireEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test$").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertTrue(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithoutAnchor(IPcre2 api) {
+        // Pattern without end anchor - requireEnd should be false even if match at end
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertFalse(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithBackslashZ(IPcre2 api) {
+        // Pattern with \z anchor (absolute end) - requireEnd is FALSE in Java
+        // because \z only matches at the absolute end, so more input cannot
+        // invalidate the match (it would just not match the \z anymore)
+        var javaMatcher = java.util.regex.Pattern.compile("test\\z").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test\\z").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertFalse(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithBackslashZUppercase(IPcre2 api) {
+        // Pattern with \Z anchor (end before final newline) - requireEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("test\\Z").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test\\Z").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertTrue(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithLookingAt(IPcre2 api) {
+        // Test hitEnd with lookingAt
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("test");
+
+        assertTrue(javaMatcher.lookingAt());
+        assertTrue(pcre4jMatcher.lookingAt());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithMatches(IPcre2 api) {
+        // Test hitEnd with matches
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("test");
+
+        assertTrue(javaMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndPersistsAfterReset(IPcre2 api) {
+        // In Java, hitEnd persists after reset() - it is NOT cleared
+        var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test$").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        // Verify hitEnd is true after the match (pattern has $ anchor)
+        assertTrue(javaMatcher.hitEnd());
+        assertTrue(pcre4jMatcher.hitEnd());
+
+        javaMatcher.reset();
+        pcre4jMatcher.reset();
+
+        // hitEnd persists after reset
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertTrue(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndPersistsAfterReset(IPcre2 api) {
+        // In Java, requireEnd persists after reset() - it is NOT cleared
+        var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test$").matcher("test");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        // Verify requireEnd is true after the match (pattern has $ anchor)
+        assertTrue(javaMatcher.requireEnd());
+        assertTrue(pcre4jMatcher.requireEnd());
+
+        javaMatcher.reset();
+        pcre4jMatcher.reset();
+
+        // requireEnd persists after reset
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertTrue(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithGreedyQuantifier(IPcre2 api) {
+        // Greedy quantifier at end - hitEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
+        var pcre4jMatcher = Pattern.compile(api, "a+").matcher("aaa");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithCharacterClass(IPcre2 api) {
+        // Character class at end - hitEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("[a-z]+").matcher("abc");
+        var pcre4jMatcher = Pattern.compile(api, "[a-z]+").matcher("abc");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithDot(IPcre2 api) {
+        // Dot at end can match more - hitEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("a.").matcher("ab");
+        var pcre4jMatcher = Pattern.compile(api, "a.").matcher("ab");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndAndRequireEndWithDollarNoMatch(IPcre2 api) {
+        // Pattern ends with $ but doesn't match - requireEnd meaningless, hitEnd indicates partial
+        var javaMatcher = java.util.regex.Pattern.compile("xyz$").matcher("abc");
+        var pcre4jMatcher = Pattern.compile(api, "xyz$").matcher("abc");
+
+        assertFalse(javaMatcher.find());
+        assertFalse(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithRegion(IPcre2 api) {
+        // Test hitEnd with region
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("XXtestXX");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("XXtestXX");
+
+        javaMatcher.region(2, 6);
+        pcre4jMatcher.region(2, 6);
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithDollarInCharacterClass(IPcre2 api) {
+        // $ inside character class is literal, not anchor - requireEnd should be false
+        var javaMatcher = java.util.regex.Pattern.compile("[$]").matcher("$");
+        var pcre4jMatcher = Pattern.compile(api, "[$]").matcher("$");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertFalse(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndAfterMultipleFinds(IPcre2 api) {
+        // Multiple finds - hitEnd should reflect the last find
+        var javaMatcher = java.util.regex.Pattern.compile("a").matcher("aXa");
+        var pcre4jMatcher = Pattern.compile(api, "a").matcher("aXa");
+
+        // First find - not at end
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+
+        // Second find - at end
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+
+        // Third find - no match
+        assertFalse(javaMatcher.find());
+        assertFalse(pcre4jMatcher.find());
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithCharacterClassNoQuantifier(IPcre2 api) {
+        // Character class without quantifier at end - matches exactly one char, hitEnd should be false
+        var javaMatcher = java.util.regex.Pattern.compile("[a-z]").matcher("a");
+        var pcre4jMatcher = Pattern.compile(api, "[a-z]").matcher("a");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithWordEscape(IPcre2 api) {
+        // \w at end without quantifier - matches exactly one char
+        var javaMatcher = java.util.regex.Pattern.compile("\\w").matcher("a");
+        var pcre4jMatcher = Pattern.compile(api, "\\w").matcher("a");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithDigitEscape(IPcre2 api) {
+        // \d at end without quantifier
+        var javaMatcher = java.util.regex.Pattern.compile("\\d").matcher("5");
+        var pcre4jMatcher = Pattern.compile(api, "\\d").matcher("5");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithSpaceEscape(IPcre2 api) {
+        // \s at end without quantifier
+        var javaMatcher = java.util.regex.Pattern.compile("\\s").matcher(" ");
+        var pcre4jMatcher = Pattern.compile(api, "\\s").matcher(" ");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithLookingAtQuantifier(IPcre2 api) {
+        // lookingAt with quantifier at end
+        var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
+        var pcre4jMatcher = Pattern.compile(api, "a+").matcher("aaa");
+
+        assertTrue(javaMatcher.lookingAt());
+        assertTrue(pcre4jMatcher.lookingAt());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithMatchesQuantifier(IPcre2 api) {
+        // matches with quantifier
+        var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
+        var pcre4jMatcher = Pattern.compile(api, "a+").matcher("aaa");
+
+        assertTrue(javaMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithMatchesDollar(IPcre2 api) {
+        // matches() with $ - requireEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test$").matcher("test");
+
+        assertTrue(javaMatcher.matches());
+        assertTrue(pcre4jMatcher.matches());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+        assertTrue(pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithLookingAtDollar(IPcre2 api) {
+        // lookingAt() with $ - requireEnd should be true when matched at end
+        var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
+        var pcre4jMatcher = Pattern.compile(api, "test$").matcher("test");
+
+        assertTrue(javaMatcher.lookingAt());
+        assertTrue(pcre4jMatcher.lookingAt());
+
+        assertEquals(javaMatcher.requireEnd(), pcre4jMatcher.requireEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void requireEndWithBraceQuantifier(IPcre2 api) {
+        // Pattern with {n,} quantifier - hitEnd should be true
+        var javaMatcher = java.util.regex.Pattern.compile("a{2,}").matcher("aaa");
+        var pcre4jMatcher = Pattern.compile(api, "a{2,}").matcher("aaa");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void hitEndWithMatchNotAtEnd(IPcre2 api) {
+        // Match found but not at end of input - hitEnd should be false
+        var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testXYZ");
+        var pcre4jMatcher = Pattern.compile(api, "test").matcher("testXYZ");
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        assertEquals(javaMatcher.hitEnd(), pcre4jMatcher.hitEnd());
+        assertFalse(pcre4jMatcher.hitEnd());
+    }
+
 }

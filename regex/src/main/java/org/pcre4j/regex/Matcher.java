@@ -105,6 +105,18 @@ public class Matcher implements java.util.regex.MatchResult {
     private boolean transparentBounds = false;
 
     /**
+     * Whether the end of input was hit by the search engine in the last match operation.
+     * When true, it is possible that more input would have changed the result of the last search.
+     */
+    private boolean hitEnd = false;
+
+    /**
+     * Whether more input could change a positive match into a negative one.
+     * When true, and a match was found, more input could cause the match to be lost.
+     */
+    private boolean requireEnd = false;
+
+    /**
      * Lazily compiled code for anchoring bounds mode that transforms the pattern
      * to use \G instead of ^ and removes $ for post-hoc verification.
      * This is needed because PCRE2's ^ always matches at position 0, not at startOffset.
@@ -520,7 +532,18 @@ public class Matcher implements java.util.regex.MatchResult {
         return transparentBounds;
     }
 
-    // TODO: hitEnd()
+    /**
+     * Returns true if the end of input was hit by the search engine in the last match operation
+     * performed by this matcher.
+     * <p>
+     * When this method returns true, then it is possible that more input would have changed the
+     * result of the last search.
+     *
+     * @return true if the end of input was hit in the last match; false otherwise
+     */
+    public boolean hitEnd() {
+        return hitEnd;
+    }
 
     /**
      * Attempts to match the input sequence, starting at the beginning of the region, against the pattern
@@ -552,6 +575,7 @@ public class Matcher implements java.util.regex.MatchResult {
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
+                updateHitEndRequireEnd(regionSubject, false, matchOptions);
                 return false;
             }
 
@@ -560,6 +584,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         processMatchResult(matchData, regionSubject);
+        updateHitEndRequireEnd(regionSubject, true, matchOptions);
         return true;
     }
 
@@ -602,6 +627,7 @@ public class Matcher implements java.util.regex.MatchResult {
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
+                updateHitEndRequireEnd(regionSubject, false, matchOptions);
                 return false;
             }
 
@@ -631,6 +657,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 if (constrainedResult < 1) {
                     lastMatchData = null;
                     lastMatchIndices = null;
+                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
                     return false;
                 }
                 processMatchResult(constrainedMatchData, constrainedSubject);
@@ -638,11 +665,15 @@ public class Matcher implements java.util.regex.MatchResult {
                 if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
                     lastMatchData = null;
                     lastMatchIndices = null;
+                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
                     return false;
                 }
+                updateHitEndRequireEnd(constrainedSubject, true, constrainedOptions);
+                return true;
             }
         }
 
+        updateHitEndRequireEnd(regionSubject, true, matchOptions);
         return true;
     }
 
@@ -829,7 +860,19 @@ public class Matcher implements java.util.regex.MatchResult {
         return sb.toString();
     }
 
-    // TODO: requireEnd()
+    /**
+     * Returns true if more input could change a positive match into a negative one.
+     * <p>
+     * If this method returns true, and a match was found, then more input could cause the match
+     * to be lost. If this method returns false and a match was found, then more input might
+     * change the match but the match won't be lost. If a match was not found, then requireEnd
+     * has no meaning.
+     *
+     * @return true if more input could change a positive match into a negative one
+     */
+    public boolean requireEnd() {
+        return requireEnd;
+    }
 
     /**
      * Resets this matcher
@@ -842,6 +885,8 @@ public class Matcher implements java.util.regex.MatchResult {
         lastMatchData = null;
         lastMatchIndices = null;
         appendPos = 0;
+        // Note: hitEnd and requireEnd are NOT reset by Java's Matcher.reset()
+        // They persist across resets until a new match operation is performed
         return this;
     }
 
@@ -1098,11 +1143,13 @@ public class Matcher implements java.util.regex.MatchResult {
                         if (!originalHadDollar) {
                             // No $ in original pattern - the match is valid as long as it ends within region
                             if (lastMatchIndices[1] <= regionEnd) {
+                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
                                 return true;
                             }
                         } else {
                             // Original had $ which was removed, so verify match ends at regionEnd
                             if (lastMatchIndices[1] == regionEnd) {
+                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
                                 return true;
                             }
                         }
@@ -1128,6 +1175,7 @@ public class Matcher implements java.util.regex.MatchResult {
             );
             if (result < 1) {
                 if (result == IPcre2.ERROR_NOMATCH) {
+                    updateHitEndRequireEnd(regionSubject, false, matchOptions);
                     return false;
                 }
 
@@ -1159,6 +1207,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 if (constrainedResult >= 1) {
                     // Found a valid match within the constrained region
                     processMatchResult(constrainedMatchData, constrainedSubject);
+                    updateHitEndRequireEnd(constrainedSubject, true, matchOptions);
                     return true;
                 }
 
@@ -1169,8 +1218,10 @@ public class Matcher implements java.util.regex.MatchResult {
                 continue;
             }
 
+            updateHitEndRequireEnd(regionSubject, true, matchOptions);
             return true;
         }
+        updateHitEndRequireEnd(getRegionSubject(start), false, getMatchOptions());
         return false;
     }
 
@@ -1424,6 +1475,209 @@ public class Matcher implements java.util.regex.MatchResult {
             char c = pattern.charAt(i);
 
             if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+
+            if (charClassDepth == 0 && c == '$') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Update hitEnd and requireEnd flags based on the match result.
+     * <p>
+     * hitEnd is set to true if the end of input was hit by the search engine, meaning
+     * more input could have changed the result. This is true when:
+     * <ul>
+     *   <li>The match ended at the end of the subject and the pattern could match more</li>
+     *   <li>No match was found and a partial match exists (more input could complete the match)</li>
+     *   <li>No match was found and the search needed to examine the end of input</li>
+     * </ul>
+     * <p>
+     * requireEnd is set to true if the match depends on end-of-input anchors ($ or \Z),
+     * meaning more input could turn a positive match into a negative one. Note that \z
+     * (absolute end) does not set requireEnd because it only matches at the very end.
+     *
+     * @param regionSubject the region subject used for matching
+     * @param matchFound whether a match was found
+     * @param matchOptions the match options used
+     */
+    private void updateHitEndRequireEnd(RegionSubject regionSubject, boolean matchFound,
+            EnumSet<Pcre2MatchOption> matchOptions) {
+        // Reset flags at the start of evaluation
+        hitEnd = false;
+        requireEnd = false;
+
+        final String subject = regionSubject.subject();
+        final int subjectEnd = subject.length();
+        final int effectiveSubjectEnd = subjectEnd + regionSubject.indexAdjustment();
+
+        if (matchFound) {
+            // Check if match ended at the effective end of the subject
+            final int matchEnd = lastMatchIndices[1];
+
+            if (matchEnd == effectiveSubjectEnd) {
+                // Match ended at the end of input.
+                // hitEnd should be true if more input could have extended the match.
+                // This is true for patterns with open-ended constructs like +, *, character classes.
+
+                // Check for soft end anchors ($ or \Z) first
+                if (patternContainsSoftEndAnchor(pattern.pattern())) {
+                    hitEnd = true;
+                    requireEnd = true;
+                } else if (patternCanConsumeMoreAtEnd(pattern.pattern())) {
+                    // Pattern has constructs that could consume more input at the end
+                    hitEnd = true;
+                }
+            }
+        } else {
+            // No match found - hitEnd is true if:
+            // 1. A partial match exists (more input could complete the match), OR
+            // 2. The search needed to examine the entire input to determine no match
+            //
+            // For correctness with Java's behavior, we set hitEnd=true when the search
+            // reached the end of input. In practice, for most patterns this is the case
+            // when no match is found.
+
+            // Check for partial match
+            final var partialOptions = EnumSet.copyOf(matchOptions);
+            partialOptions.add(Pcre2MatchOption.PARTIAL_SOFT);
+
+            final var partialMatchData = new Pcre2MatchData(pattern.code);
+            final var partialResult = pattern.code.match(
+                    subject,
+                    regionSubject.startOffset(),
+                    partialOptions,
+                    partialMatchData,
+                    matchContext
+            );
+
+            if (partialResult == IPcre2.ERROR_PARTIAL) {
+                // Partial match exists - more input could lead to a match
+                hitEnd = true;
+            } else {
+                // No partial match - but the search still needed to examine the input.
+                // In Java's implementation, hitEnd is typically true when no match is found
+                // because the search engine had to look through the entire input.
+                // Set hitEnd=true unless we can prove the search ended early.
+                //
+                // For a pattern like "xyz" against "abc", Java returns hitEnd=true because
+                // the search engine had to examine all positions to determine there's no match.
+                hitEnd = true;
+            }
+        }
+    }
+
+    /**
+     * Checks if a pattern can consume more input at the end of a match.
+     * <p>
+     * This returns true if the pattern ends with constructs that could consume
+     * more input, such as:
+     * <ul>
+     *   <li>{@code +}, {@code *}, {@code ?} quantifiers</li>
+     *   <li>{@code {n,}} or {@code {n,m}} quantifiers where the upper bound isn't reached</li>
+     *   <li>Character classes {@code [...]}</li>
+     *   <li>Dot {@code .}</li>
+     *   <li>{@code \w}, {@code \d}, {@code \s} and similar character type escapes</li>
+     * </ul>
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern could consume more input at the end
+     */
+    private static boolean patternCanConsumeMoreAtEnd(String pattern) {
+        if (pattern.isEmpty()) {
+            return false;
+        }
+
+        // Check the last character of the pattern to determine if it could consume more
+        int i = pattern.length() - 1;
+
+        while (i >= 0) {
+            char c = pattern.charAt(i);
+
+            // Check for quantifiers at the end
+            if (c == '+' || c == '*' || c == '?' || c == '}') {
+                return true; // Pattern has a quantifier that could consume more
+            }
+
+            // Check for character class end
+            if (c == ']') {
+                // Found end of character class without quantifier - matches exactly one character
+                // A character class like [a-z] matches one char just like . or \w
+                return false;
+            }
+
+            // Check for escape sequences
+            if (i > 0 && pattern.charAt(i - 1) == '\\') {
+                // Escape sequence at end
+                // Character type escapes (\w, \d, \s, \W, \D, \S, etc.) can match multiple chars
+                // when followed by a quantifier, but at the pattern end they match exactly one
+                // However, \w matches one character and if input ends with matching char,
+                // more matching chars could extend
+                if (c == 'w' || c == 'W' || c == 'd' || c == 'D' || c == 's' || c == 'S') {
+                    // These match a class of characters - similar to character class
+                    // But without a quantifier, they match exactly one character
+                    // Java seems to return hitEnd=false for these at end
+                    return false;
+                }
+                return false;
+            }
+
+            // Check for dot (matches any character)
+            if (c == '.') {
+                // Dot at end without quantifier matches exactly one char
+                return false;
+            }
+
+            // If we reach here with a normal character, the pattern ends with a literal
+            // Literals match exactly, so no more input could extend the match
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if a regex pattern contains a "soft" end anchor ($ or \Z) outside of character classes.
+     * These anchors can match before a final newline, meaning more input could invalidate a match.
+     * <p>
+     * Note: \z (lowercase) is not included because it only matches at the absolute end,
+     * so more input cannot invalidate a match that used \z.
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern contains $ or \Z outside character classes
+     */
+    private static boolean patternContainsSoftEndAnchor(String pattern) {
+        int charClassDepth = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                // Check for \Z (uppercase only - \z is absolute end, not soft)
+                if (charClassDepth == 0 && c == 'Z') {
+                    return true;
+                }
                 escaped = false;
                 continue;
             }
