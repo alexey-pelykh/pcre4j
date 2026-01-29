@@ -46,24 +46,19 @@ sourceSets {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_22
+    targetCompatibility = JavaVersion.VERSION_22
 
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(22)
     }
 
     withSourcesJar()
     withJavadocJar()
 }
 
-tasks.withType<JavaCompile> {
-    options.compilerArgs.add("--enable-preview")
-}
-
 tasks.test {
     useJUnitPlatform()
-    jvmArgs("--enable-preview")
 
     systemProperty(
         "java.library.path", listOf(
@@ -101,8 +96,7 @@ tasks.named<Jar>("sourcesJar") {
 tasks.withType<Javadoc> {
     val javadocOptions = options as CoreJavadocOptions
 
-    javadocOptions.addStringOption("source", "21")
-    javadocOptions.addBooleanOption("-enable-preview", true)
+    javadocOptions.addStringOption("source", "22")
 }
 
 publishing {

@@ -200,7 +200,7 @@ public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
         // Read the converted pattern from native memory
         MemorySegment pConvertedPattern = MemorySegment.ofAddress(buffer[0])
                 .reinterpret(blength[0] + 1); // +1 for null terminator
-        String convertedPattern = pConvertedPattern.getUtf8String(0);
+        String convertedPattern = pConvertedPattern.getString(0);
 
         // Compile the converted pattern
         int[] errorcode = new int[1];

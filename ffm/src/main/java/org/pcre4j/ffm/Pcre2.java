@@ -807,7 +807,7 @@ public class Pcre2 implements IPcre2 {
         }
 
         try (var arena = Arena.ofConfined()) {
-            final var pWhere = arena.allocateArray(ValueLayout.JAVA_INT, 1);
+            final var pWhere = arena.allocate(ValueLayout.JAVA_INT);
 
             final var result = (int) pcre2_config.invokeExact(
                     what,
@@ -979,8 +979,8 @@ public class Pcre2 implements IPcre2 {
         try (var arena = Arena.ofConfined()) {
             final var pszPattern = allocateString(arena, pattern);
             final var patternSize = MemorySegment.ofAddress(getStringLength(pszPattern));
-            final var pErrorCode = arena.allocateArray(ValueLayout.JAVA_INT, 1);
-            final var pErrorOffset = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pErrorCode = arena.allocate(ValueLayout.JAVA_INT);
+            final var pErrorOffset = arena.allocate(ValueLayout.JAVA_LONG);
             final var pContext = MemorySegment.ofAddress(ccontext);
 
             final var pCode = (MemorySegment) pcre2_compile.invokeExact(
@@ -1111,7 +1111,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pWhere = arena.allocateArray(ValueLayout.JAVA_INT, 1);
+            final var pWhere = arena.allocate(ValueLayout.JAVA_INT);
 
             final var result = (int) pcre2_pattern_info.invokeExact(
                     pCode,
@@ -1138,7 +1138,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pWhere = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pWhere = arena.allocate(ValueLayout.JAVA_LONG);
 
             final var result = (int) pcre2_pattern_info.invokeExact(
                     pCode,
@@ -1162,7 +1162,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pCode = MemorySegment.ofAddress(code);
-            final var pWhere = arena.allocateArray(ValueLayout.ADDRESS, 1);
+            final var pWhere = arena.allocate(ValueLayout.ADDRESS);
 
             final var result = (int) pcre2_pattern_info.invokeExact(
                     pCode,
@@ -1554,7 +1554,7 @@ public class Pcre2 implements IPcre2 {
             final var startOffset = MemorySegment.ofAddress(startoffset);
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
-            final var pWorkspace = arena.allocateArray(ValueLayout.JAVA_INT, workspace);
+            final var pWorkspace = arena.allocateFrom(ValueLayout.JAVA_INT, workspace);
             final var wsCount = MemorySegment.ofAddress(wscount);
 
             return (int) pcre2_dfa_match.invokeExact(
@@ -1865,7 +1865,7 @@ public class Pcre2 implements IPcre2 {
             final var pszReplacement = allocateString(arena, replacement);
             final var replacementLength = MemorySegment.ofAddress(getStringLength(pszReplacement));
             final var pOutputBuffer = MemorySegment.ofBuffer(outputbuffer);
-            final var pOutputLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pOutputLength = arena.allocate(ValueLayout.JAVA_LONG);
             pOutputLength.set(ValueLayout.JAVA_LONG, 0, outputlength[0]);
 
             final var result = (int) pcre2_substitute.invokeExact(
@@ -1901,8 +1901,8 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
-            final var pBufferPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
-            final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pBufferPtr = arena.allocate(ValueLayout.ADDRESS);
+            final var pBuffLen = arena.allocate(ValueLayout.JAVA_LONG);
 
             final var result = (int) pcre2_substring_get_bynumber.invokeExact(
                     pMatchData,
@@ -1935,7 +1935,7 @@ public class Pcre2 implements IPcre2 {
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pBuffer = MemorySegment.ofBuffer(buffer);
-            final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pBuffLen = arena.allocate(ValueLayout.JAVA_LONG);
             pBuffLen.set(ValueLayout.JAVA_LONG, 0, bufflen[0]);
 
             final var result = (int) pcre2_substring_copy_bynumber.invokeExact(
@@ -1968,8 +1968,8 @@ public class Pcre2 implements IPcre2 {
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pszName = allocateString(arena, name);
-            final var pBufferPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
-            final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pBufferPtr = arena.allocate(ValueLayout.ADDRESS);
+            final var pBuffLen = arena.allocate(ValueLayout.JAVA_LONG);
 
             final var result = (int) pcre2_substring_get_byname.invokeExact(
                     pMatchData,
@@ -2006,7 +2006,7 @@ public class Pcre2 implements IPcre2 {
             final var pMatchData = MemorySegment.ofAddress(matchData);
             final var pszName = allocateString(arena, name);
             final var pBuffer = MemorySegment.ofBuffer(buffer);
-            final var pBuffLen = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pBuffLen = arena.allocate(ValueLayout.JAVA_LONG);
             pBuffLen.set(ValueLayout.JAVA_LONG, 0, bufflen[0]);
 
             final var result = (int) pcre2_substring_copy_byname.invokeExact(
@@ -2046,7 +2046,7 @@ public class Pcre2 implements IPcre2 {
                 throw new IllegalArgumentException("length must be an array of length 1");
             }
 
-            final var pLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pLength = arena.allocate(ValueLayout.JAVA_LONG);
 
             final var result = (int) pcre2_substring_length_byname.invokeExact(
                     pMatchData,
@@ -2082,7 +2082,7 @@ public class Pcre2 implements IPcre2 {
         }
 
         try (var arena = Arena.ofConfined()) {
-            final var pLength = arena.allocateArray(ValueLayout.JAVA_LONG, 1);
+            final var pLength = arena.allocate(ValueLayout.JAVA_LONG);
 
             final var result = (int) pcre2_substring_length_bynumber.invokeExact(
                     pMatchData,
@@ -2124,9 +2124,9 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             final var pMatchData = MemorySegment.ofAddress(matchData);
-            final var pListPtr = arena.allocateArray(ValueLayout.ADDRESS, 1);
+            final var pListPtr = arena.allocate(ValueLayout.ADDRESS);
             final var pLengthsPtr = lengthsptr != null
-                    ? arena.allocateArray(ValueLayout.ADDRESS, 1)
+                    ? arena.allocate(ValueLayout.ADDRESS)
                     : MemorySegment.NULL;
 
             final var result = (int) pcre2_substring_list_get.invokeExact(
@@ -2251,7 +2251,7 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             // Create an array of pointers for the codes
-            final var pCodes = arena.allocateArray(ValueLayout.ADDRESS, numberOfCodes);
+            final var pCodes = arena.allocate(ValueLayout.ADDRESS, numberOfCodes);
             for (int i = 0; i < numberOfCodes; i++) {
                 pCodes.setAtIndex(ValueLayout.ADDRESS, i, MemorySegment.ofAddress(codes[i]));
             }
@@ -2296,10 +2296,10 @@ public class Pcre2 implements IPcre2 {
 
         try (var arena = Arena.ofConfined()) {
             // Allocate memory for the output array of pointers
-            final var pCodes = arena.allocateArray(ValueLayout.ADDRESS, numberOfCodes);
+            final var pCodes = arena.allocate(ValueLayout.ADDRESS, numberOfCodes);
 
             // Copy the input bytes to native memory
-            final var pBytes = arena.allocateArray(ValueLayout.JAVA_BYTE, bytes.length);
+            final var pBytes = arena.allocate(ValueLayout.JAVA_BYTE, bytes.length);
             pBytes.copyFrom(MemorySegment.ofArray(bytes));
 
             final var pGContext = MemorySegment.ofAddress(gcontext);
@@ -2348,7 +2348,7 @@ public class Pcre2 implements IPcre2 {
         }
 
         try (var arena = Arena.ofConfined()) {
-            final var pBytes = arena.allocateArray(ValueLayout.JAVA_BYTE, bytes.length);
+            final var pBytes = arena.allocate(ValueLayout.JAVA_BYTE, bytes.length);
             pBytes.copyFrom(MemorySegment.ofArray(bytes));
 
             return (int) pcre2_serialize_get_number_of_codes.invokeExact(
@@ -2372,7 +2372,7 @@ public class Pcre2 implements IPcre2 {
     private MemorySegment allocateString(Arena arena, String str) {
         if (codeUnitSize == 1) {
             // For UTF-8, use the built-in method which adds null terminator
-            return arena.allocateUtf8String(str);
+            return arena.allocateFrom(str);
         } else {
             // For UTF-16 and UTF-32, encode manually with null terminator
             final var bytes = str.getBytes(charset);
