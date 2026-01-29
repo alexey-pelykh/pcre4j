@@ -25,7 +25,7 @@ dependencies {
 reporting {
     reports {
         register<JacocoCoverageReport>("jacocoAggregatedTestReport") {
-            testType = TestSuiteType.UNIT_TEST
+            testSuiteName = "test"
         }
     }
 }
