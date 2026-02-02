@@ -56,6 +56,8 @@ Library discovery priority:
 1. `pcre2.library.path` system property
 2. `jna.library.path` (JNA) / `java.library.path` (FFM)
 3. System library path
+4. Automatic discovery fallback (`Pcre2LibraryFinder`): `pcre2-config`, `pkg-config`, well-known platform paths
+   - Disable with `-Dpcre2.library.discovery=false`
 
 ## Code Conventions
 

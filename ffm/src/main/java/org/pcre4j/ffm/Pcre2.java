@@ -15,6 +15,7 @@
 package org.pcre4j.ffm;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2LibraryFinder;
 import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.io.File;
@@ -187,7 +188,16 @@ public class Pcre2 implements IPcre2 {
         if (library.indexOf(File.separatorChar) != -1) {
             System.load(library);
         } else {
-            System.loadLibrary(library);
+            try {
+                System.loadLibrary(library);
+            } catch (UnsatisfiedLinkError e) {
+                var discovered = Pcre2LibraryFinder.discover(library);
+                if (discovered.isPresent()) {
+                    System.load(discovered.get().toString());
+                } else {
+                    throw e;
+                }
+            }
         }
 
         pcre2_config = LINKER.downcallHandle(

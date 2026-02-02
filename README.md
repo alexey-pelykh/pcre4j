@@ -187,19 +187,23 @@ The PCRE4J library supports several backends to invoke the `pcre2` API.
 ### `jna`
 
 The `jna` backend uses the [Java Native Access](https://github.com/java-native-access/jna) library to invoke the `pcre2`
-shared library. For this backend to work, the `pcre2` shared library must be installed on the system and be visible via
-`jna.library.path`.
+shared library. For this backend to work, the `pcre2` shared library must be installed on the system. The library is
+located via `jna.library.path`, or automatically discovered using `pcre2-config`, `pkg-config`, or well-known platform
+paths as a fallback.
 
 ### `ffm`
 
 The `ffm` backend uses
 the [Foreign Functions and Memory API](https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html)
 to invoke the `pcre2` shared library. For this backend to work, the `pcre2` shared library must be installed on the
-system and be visible via `java.library.path`.
+system. The library is located via `java.library.path`, or automatically discovered using `pcre2-config`, `pkg-config`,
+or well-known platform paths as a fallback.
 
 The `ffm` module is packaged as a Multi-Release JAR supporting both:
 - **Java 21**: Requires `--enable-preview` flag (FFM was a preview feature)
 - **Java 22+**: No special flags required (FFM is finalized)
+
+> **Note:** Automatic library discovery can be disabled by setting `-Dpcre2.library.discovery=false`.
 
 ## Javadoc
 

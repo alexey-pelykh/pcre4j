@@ -22,8 +22,9 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
-import org.pcre4j.api.Pcre2UtfWidth;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2LibraryFinder;
+import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
@@ -110,11 +111,27 @@ public class Pcre2 implements IPcre2 {
 
         this.charset = charset;
         this.codeUnitSize = codeUnitSize;
-        this.library = Native.load(
-                library,
-                Library.class,
-                Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
-        );
+
+        Library loadedLibrary;
+        try {
+            loadedLibrary = Native.load(
+                    library,
+                    Library.class,
+                    Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
+            );
+        } catch (UnsatisfiedLinkError e) {
+            var discovered = Pcre2LibraryFinder.discover(library);
+            if (discovered.isPresent()) {
+                loadedLibrary = Native.load(
+                        discovered.get().toString(),
+                        Library.class,
+                        Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
+                );
+            } else {
+                throw e;
+            }
+        }
+        this.library = loadedLibrary;
     }
 
     @Override
