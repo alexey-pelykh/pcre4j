@@ -143,4 +143,24 @@ public class PatternTests {
         assertThrows(IllegalStateException.class, pcre4jMatcher::group);
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void splitAsStream(IPcre2 api) {
+        var regex = ",";
+        var input1 = "a,b,c";
+        var input2 = "a,b,c,";
+
+        var javaPattern = java.util.regex.Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(api, regex);
+
+        assertArrayEquals(
+            javaPattern.splitAsStream(input1).toArray(),
+            pcre4jPattern.splitAsStream(input1).toArray()
+        );
+
+        assertArrayEquals(
+            javaPattern.splitAsStream(input2).toArray(),
+            pcre4jPattern.splitAsStream(input2).toArray()
+        );
+    }
 }

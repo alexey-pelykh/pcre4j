@@ -391,8 +391,7 @@ public class Pattern {
         return regex;
     }
 
-    public Stream<String> splitAsStream(CharSequence input)
-    {
+    public Stream<String> splitAsStream(CharSequence input) {
         return Arrays.stream(split(input, 0));
     }
 }
