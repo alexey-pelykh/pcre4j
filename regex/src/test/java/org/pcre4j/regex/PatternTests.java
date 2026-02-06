@@ -143,10 +143,10 @@ public class PatternTests {
         assertThrows(IllegalStateException.class, pcre4jMatcher::group);
     }
 
-    @ParameterizedTest
+      @ParameterizedTest
     @MethodSource("parameters")
     void quote(IPcre2 api) {
-        var input = ".*+?^$|()[]\\{}";
+          var input = ".*+?^$|()[]\\{}";
         var inputWithSlashE = "abc\\Edef";
         var inputWithEmptyString = "";
 
@@ -178,7 +178,7 @@ public class PatternTests {
         assertTrue(pcre4jMatcher.matches());
     }
 
-    @ParameterizedTest
+     @ParameterizedTest
     @MethodSource("parameters")
     void commentsHashComments(IPcre2 api) {
         // Comments starting with # should be ignored until end of line
@@ -198,7 +198,7 @@ public class PatternTests {
         assertTrue(pcre4jMatcher.matches());
     }
 
-    @ParameterizedTest
+     @ParameterizedTest
     @MethodSource("parameters")
     void commentsEscapedWhitespace(IPcre2 api) {
         // Escaped whitespace should be matched literally
@@ -892,10 +892,8 @@ public class PatternTests {
 
         var sb = new StringBuilder();
         while (pcre4jMatcher.find()) {
-            pcre4jMatcher.appendReplacement(sb, "E");
+            pcre4jMatcher.appendReplacement(sb, "E"); pcre4jMatcher.appendTail(sb);
         }
-        pcre4jMatcher.appendTail(sb);
-
         assertEquals("cafE cafE", sb.toString());
     }
 
@@ -937,4 +935,31 @@ public class PatternTests {
         assertTrue(pcre4jMatcher.matches());
     }
 
-}
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void splitAsStream(IPcre2 api) {
+        //Test splitAsStream against Java Pattern for multiple inputs and edge cases
+        Object[][] cases = new Object[][]{
+            {",", "a,b,c"},
+            {",", "a,b,c,"},
+            {",", ""},
+            {",", "abc"},
+            {"\\d", "a1b2c"}
+        };
+
+        for (Object[] c : cases) {
+            String regex = (String) c[0];
+            String input = (String) c[1];
+
+            var javaPattern = java.util.regex.Pattern.compile(regex);
+            var pcre4jPattern = Pattern.compile(api, regex);
+
+            assertArrayEquals(
+                javaPattern.splitAsStream(input).toArray(),
+                pcre4jPattern.splitAsStream(input).toArray(),
+                "Mismatch for regex=" + regex + ", input=" + input
+            );
+        }
+    }
+  }
