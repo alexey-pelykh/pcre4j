@@ -14,17 +14,17 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.*;
-import org.pcre4j.api.IPcre2;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
-import java.util.Arrays;
 import java.util.stream.Stream;
+
+import org.pcre4j.*;
+import org.pcre4j.api.IPcre2;
 
 /**
  * A compiled representation of a regular expression that uses the PCRE library yet aims to have a
@@ -375,8 +375,6 @@ public class Pattern {
         return result.subList(0, resultSize).toArray(new String[resultSize]);
     }
 
-    // TODO: splitAsStream(CharSequence input)
-
     /**
      * Returns a map of named groups in this pattern.
      *
@@ -391,6 +389,12 @@ public class Pattern {
         return regex;
     }
 
+    /**
+     * Creates a stream from the given input sequence around matches of this pattern.
+     *
+     * @param input the character sequence to be split
+     * @return a stream of strings computed by splitting the input around matches of this pattern
+     */
     public Stream<String> splitAsStream(CharSequence input) {
         return Arrays.stream(split(input, 0));
     }
