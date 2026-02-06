@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import java.util.EnumSet;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -125,6 +126,25 @@ public class Pcre2CodeTests {
     void heapLimitThrowsWhenUnset(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalStateException.class, code::heapLimit);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void firstCodeTypeReturnsValidValue(IPcre2 api) {
+        // Test that firstCodeType returns a valid value (0, 1, or 2)
+        var code = new Pcre2Code(api, "test");
+        var result = code.firstCodeType();
+        assertTrue(result >= 0 && result <= 2,
+                "firstCodeType should return 0, 1, or 2, but got " + result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void firstCodeTypeForLiteralPattern(IPcre2 api) {
+        // Pattern starting with a literal character should return 1 (first code unit is set)
+        var code = new Pcre2Code(api, "test");
+        assertEquals(1, code.firstCodeType(),
+                "Pattern starting with literal should return 1 (first code unit set)");
     }
 
 }

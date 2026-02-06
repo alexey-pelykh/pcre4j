@@ -17,11 +17,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up temurin-jdk-21
+      # Need both JDKs for MRJAR build
+      - name: Set up temurin-jdk-21 (for MRJAR base)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
+
+      - name: Set up temurin-jdk-22 (for MRJAR overlay)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
 
       - name: Cache Gradle packages
         uses: actions/cache@v4

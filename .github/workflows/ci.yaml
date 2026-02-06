@@ -25,7 +25,16 @@ jobs:
           - semeru
           - oracle
 #          - dragonwell
-        java-version: [ 21 ]
+        java-version: [ 21, 22, 25 ]
+        pcre2-version: [ '10.42', '10.43', '10.47' ]
+        exclude:
+          # Some distributions may not have all Java versions yet
+          - java-distribution: adopt-hotspot
+            java-version: 25
+          - java-distribution: adopt-openj9
+            java-version: 25
+          - java-distribution: microsoft
+            java-version: 22
 
     runs-on: ${{ matrix.os }}
 
@@ -33,11 +42,30 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up ${{ matrix.java-distribution }}-jdk-${{ matrix.java-version }}
+      # Always need JDK 21 for building base MRJAR classes
+      - name: Set up temurin-jdk-21 (for MRJAR base)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Always need JDK 22 for building MRJAR overlay classes
+      - name: Set up temurin-jdk-22 (for MRJAR overlay)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
+
+      # Set up the test runtime Java version (available via toolchain, not JAVA_HOME)
+      - name: Set up ${{ matrix.java-distribution }}-jdk-${{ matrix.java-version }} (test runtime)
         uses: actions/setup-java@v4
         with:
           distribution: ${{ matrix.java-distribution }}
           java-version: ${{ matrix.java-version }}
+
+      # Gradle 8.x doesn't support Java 25 as daemon JVM - use Java 21 for Gradle
+      - name: Configure Gradle JVM
+        run: echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
 
       - name: Cache Gradle packages
         uses: actions/cache@v4
@@ -48,13 +76,31 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}
 
-      - name: Install PCRE
+      - name: Cache PCRE2
         if: ${{ matrix.os == 'ubuntu-24.04' }}
-        run: sudo apt-get install -y libpcre2-8-0
+        uses: actions/cache@v4
+        id: cache-pcre2
+        with:
+          path: /opt/pcre2
+          key: pcre2-${{ matrix.pcre2-version }}-${{ matrix.os }}
 
-      - name: Test
-        if: ${{ matrix.os == 'ubuntu-24.04' }}
-        run: ./gradlew ffm:test jna:test -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
+      - name: Build PCRE2 from source
+        if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
+        run: |
+          sudo apt-get install -y build-essential
+          curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ matrix.pcre2-version }}/pcre2-${{ matrix.pcre2-version }}.tar.gz | tar xz
+          cd pcre2-${{ matrix.pcre2-version }}
+          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
+          make -j$(nproc)
+          sudo make install
+
+      - name: Test (Java 21 with preview)
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 }}
+        run: ./gradlew ffm:test jna:test -Dpcre2.library.path=/opt/pcre2/lib
+
+      - name: Test (Java 22+ with MRJAR)
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version >= 22 }}
+        run: ./gradlew ffm:testJava22 jna:test -Dpcre2.library.path=/opt/pcre2/lib -PtestJavaVersion=${{ matrix.java-version }}
 
   package:
     runs-on: ubuntu-24.04
@@ -69,11 +115,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up temurin-jdk-21
+      # Need both JDKs for MRJAR build
+      - name: Set up temurin-jdk-21 (for MRJAR base)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
+
+      - name: Set up temurin-jdk-22 (for MRJAR overlay)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 22
 
       - name: Set up Git Hub Pages
         uses: actions/configure-pages@v5
@@ -90,11 +143,25 @@ jobs:
       - name: Checkstyle
         run: ./gradlew checkstyleMain checkstyleTest
 
-      - name: Install PCRE
-        run: sudo apt-get install -y libpcre2-8-0
+      - name: Cache PCRE2
+        uses: actions/cache@v4
+        id: cache-pcre2
+        with:
+          path: /opt/pcre2
+          key: pcre2-10.47-ubuntu-24.04
+
+      - name: Build PCRE2 from source
+        if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
+        run: |
+          sudo apt-get install -y build-essential
+          curl -L https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz | tar xz
+          cd pcre2-10.47
+          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
+          make -j$(nproc)
+          sudo make install
 
       - name: Build artifacts
-        run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
+        run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/opt/pcre2/lib
 
       - name: Build docs
         run: |
@@ -130,13 +197,13 @@ jobs:
           path: build/gh-pages
 
       - name: Stage snapshot artifacts
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         run: >
           ./gradlew publishAllPublicationsToStagingDeployRepository
           -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
       - name: Publish snapshots to Maven Central
-        if: ${{ github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_name == 'main') }}
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_NEXUS2_SNAPSHOTS_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}

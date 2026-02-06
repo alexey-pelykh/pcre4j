@@ -18,10 +18,13 @@ import org.pcre4j.*;
 import org.pcre4j.api.IPcre2;
 
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 /**
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims
@@ -88,6 +91,61 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private int appendPos;
 
+    /**
+     * Whether the boundaries of this matcher's region are treated as anchors.
+     * When true (default), {@code ^} and {@code $} match at region boundaries.
+     * When false, they only match at the true start/end of input.
+     */
+    private boolean anchoringBounds = true;
+
+    /**
+     * Whether the boundaries of this matcher's region are transparent.
+     * When true, lookahead and lookbehind can see beyond region boundaries.
+     * When false (default), lookaround cannot see outside the region.
+     */
+    private boolean transparentBounds = false;
+
+    /**
+     * Whether the end of input was hit by the search engine in the last match operation.
+     * When true, it is possible that more input would have changed the result of the last search.
+     */
+    private boolean hitEnd = false;
+
+    /**
+     * Whether more input could change a positive match into a negative one.
+     * When true, and a match was found, more input could cause the match to be lost.
+     */
+    private boolean requireEnd = false;
+
+    /**
+     * Lazily compiled code for anchoring bounds mode that transforms the pattern
+     * to use \G instead of ^ and removes $ for post-hoc verification.
+     * This is needed because PCRE2's ^ always matches at position 0, not at startOffset.
+     */
+    private Pcre2Code anchoringBoundsCode = null;
+
+    /**
+     * For CANON_EQ mode: the NFD-normalized input string used for matching.
+     * Null when CANON_EQ is not enabled.
+     */
+    private String normalizedInput = null;
+
+    /**
+     * For CANON_EQ mode: maps each index in normalizedInput to the corresponding index in the original input.
+     * normalizedToOriginalIndex[nfdIndex] gives the original string index that the NFD character at nfdIndex
+     * corresponds to. This is used to convert match indices from NFD space back to original string space.
+     * Null when CANON_EQ is not enabled.
+     */
+    private int[] normalizedToOriginalIndex = null;
+
+    /**
+     * For CANON_EQ mode: maps each index in the original input to the corresponding index in normalizedInput.
+     * originalToNormalizedIndex[origIndex] gives the NFD string index that corresponds to the original
+     * character at origIndex. This is used to convert region boundaries from original to NFD space.
+     * Null when CANON_EQ is not enabled.
+     */
+    private int[] originalToNormalizedIndex = null;
+
     /* package-private */ Matcher(Pattern pattern, CharSequence input) {
         this.pattern = pattern;
         this.matchContext = new Pcre2MatchContext(pattern.code.api(), null);
@@ -102,7 +160,82 @@ public class Matcher implements java.util.regex.MatchResult {
         this.input = input.toString();
         this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
 
+        // Initialize CANON_EQ support if the flag is set
+        if ((pattern.flags() & Pattern.CANON_EQ) != 0) {
+            initializeCanonEqSupport();
+        }
+
         reset();
+    }
+
+    /**
+     * Initialize the NFD normalization support for CANON_EQ mode.
+     * Creates the normalized input string and the bidirectional index mappings.
+     */
+    private void initializeCanonEqSupport() {
+        // Normalize input to NFD form
+        this.normalizedInput = Normalizer.normalize(input, Normalizer.Form.NFD);
+
+        // Build index mappings between original and normalized strings
+        // We iterate through both strings simultaneously, tracking how characters map
+        buildIndexMappings();
+    }
+
+    /**
+     * Builds bidirectional index mappings between the original input and its NFD-normalized form.
+     * <p>
+     * The algorithm works by iterating through the original string character by character,
+     * normalizing each character individually, and tracking how the indices map.
+     * <p>
+     * For example, with input "café" (where é is precomposed U+00E9):
+     * - Original: c(0) a(1) f(2) é(3) - length 4
+     * - NFD:      c(0) a(1) f(2) e(3) ́(4) - length 5 (é decomposes to e + combining accent)
+     * <p>
+     * The mappings would be:
+     * - normalizedToOriginalIndex: [0, 1, 2, 3, 3] (both NFD chars 3 and 4 map to original char 3)
+     * - originalToNormalizedIndex: [0, 1, 2, 3, 5] (original char 3 maps to NFD char 3, end maps to 5)
+     */
+    private void buildIndexMappings() {
+        final int origLen = input.length();
+        final int normLen = normalizedInput.length();
+
+        // originalToNormalizedIndex: for each position in original (including end position)
+        this.originalToNormalizedIndex = new int[origLen + 1];
+
+        // normalizedToOriginalIndex: for each position in normalized
+        this.normalizedToOriginalIndex = new int[normLen];
+
+        int normIdx = 0;
+        for (int origIdx = 0; origIdx < origLen; ) {
+            // Get the code point at origIdx
+            final int codePoint = input.codePointAt(origIdx);
+            final int charCount = Character.charCount(codePoint);
+
+            // Record where this original position maps to in normalized string
+            originalToNormalizedIndex[origIdx] = normIdx;
+
+            // Normalize this single code point
+            final String origChar = input.substring(origIdx, origIdx + charCount);
+            final String normChar = Normalizer.normalize(origChar, Normalizer.Form.NFD);
+
+            // All characters in the normalized form of this code point map back to origIdx
+            for (int i = 0; i < normChar.length(); i++) {
+                if (normIdx < normLen) {
+                    normalizedToOriginalIndex[normIdx] = origIdx;
+                    normIdx++;
+                }
+            }
+
+            // Handle surrogate pairs - both chars of a surrogate pair map to same position
+            if (charCount == 2 && origIdx + 1 < origLen) {
+                originalToNormalizedIndex[origIdx + 1] = originalToNormalizedIndex[origIdx];
+            }
+
+            origIdx += charCount;
+        }
+
+        // The end position of original maps to end of normalized
+        originalToNormalizedIndex[origLen] = normLen;
     }
 
     /**
@@ -459,7 +592,19 @@ public class Matcher implements java.util.regex.MatchResult {
         return pattern.code.captureCount();
     }
 
-    // TODO: hasAnchoringBounds()
+    /**
+     * Queries the anchoring of region bounds for this matcher.
+     * <p>
+     * This method returns {@code true} if this matcher uses <i>anchoring</i> bounds, {@code false} otherwise.
+     * <p>
+     * By default, a matcher uses anchoring bounds.
+     *
+     * @return {@code true} if this matcher is using anchoring bounds, {@code false} otherwise
+     * @see #useAnchoringBounds(boolean)
+     */
+    public boolean hasAnchoringBounds() {
+        return anchoringBounds;
+    }
 
     /**
      * Returns {@code true} if the matcher has found a match, otherwise {@code false}
@@ -471,9 +616,32 @@ public class Matcher implements java.util.regex.MatchResult {
         return lastMatchData != null;
     }
 
-    // TODO: hasTransparentBounds()
+    /**
+     * Queries the transparency of region bounds for this matcher.
+     * <p>
+     * This method returns {@code true} if this matcher uses <i>transparent</i> bounds, {@code false} otherwise.
+     * <p>
+     * By default, a matcher uses opaque region boundaries.
+     *
+     * @return {@code true} if this matcher is using transparent bounds, {@code false} otherwise
+     * @see #useTransparentBounds(boolean)
+     */
+    public boolean hasTransparentBounds() {
+        return transparentBounds;
+    }
 
-    // TODO: hitEnd()
+    /**
+     * Returns true if the end of input was hit by the search engine in the last match operation
+     * performed by this matcher.
+     * <p>
+     * When this method returns true, then it is possible that more input would have changed the
+     * result of the last search.
+     *
+     * @return true if the end of input was hit in the last match; false otherwise
+     */
+    public boolean hitEnd() {
+        return hitEnd;
+    }
 
     /**
      * Attempts to match the input sequence, starting at the beginning of the region, against the pattern
@@ -491,16 +659,21 @@ public class Matcher implements java.util.regex.MatchResult {
             matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED);
         }
 
+        // Apply anchoring bounds options
+        matchOptions.addAll(getMatchOptions());
+
+        final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(lookingAtCode);
         final var result = lookingAtCode.match(
-                input.subSequence(0, regionEnd).toString(),
-                regionStart,
+                regionSubject.subject(),
+                regionSubject.startOffset(),
                 matchOptions,
                 matchData,
                 matchContext
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
+                updateHitEndRequireEnd(regionSubject, false, matchOptions);
                 return false;
             }
 
@@ -508,9 +681,8 @@ public class Matcher implements java.util.regex.MatchResult {
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
-
+        processMatchResult(matchData, regionSubject);
+        updateHitEndRequireEnd(regionSubject, true, matchOptions);
         return true;
     }
 
@@ -522,34 +694,84 @@ public class Matcher implements java.util.regex.MatchResult {
     public boolean matches() {
         final Pcre2Code matchingCode;
         final EnumSet<Pcre2MatchOption> matchOptions;
-        if (pattern.matchingCode != null) {
+        if (pattern.matchingCode != null && !transparentBounds) {
+            // Use the pre-compiled JIT code with ANCHORED and ENDANCHORED baked in
+            // but only when transparent bounds is disabled, because ENDANCHORED
+            // would anchor to end of full input rather than regionEnd
             matchingCode = pattern.matchingCode;
             matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
         } else {
             matchingCode = pattern.code;
-            matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
+            // For transparent bounds, we can't use ENDANCHORED with full input because it would
+            // anchor to end of input, not regionEnd. We'll manually verify match end instead.
+            if (transparentBounds) {
+                matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED);
+            } else {
+                matchOptions = EnumSet.of(Pcre2MatchOption.ANCHORED, Pcre2MatchOption.ENDANCHORED);
+            }
         }
 
+        // Apply anchoring bounds options
+        matchOptions.addAll(getMatchOptions());
+
+        final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(matchingCode);
         final var result = matchingCode.match(
-                input.subSequence(0, regionEnd).toString(),
-                regionStart,
+                regionSubject.subject(),
+                regionSubject.startOffset(),
                 matchOptions,
                 matchData,
                 matchContext
         );
         if (result < 1) {
             if (result == IPcre2.ERROR_NOMATCH) {
+                updateHitEndRequireEnd(regionSubject, false, matchOptions);
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.matchingCode.api(), result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(
+                    pattern.matchingCode != null ? pattern.matchingCode.api() : pattern.code.api(), result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
+        processMatchResult(matchData, regionSubject);
 
+        // For transparent bounds, manually verify the match covers exactly the region
+        if (transparentBounds) {
+            if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                // Match doesn't span exactly the region, try with constrained subject
+                final var constrainedSubject = getConstrainedRegionSubject(regionStart);
+                final var constrainedMatchData = new Pcre2MatchData(matchingCode);
+                // Use ENDANCHORED for constrained subject since it ends at regionEnd
+                final var constrainedOptions = EnumSet.copyOf(matchOptions);
+                constrainedOptions.add(Pcre2MatchOption.ENDANCHORED);
+                final var constrainedResult = matchingCode.match(
+                        constrainedSubject.subject(),
+                        constrainedSubject.startOffset(),
+                        constrainedOptions,
+                        constrainedMatchData,
+                        matchContext
+                );
+                if (constrainedResult < 1) {
+                    lastMatchData = null;
+                    lastMatchIndices = null;
+                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
+                    return false;
+                }
+                processMatchResult(constrainedMatchData, constrainedSubject);
+                // Verify constrained match spans the region
+                if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                    lastMatchData = null;
+                    lastMatchIndices = null;
+                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
+                    return false;
+                }
+                updateHitEndRequireEnd(constrainedSubject, true, constrainedOptions);
+                return true;
+            }
+        }
+
+        updateHitEndRequireEnd(regionSubject, true, matchOptions);
         return true;
     }
 
@@ -652,6 +874,19 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public String replaceAll(String replacement) {
         reset();
+
+        // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
+        // is normalized but the input string we're operating on is the original.
+        // We must use find() + appendReplacement() which handles the index mapping properly.
+        if (normalizedInput != null) {
+            final var sb = new StringBuilder();
+            while (find()) {
+                appendReplacement(sb, replacement);
+            }
+            appendTail(sb);
+            return sb.toString();
+        }
+
         return pattern.code.substitute(
                 input.substring(regionStart, regionEnd),
                 0,
@@ -701,6 +936,20 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public String replaceFirst(String replacement) {
         reset();
+
+        // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
+        // is normalized but the input string we're operating on is the original.
+        // We must use find() + appendReplacement() which handles the index mapping properly.
+        if (normalizedInput != null) {
+            if (!find()) {
+                return input.substring(regionStart, regionEnd);
+            }
+            final var sb = new StringBuilder();
+            appendReplacement(sb, replacement);
+            appendTail(sb);
+            return sb.toString();
+        }
+
         return pattern.code.substitute(
                 input.substring(regionStart, regionEnd),
                 0,
@@ -736,7 +985,19 @@ public class Matcher implements java.util.regex.MatchResult {
         return sb.toString();
     }
 
-    // TODO: requireEnd()
+    /**
+     * Returns true if more input could change a positive match into a negative one.
+     * <p>
+     * If this method returns true, and a match was found, then more input could cause the match
+     * to be lost. If this method returns false and a match was found, then more input might
+     * change the match but the match won't be lost. If a match was not found, then requireEnd
+     * has no meaning.
+     *
+     * @return true if more input could change a positive match into a negative one
+     */
+    public boolean requireEnd() {
+        return requireEnd;
+    }
 
     /**
      * Resets this matcher
@@ -749,6 +1010,8 @@ public class Matcher implements java.util.regex.MatchResult {
         lastMatchData = null;
         lastMatchIndices = null;
         appendPos = 0;
+        // Note: hitEnd and requireEnd are NOT reset by Java's Matcher.reset()
+        // They persist across resets until a new match operation is performed
         return this;
     }
 
@@ -761,10 +1024,43 @@ public class Matcher implements java.util.regex.MatchResult {
     public Matcher reset(CharSequence input) {
         this.input = input.toString();
         this.inputBytes = this.input.getBytes(StandardCharsets.UTF_8);
+
+        // Reinitialize CANON_EQ support if the flag is set
+        if ((pattern.flags() & Pattern.CANON_EQ) != 0) {
+            initializeCanonEqSupport();
+        } else {
+            this.normalizedInput = null;
+            this.normalizedToOriginalIndex = null;
+            this.originalToNormalizedIndex = null;
+        }
+
         return reset();
     }
 
-    // TODO: results()
+    /**
+     * Returns a stream of match results for each subsequence of the input sequence that matches the pattern.
+     * <p>
+     * The match results occur in the same order as the matching subsequences in the input sequence.
+     * <p>
+     * Each match result is produced as if by {@link #toMatchResult()}.
+     * <p>
+     * This method does not reset this matcher. Matching starts on initiation of the terminal stream operation
+     * either at the beginning of this matcher's region, or, if the matcher has not since been reset, at the
+     * first character not matched by a previous match.
+     * <p>
+     * If the match results are used after the matcher has been modified (via {@link #find()}, {@link #reset()},
+     * etc.), the behavior is undefined.
+     *
+     * @return a sequential stream of match results
+     * @since 9
+     */
+    public Stream<java.util.regex.MatchResult> results() {
+        return Stream.iterate(
+                find() ? toMatchResult() : null,
+                Objects::nonNull,
+                mr -> find() ? toMatchResult() : null
+        );
+    }
 
     /**
      * Returns the start index of the most recent match
@@ -847,7 +1143,27 @@ public class Matcher implements java.util.regex.MatchResult {
                 "]";
     }
 
-    // TODO: useAnchoringBounds(boolean b)
+    /**
+     * Sets the anchoring of region bounds for this matcher.
+     * <p>
+     * Invoking this method with an argument of {@code true} will set this matcher to use <i>anchoring</i> bounds.
+     * If the boolean argument is {@code false}, then <i>non-anchoring</i> bounds will be used.
+     * <p>
+     * Using anchoring bounds, the boundaries of this matcher's region match anchors such as {@code ^} and {@code $}.
+     * <p>
+     * Without anchoring bounds, the boundaries of this matcher's region will not match anchors such as {@code ^}
+     * and {@code $}.
+     * <p>
+     * By default, a matcher uses anchoring bounds.
+     *
+     * @param b a boolean indicating whether or not to use anchoring bounds
+     * @return this matcher
+     * @see #hasAnchoringBounds()
+     */
+    public Matcher useAnchoringBounds(boolean b) {
+        anchoringBounds = b;
+        return this;
+    }
 
     /**
      * Changes the pattern that this matcher uses to against the input
@@ -870,41 +1186,836 @@ public class Matcher implements java.util.regex.MatchResult {
         }
         this.groupNameToIndex = newPattern.namedGroups();
 
+        // Clear cached transformed pattern since the pattern changed
+        this.anchoringBoundsCode = null;
+
         reset();
 
         return this;
     }
 
-    // TODO: useTransparentBounds(boolean b)
+    /**
+     * Sets the transparency of region bounds for this matcher.
+     * <p>
+     * Invoking this method with an argument of {@code true} will set this matcher to use <i>transparent</i> bounds.
+     * If the boolean argument is {@code false}, then <i>opaque</i> bounds will be used.
+     * <p>
+     * Using transparent bounds, the boundaries of this matcher's region are transparent to lookahead, lookbehind,
+     * and boundary matching constructs. Those constructs can see beyond the boundaries of the region to see if a
+     * match is appropriate.
+     * <p>
+     * Using opaque bounds, the boundaries of this matcher's region are opaque to lookahead, lookbehind, and
+     * boundary matching constructs that may try to see beyond them. Those constructs cannot look past the boundaries
+     * so they will fail to match anything outside of the region.
+     * <p>
+     * By default, a matcher uses opaque bounds.
+     *
+     * @param b a boolean indicating whether to use opaque or transparent regions
+     * @return this matcher
+     * @see #hasTransparentBounds()
+     */
+    public Matcher useTransparentBounds(boolean b) {
+        transparentBounds = b;
+        return this;
+    }
 
     /**
-     * Find next match of the pattern in the input starting from the specified index
+     * Find next match of the pattern in the input starting from the specified index.
+     * <p>
+     * <b>Algorithm Overview:</b>
+     * <ol>
+     *   <li><b>Transparent + Anchoring bounds path</b>: When both are enabled and searching from
+     *       regionStart, try a transformed pattern where ^ becomes \G (matches at startOffset)
+     *       and $ is removed (verified post-hoc). This handles the case where PCRE2's ^ would
+     *       match at position 0, not regionStart. If this path succeeds with match ending at
+     *       regionEnd, return success. Otherwise fall through to normal matching.</li>
+     *   <li><b>Normal matching</b>: Match using the original pattern against the region subject
+     *       (full input for transparent bounds, region substring for opaque bounds).</li>
+     *   <li><b>Region boundary enforcement</b>: For transparent bounds, if the match extends
+     *       beyond regionEnd, retry with a constrained subject (truncated at regionEnd) to find
+     *       a shorter valid match. If no valid match exists, advance searchStart and retry.</li>
+     * </ol>
      *
      * @param start the index to start searching from in the input
      * @return {@code true} if a match is found, otherwise {@code false}
      */
     private boolean search(int start) {
-        final var matchData = new Pcre2MatchData(pattern.code);
-        final var result = pattern.code.match(
-                input.subSequence(0, regionEnd).toString(),
-                start,
-                EnumSet.noneOf(Pcre2MatchOption.class),
-                matchData,
-                matchContext
+        int searchStart = start;
+        while (searchStart <= regionEnd) {
+            final var regionSubject = getRegionSubject(searchStart);
+            final var matchOptions = getMatchOptions();
+
+            // PATH 1: Transparent + Anchoring bounds special handling
+            //
+            // Problem: PCRE2's ^ always matches at position 0, but Java's ^ with anchoring bounds
+            // should match at regionStart. With transparent bounds we pass the full input, so ^
+            // would incorrectly match at position 0 instead of regionStart.
+            //
+            // Solution: Transform pattern (^ -> \G, remove $) and verify $ constraint post-hoc.
+            // \G matches at startOffset which is regionStart, achieving the correct behavior.
+            //
+            // Note: MULTILINE patterns are excluded because ^ should also match after newlines,
+            // which \G cannot replicate.
+            if (transparentBounds && anchoringBounds && searchStart == regionStart) {
+                final var abCode = getOrCreateAnchoringBoundsCode();
+                if (abCode != null) {
+                    // Use the transformed pattern (^ replaced with \G, $ removed)
+                    final var matchData = new Pcre2MatchData(abCode);
+                    final var result = abCode.match(
+                            input,
+                            searchStart,
+                            matchOptions,
+                            matchData,
+                            matchContext
+                    );
+                    if (result >= 1) {
+                        // Process to get match indices
+                        processMatchResult(matchData, new RegionSubject(input, searchStart, 0));
+
+                        // Check if the original pattern contained $ anchor (outside character classes)
+                        // If so, we must verify the match ends at regionEnd (simulates $ at regionEnd)
+                        final boolean originalHadDollar = patternContainsDollarAnchor(pattern.pattern());
+                        if (!originalHadDollar) {
+                            // No $ in original pattern - the match is valid as long as it ends within region
+                            if (lastMatchIndices[1] <= regionEnd) {
+                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
+                                return true;
+                            }
+                        } else {
+                            // Original had $ which was removed, so verify match ends at regionEnd
+                            if (lastMatchIndices[1] == regionEnd) {
+                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
+                                return true;
+                            }
+                        }
+
+                        // Match doesn't satisfy anchor constraints. Reset and fall through to
+                        // normal matching which may find a match without anchor constraints.
+                        lastMatchData = null;
+                        lastMatchIndices = null;
+                    }
+                    // If no match with transformed pattern, fall through to normal matching.
+                    // This allows patterns without ^ to still find matches.
+                }
+            }
+
+            // PATH 2: Normal matching with original pattern
+            final var matchData = new Pcre2MatchData(pattern.code);
+            final var result = pattern.code.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    matchOptions,
+                    matchData,
+                    matchContext
+            );
+            if (result < 1) {
+                if (result == IPcre2.ERROR_NOMATCH) {
+                    updateHitEndRequireEnd(regionSubject, false, matchOptions);
+                    return false;
+                }
+
+                final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+                throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
+            }
+
+            processMatchResult(matchData, regionSubject);
+
+            // PATH 3: Region boundary enforcement for transparent bounds
+            //
+            // When transparent bounds are enabled, the full input is passed to PCRE2,
+            // so we need to verify the match doesn't extend beyond regionEnd.
+            if (transparentBounds && lastMatchIndices[1] > regionEnd) {
+                // Match extends beyond region end. Try matching with constrained subject
+                // to see if there's a valid shorter match (e.g., for greedy quantifiers).
+                // This preserves lookbehind (which sees before regionStart) while constraining
+                // the actual match to end within the region.
+                final var constrainedSubject = getConstrainedRegionSubject(searchStart);
+                final var constrainedMatchData = new Pcre2MatchData(pattern.code);
+                final var constrainedResult = pattern.code.match(
+                        constrainedSubject.subject(),
+                        constrainedSubject.startOffset(),
+                        matchOptions,
+                        constrainedMatchData,
+                        matchContext
+                );
+
+                if (constrainedResult >= 1) {
+                    // Found a valid match within the constrained region
+                    processMatchResult(constrainedMatchData, constrainedSubject);
+                    updateHitEndRequireEnd(constrainedSubject, true, matchOptions);
+                    return true;
+                }
+
+                // No valid match at this position, try next position
+                lastMatchData = null;
+                lastMatchIndices = null;
+                searchStart = searchStart + 1;
+                continue;
+            }
+
+            updateHitEndRequireEnd(regionSubject, true, matchOptions);
+            return true;
+        }
+        updateHitEndRequireEnd(getRegionSubject(start), false, getMatchOptions());
+        return false;
+    }
+
+    /**
+     * Get the match options based on the current anchoring bounds setting.
+     *
+     * @return the set of match options to use
+     */
+    private EnumSet<Pcre2MatchOption> getMatchOptions() {
+        final var options = EnumSet.noneOf(Pcre2MatchOption.class);
+        if (!anchoringBounds) {
+            if (regionStart > 0) {
+                options.add(Pcre2MatchOption.NOTBOL);
+            }
+            if (regionEnd < input.length()) {
+                options.add(Pcre2MatchOption.NOTEOL);
+            }
+        }
+        return options;
+    }
+
+    /**
+     * Holds the subject string and coordinate mapping for region-aware matching.
+     * <p>
+     * When matching with a region, PCRE2 needs to receive only the region substring
+     * so that word boundaries (\b) don't see outside the region. This matches Java's
+     * default behavior where transparent bounds are disabled. The indexAdjustment is
+     * used to convert match indices back to the full input coordinate space.
+     *
+     * @param subject the subject string to match against
+     * @param startOffset the offset within subject to start matching
+     * @param indexAdjustment the value to add to match indices to convert to full input coordinates
+     * @param useCanonEqMapping if true, match indices are in NFD space and need conversion to original
+     */
+    private record RegionSubject(String subject, int startOffset, int indexAdjustment, boolean useCanonEqMapping) {
+        RegionSubject(String subject, int startOffset, int indexAdjustment) {
+            this(subject, startOffset, indexAdjustment, false);
+        }
+    }
+
+    /**
+     * Creates a RegionSubject for matching, handling region boundaries.
+     * <p>
+     * When transparent bounds are enabled, the full input string is passed to PCRE2 so that
+     * lookahead and lookbehind can see beyond the region. Matches are validated after matching
+     * to ensure they don't extend beyond the region end.
+     * <p>
+     * When transparent bounds are disabled (opaque, the default), only the region substring is
+     * passed so that lookbehind and word boundaries (\b) cannot see outside the region.
+     * The difference between anchoring enabled/disabled is handled by NOTBOL/NOTEOL flags.
+     * <p>
+     * When CANON_EQ is enabled, the normalized input is used for matching and indices are
+     * converted between original and normalized coordinate spaces.
+     *
+     * @param matchStartInInput the start position for matching in input coordinates
+     * @return the RegionSubject containing the subject string and coordinate mapping
+     */
+    private RegionSubject getRegionSubject(int matchStartInInput) {
+        // Handle CANON_EQ mode: use normalized input and convert indices
+        if (normalizedInput != null) {
+            return getRegionSubjectCanonEq(matchStartInInput);
+        }
+
+        if (transparentBounds) {
+            // Transparent bounds: pass the full input string so that lookahead can see beyond
+            // regionEnd and lookbehind can see before regionStart
+            return new RegionSubject(
+                    input,
+                    matchStartInInput,
+                    0
+            );
+        } else {
+            // Opaque bounds (default): pass only the region substring
+            if (regionStart > 0) {
+                return new RegionSubject(
+                        input.substring(regionStart, regionEnd),
+                        matchStartInInput - regionStart,
+                        regionStart
+                );
+            } else {
+                return new RegionSubject(
+                        input.substring(0, regionEnd),
+                        matchStartInInput,
+                        0
+                );
+            }
+        }
+    }
+
+    /**
+     * Creates a RegionSubject for CANON_EQ mode, using the normalized input.
+     * Converts all indices from original to normalized coordinate space.
+     *
+     * @param matchStartInInput the start position for matching in original input coordinates
+     * @return the RegionSubject containing the normalized subject string
+     */
+    private RegionSubject getRegionSubjectCanonEq(int matchStartInInput) {
+        // Convert indices from original to normalized space
+        final int normMatchStart = originalToNormalizedIndex[matchStartInInput];
+        final int normRegionStart = originalToNormalizedIndex[regionStart];
+        final int normRegionEnd = originalToNormalizedIndex[regionEnd];
+
+        if (transparentBounds) {
+            // Transparent bounds: pass the full normalized input
+            return new RegionSubject(
+                    normalizedInput,
+                    normMatchStart,
+                    0,
+                    true
+            );
+        } else {
+            // Opaque bounds: pass only the region substring of normalized input
+            if (normRegionStart > 0) {
+                return new RegionSubject(
+                        normalizedInput.substring(normRegionStart, normRegionEnd),
+                        normMatchStart - normRegionStart,
+                        normRegionStart,
+                        true
+                );
+            } else {
+                return new RegionSubject(
+                        normalizedInput.substring(0, normRegionEnd),
+                        normMatchStart,
+                        0,
+                        true
+                );
+            }
+        }
+    }
+
+    /**
+     * Get a constrained region subject for transparent bounds matching when the initial match
+     * extends beyond regionEnd. This allows lookbehind to see before regionStart while
+     * constraining the actual match to end at or before regionEnd.
+     *
+     * @param matchStartInInput the starting position for matching in input coordinates
+     * @return the constrained region subject
+     */
+    private RegionSubject getConstrainedRegionSubject(int matchStartInInput) {
+        // Handle CANON_EQ mode
+        if (normalizedInput != null) {
+            final int normMatchStart = originalToNormalizedIndex[matchStartInInput];
+            final int normRegionEnd = originalToNormalizedIndex[regionEnd];
+            return new RegionSubject(
+                    normalizedInput.substring(0, normRegionEnd),
+                    normMatchStart,
+                    0,
+                    true
+            );
+        }
+
+        // Pass substring from 0 to regionEnd, preserving lookbehind context
+        // while constraining the match end position
+        return new RegionSubject(
+                input.substring(0, regionEnd),
+                matchStartInInput,
+                0
         );
-        if (result < 1) {
-            if (result == IPcre2.ERROR_NOMATCH) {
+    }
+
+    /**
+     * Gets or creates a compiled pattern variant for anchoring bounds mode.
+     * <p>
+     * This transforms the pattern to handle Java's anchoring bounds semantics:
+     * <ul>
+     *   <li>{@code ^} is replaced with {@code \G} (matches at startOffset, not position 0)</li>
+     *   <li>{@code $} is removed (match end position is verified post-hoc)</li>
+     * </ul>
+     * <p>
+     * This is necessary because PCRE2's {@code ^} always matches at position 0 of the subject,
+     * while Java's {@code ^} with anchoring bounds matches at regionStart.
+     *
+     * @return the compiled anchoring bounds code, or null if transformation is not needed
+     */
+    private Pcre2Code getOrCreateAnchoringBoundsCode() {
+        if (anchoringBoundsCode != null) {
+            return anchoringBoundsCode;
+        }
+
+        // In MULTILINE mode, ^ matches at line boundaries (after newlines), not just at start.
+        // The \G transformation only matches at startOffset, which breaks multiline semantics.
+        // Skip transformation for MULTILINE patterns and fall back to normal matching.
+        if ((pattern.flags() & Pattern.MULTILINE) != 0) {
+            return null;
+        }
+
+        final var originalPattern = pattern.pattern();
+        final var transformed = transformPatternForAnchoringBounds(originalPattern);
+
+        // If no transformation needed, return null to indicate using the original pattern
+        if (transformed.equals(originalPattern)) {
+            return null;
+        }
+
+        // Compile the transformed pattern
+        try {
+            final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
+            // Copy relevant flags from the original pattern
+            final int flags = pattern.flags();
+            if ((flags & Pattern.CASE_INSENSITIVE) != 0) {
+                compileOptions.add(Pcre2CompileOption.CASELESS);
+            }
+            if ((flags & Pattern.DOTALL) != 0) {
+                compileOptions.add(Pcre2CompileOption.DOTALL);
+            }
+            if ((flags & Pattern.LITERAL) != 0) {
+                compileOptions.add(Pcre2CompileOption.LITERAL);
+            }
+            // Note: MULTILINE patterns return early (line 1281), so this flag is never set here.
+            // The check is kept for completeness in case the early return logic changes.
+            if ((flags & Pattern.UNICODE_CHARACTER_CLASS) != 0) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
+            // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
+            // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
+            if ((flags & Pattern.COMMENTS) != 0) {
+                compileOptions.add(Pcre2CompileOption.EXTENDED);
+            }
+
+            final var compileContext = new Pcre2CompileContext(pattern.code.api(), null);
+            if ((flags & Pattern.UNIX_LINES) != 0) {
+                compileContext.setNewline(Pcre2Newline.LF);
+            } else {
+                compileContext.setNewline(Pcre2Newline.ANY);
+            }
+
+            anchoringBoundsCode = new Pcre2Code(
+                    pattern.code.api(),
+                    transformed,
+                    compileOptions,
+                    compileContext
+            );
+            return anchoringBoundsCode;
+        } catch (Pcre2CompileError e) {
+            // If transformation produces invalid pattern, fall back to original
+            return null;
+        }
+    }
+
+    /**
+     * Transforms a regex pattern for anchoring bounds mode.
+     * <p>
+     * Replaces {@code ^} with {@code \G} and removes {@code $} (outside character classes).
+     * The {@code \G} assertion matches at startOffset (where matching begins), which is
+     * what Java's {@code ^} does with anchoring bounds enabled. The {@code $} removal
+     * is compensated by post-hoc verification that the match ends at regionEnd.
+     * <p>
+     * Handles POSIX character classes like {@code [[:alpha:]]} correctly by tracking
+     * nested bracket depth.
+     *
+     * @param pattern the original pattern
+     * @return the transformed pattern
+     */
+    private static String transformPatternForAnchoringBounds(String pattern) {
+        final var sb = new StringBuilder(pattern.length() + 10);
+        int charClassDepth = 0;  // Track nested character class depth for POSIX classes
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                sb.append(c);
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                sb.append(c);
+                escaped = true;
+                continue;
+            }
+
+            // Handle POSIX character classes like [[:alpha:]] - they contain nested brackets
+            // Also handles regular character classes
+            if (c == '[') {
+                charClassDepth++;
+                sb.append(c);
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                sb.append(c);
+                continue;
+            }
+
+            if (charClassDepth == 0) {
+                if (c == '^') {
+                    // Replace ^ with \G (matches at startOffset)
+                    sb.append("\\G");
+                    continue;
+                }
+                if (c == '$') {
+                    // Remove $ (will verify match end position post-hoc)
+                    continue;
+                }
+            }
+
+            sb.append(c);
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Checks if a regex pattern contains a $ anchor outside of character classes.
+     * This is used to determine if the match end position must be verified post-hoc
+     * when using the transformed pattern for anchoring bounds.
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern contains a $ anchor outside character classes
+     */
+    private static boolean patternContainsDollarAnchor(String pattern) {
+        int charClassDepth = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+
+            if (charClassDepth == 0 && c == '$') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Update hitEnd and requireEnd flags based on the match result.
+     * <p>
+     * hitEnd is set to true if the end of input was hit by the search engine, meaning
+     * more input could have changed the result. This is true when:
+     * <ul>
+     *   <li>The match ended at the end of the subject and the pattern could match more</li>
+     *   <li>No match was found and a partial match exists (more input could complete the match)</li>
+     *   <li>No match was found and the search needed to examine the end of input</li>
+     * </ul>
+     * <p>
+     * requireEnd is set to true if the match depends on end-of-input anchors ($ or \Z),
+     * meaning more input could turn a positive match into a negative one. Note that \z
+     * (absolute end) does not set requireEnd because it only matches at the very end.
+     *
+     * @param regionSubject the region subject used for matching
+     * @param matchFound whether a match was found
+     * @param matchOptions the match options used
+     */
+    private void updateHitEndRequireEnd(RegionSubject regionSubject, boolean matchFound,
+            EnumSet<Pcre2MatchOption> matchOptions) {
+        // Reset flags at the start of evaluation
+        hitEnd = false;
+        requireEnd = false;
+
+        final String subject = regionSubject.subject();
+        final int subjectEnd = subject.length();
+        final int effectiveSubjectEnd = subjectEnd + regionSubject.indexAdjustment();
+
+        if (matchFound) {
+            // Check if match ended at the effective end of the subject
+            final int matchEnd = lastMatchIndices[1];
+
+            if (matchEnd == effectiveSubjectEnd) {
+                // Match ended at the end of input.
+                // hitEnd should be true if more input could have extended the match.
+                // This is true for patterns with open-ended constructs like +, *, character classes.
+
+                // Check for soft end anchors ($ or \Z) first
+                if (patternContainsSoftEndAnchor(pattern.pattern())) {
+                    hitEnd = true;
+                    requireEnd = true;
+                } else if (patternCanConsumeMoreAtEnd(pattern.pattern())) {
+                    // Pattern has constructs that could consume more input at the end
+                    hitEnd = true;
+                }
+            }
+        } else {
+            // No match found - hitEnd is true if:
+            // 1. A partial match exists (more input could complete the match), OR
+            // 2. The search needed to examine the entire input to determine no match
+            //
+            // For correctness with Java's behavior, we set hitEnd=true when the search
+            // reached the end of input. In practice, for most patterns this is the case
+            // when no match is found.
+
+            // Check for partial match
+            final var partialOptions = EnumSet.copyOf(matchOptions);
+            partialOptions.add(Pcre2MatchOption.PARTIAL_SOFT);
+
+            final var partialMatchData = new Pcre2MatchData(pattern.code);
+            final var partialResult = pattern.code.match(
+                    subject,
+                    regionSubject.startOffset(),
+                    partialOptions,
+                    partialMatchData,
+                    matchContext
+            );
+
+            if (partialResult == IPcre2.ERROR_PARTIAL) {
+                // Partial match exists - more input could lead to a match
+                hitEnd = true;
+            } else {
+                // No partial match - but the search still needed to examine the input.
+                // In Java's implementation, hitEnd is typically true when no match is found
+                // because the search engine had to look through the entire input.
+                // Set hitEnd=true unless we can prove the search ended early.
+                //
+                // For a pattern like "xyz" against "abc", Java returns hitEnd=true because
+                // the search engine had to examine all positions to determine there's no match.
+                hitEnd = true;
+            }
+        }
+    }
+
+    /**
+     * Checks if a pattern can consume more input at the end of a match.
+     * <p>
+     * This returns true if the pattern ends with constructs that could consume
+     * more input, such as:
+     * <ul>
+     *   <li>{@code +}, {@code *}, {@code ?} quantifiers</li>
+     *   <li>{@code {n,}} or {@code {n,m}} quantifiers where the upper bound isn't reached</li>
+     *   <li>Character classes {@code [...]}</li>
+     *   <li>Dot {@code .}</li>
+     *   <li>{@code \w}, {@code \d}, {@code \s} and similar character type escapes</li>
+     * </ul>
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern could consume more input at the end
+     */
+    private static boolean patternCanConsumeMoreAtEnd(String pattern) {
+        if (pattern.isEmpty()) {
+            return false;
+        }
+
+        // Check the last character of the pattern to determine if it could consume more
+        int i = pattern.length() - 1;
+
+        while (i >= 0) {
+            char c = pattern.charAt(i);
+
+            // Check for quantifiers at the end
+            if (c == '+' || c == '*' || c == '?' || c == '}') {
+                return true; // Pattern has a quantifier that could consume more
+            }
+
+            // Check for character class end
+            if (c == ']') {
+                // Found end of character class without quantifier - matches exactly one character
+                // A character class like [a-z] matches one char just like . or \w
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
-            throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
+            // Check for escape sequences
+            if (i > 0 && pattern.charAt(i - 1) == '\\') {
+                // Escape sequence at end
+                // Character type escapes (\w, \d, \s, \W, \D, \S, etc.) can match multiple chars
+                // when followed by a quantifier, but at the pattern end they match exactly one
+                // However, \w matches one character and if input ends with matching char,
+                // more matching chars could extend
+                if (c == 'w' || c == 'W' || c == 'd' || c == 'D' || c == 's' || c == 'S') {
+                    // These match a class of characters - similar to character class
+                    // But without a quantifier, they match exactly one character
+                    // Java seems to return hitEnd=false for these at end
+                    return false;
+                }
+                return false;
+            }
+
+            // Check for dot (matches any character)
+            if (c == '.') {
+                // Dot at end without quantifier matches exactly one char
+                return false;
+            }
+
+            // If we reach here with a normal character, the pattern ends with a literal
+            // Literals match exactly, so no more input could extend the match
+            return false;
         }
 
-        lastMatchData = matchData;
-        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(input, inputBytes, matchData.ovector());
+        return false;
+    }
 
-        return true;
+    /**
+     * Checks if a regex pattern contains a "soft" end anchor ($ or \Z) outside of character classes.
+     * These anchors can match before a final newline, meaning more input could invalidate a match.
+     * <p>
+     * Note: \z (lowercase) is not included because it only matches at the absolute end,
+     * so more input cannot invalidate a match that used \z.
+     *
+     * @param pattern the pattern to check
+     * @return true if the pattern contains $ or \Z outside character classes
+     */
+    private static boolean patternContainsSoftEndAnchor(String pattern) {
+        int charClassDepth = 0;
+        boolean escaped = false;
+
+        for (int i = 0; i < pattern.length(); i++) {
+            char c = pattern.charAt(i);
+
+            if (escaped) {
+                // Check for \Z (uppercase only - \z is absolute end, not soft)
+                if (charClassDepth == 0 && c == 'Z') {
+                    return true;
+                }
+                escaped = false;
+                continue;
+            }
+
+            if (c == '\\') {
+                escaped = true;
+                continue;
+            }
+
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+
+            if (charClassDepth == 0 && c == '$') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Process match results: convert ovector to string indices and adjust for region offset.
+     * When CANON_EQ is enabled, also converts indices from NFD space to original string space.
+     *
+     * @param matchData the match data containing the ovector
+     * @param regionSubject the region subject used for matching
+     */
+    private void processMatchResult(Pcre2MatchData matchData, RegionSubject regionSubject) {
+        lastMatchData = matchData;
+        final var subjectBytes = regionSubject.subject().getBytes(StandardCharsets.UTF_8);
+        lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(
+                regionSubject.subject(), subjectBytes, matchData.ovector()
+        );
+
+        // Adjust indices back to full input coordinate space
+        if (regionSubject.indexAdjustment() > 0) {
+            for (int i = 0; i < lastMatchIndices.length; i++) {
+                if (lastMatchIndices[i] >= 0) {
+                    lastMatchIndices[i] += regionSubject.indexAdjustment();
+                }
+            }
+        }
+
+        // For CANON_EQ mode: convert indices from NFD space to original string space
+        if (regionSubject.useCanonEqMapping() && normalizedToOriginalIndex != null) {
+            // Save the NFD indices (already adjusted for region offset) before converting to original space
+            final int[] nfdIndices = lastMatchIndices.clone();
+
+            for (int i = 0; i < lastMatchIndices.length; i++) {
+                if (lastMatchIndices[i] >= 0) {
+                    final int normIdx = lastMatchIndices[i];
+                    if (normIdx < normalizedToOriginalIndex.length) {
+                        lastMatchIndices[i] = normalizedToOriginalIndex[normIdx];
+                    } else if (normIdx == normalizedToOriginalIndex.length) {
+                        // End of normalized string maps to end of original string
+                        lastMatchIndices[i] = input.length();
+                    }
+                }
+            }
+
+            // For match end indices (odd positions in the array), we need to ensure they
+            // point to the position AFTER the last matching character in the original string.
+            // The normalizedToOriginalIndex maps to the START of each character, so for
+            // end positions we need to advance to the next character boundary.
+            for (int i = 1; i < lastMatchIndices.length; i += 2) {
+                if (lastMatchIndices[i] >= 0 && lastMatchIndices[i] < input.length()) {
+                    // Use the saved NFD indices (already includes region offset adjustment)
+                    final int nfdEndIdx = nfdIndices[i];
+
+                    if (nfdEndIdx <= normalizedInput.length()) {
+                        // Find the original index for this end position
+                        // We need to map from the end of the match in NFD space to original space
+                        lastMatchIndices[i] = convertNfdEndIndexToOriginal(nfdEndIdx);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Converts an end index from NFD space to original string space.
+     * <p>
+     * For end positions, we need to find where in the original string the NFD position maps to.
+     * If the NFD position is at a combining character, we need to map to the end of the
+     * corresponding base character + combining sequence in the original string.
+     *
+     * @param nfdEndIndex the end index in NFD space
+     * @return the corresponding end index in original string space
+     */
+    private int convertNfdEndIndexToOriginal(int nfdEndIndex) {
+        if (nfdEndIndex >= normalizedInput.length()) {
+            return input.length();
+        }
+        if (nfdEndIndex <= 0) {
+            return 0;
+        }
+
+        // The normalizedToOriginalIndex gives us the start of the original character
+        // that the NFD character at that index belongs to. For an end index, we want
+        // to find where the character sequence ends in the original.
+
+        // Get the original index that this NFD position maps to
+        final int origIdx = normalizedToOriginalIndex[nfdEndIndex];
+
+        // If the next NFD character maps to the same original position, we're in the middle
+        // of a decomposed character. Keep advancing until we find the next original character.
+        // But since this is an END index, we want the position AFTER the character.
+
+        // If the previous NFD character mapped to the same original position,
+        // then we're at the end of a decomposed sequence, return the next original position
+        if (nfdEndIndex > 0 && normalizedToOriginalIndex[nfdEndIndex - 1] == origIdx) {
+            // We're at or after a combining character that belongs to origIdx
+            // Find the next different original index
+            int nextOrigIdx = origIdx;
+            for (int i = nfdEndIndex; i < normalizedInput.length(); i++) {
+                if (normalizedToOriginalIndex[i] != origIdx) {
+                    nextOrigIdx = normalizedToOriginalIndex[i];
+                    break;
+                }
+            }
+            if (nextOrigIdx == origIdx) {
+                // Reached end of string
+                return input.length();
+            }
+            return nextOrigIdx;
+        }
+
+        return origIdx;
     }
 
     /**

@@ -56,6 +56,8 @@ Library discovery priority:
 1. `pcre2.library.path` system property
 2. `jna.library.path` (JNA) / `java.library.path` (FFM)
 3. System library path
+4. Automatic discovery fallback (`Pcre2LibraryFinder`): `pcre2-config`, `pkg-config`, well-known platform paths
+   - Disable with `-Dpcre2.library.discovery=false`
 
 ## Code Conventions
 
@@ -139,3 +141,9 @@ GitHub Issues: https://github.com/alexey-pelykh/pcre4j/issues
 
 **Closing Issues**: Use PR descriptions (not commit messages) since the project uses rebase-merge.
 Include `Fixes #<number>` or `Closes #<number>` in the PR description to auto-close issues on merge.
+
+## API Implementation Tracking
+
+**IMPORTANT**: When implementing new PCRE2 API bindings, update `PCRE2_API.md` to mark the API as implemented (add ✅).
+
+The file tracks all PCRE2 API functions and their implementation status in PCRE4J.

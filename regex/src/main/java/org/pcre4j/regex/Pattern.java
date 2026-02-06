@@ -14,6 +14,10 @@
  */
 package org.pcre4j.regex;
 
+import org.pcre4j.*;
+import org.pcre4j.api.IPcre2;
+
+import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -23,8 +27,6 @@ import java.util.function.Predicate;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
-import org.pcre4j.*;
-import org.pcre4j.api.IPcre2;
 
 /**
  * A compiled representation of a regular expression that uses the PCRE library yet aims to have a
@@ -67,9 +69,73 @@ public class Pattern {
      */
     public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
 
-    // TODO: public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
-    // TODO: public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
-    // TODO: public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
+    /**
+     * A {@link java.util.regex.Pattern#COMMENTS}-compatible flag implemented via
+     * {@link org.pcre4j.Pcre2CompileOption#EXTENDED}
+     * <p>
+     * Permits whitespace and comments in the pattern. In this mode, whitespace is ignored except when escaped or
+     * inside a character class, and comments starting with {@code #} are ignored until end of line.
+     * </p>
+     * <p>
+     * Comments mode can also be enabled via the embedded flag expression {@code (?x)}.
+     * </p>
+     */
+    public static final int COMMENTS = java.util.regex.Pattern.COMMENTS;
+
+    /**
+     * A {@link java.util.regex.Pattern#UNICODE_CASE}-compatible flag that enables Unicode-aware case folding.
+     * <p>
+     * When this flag is specified, case-insensitive matching (when enabled by the {@link #CASE_INSENSITIVE} flag)
+     * is done in a manner consistent with the Unicode Standard. By default in {@link java.util.regex.Pattern},
+     * case-insensitive matching assumes that only characters in the US-ASCII charset are being matched.
+     * </p>
+     * <p>
+     * <strong>Implementation Note:</strong> PCRE2 with UTF mode (which PCRE4J always enables) already performs
+     * Unicode-aware case folding when {@link #CASE_INSENSITIVE} is used. This flag is provided for API
+     * compatibility with {@link java.util.regex.Pattern} and has no additional effect on PCRE2's behavior
+     * since Unicode case folding is already enabled by default.
+     * </p>
+     *
+     * @see #CASE_INSENSITIVE
+     */
+    public static final int UNICODE_CASE = java.util.regex.Pattern.UNICODE_CASE;
+
+    /**
+     * A {@link java.util.regex.Pattern#CANON_EQ}-compatible flag that enables canonical equivalence matching.
+     * <p>
+     * When this flag is specified, two characters will be considered to match if, and only if, their full
+     * canonical decompositions match. For example, the expression {@code "a\u030A"} (a + combining ring above)
+     * will match the string {@code "\u00E5"} (å, precomposed) when this flag is specified.
+     * </p>
+     * <p>
+     * By default, matching does not take canonical equivalence into account.
+     * </p>
+     * <p>
+     * There is no embedded flag character for enabling canonical equivalence.
+     * </p>
+     * <p>
+     * <strong>Implementation Note:</strong> This flag is implemented by normalizing both the pattern and input
+     * to NFD (Canonical Decomposition) form using {@link java.text.Normalizer} before matching. Match indices
+     * are mapped back to the original input string positions. This approach may impose a performance penalty.
+     * </p>
+     * <p>
+     * <strong>Limitations:</strong> The NFD normalization approach provides correct behavior for most common
+     * canonical equivalence cases. However, there are known differences from {@link java.util.regex.Pattern}'s
+     * implementation:
+     * </p>
+     * <ul>
+     *   <li><strong>Character classes:</strong> Character classes containing precomposed characters (e.g.,
+     *       {@code [éè]}) will not correctly match the decomposed forms of those characters. The NFD
+     *       normalization transforms the character class contents, changing the regex semantics. For
+     *       reliable canonical equivalence with character classes, use decomposed forms in the pattern.</li>
+     *   <li><strong>Complex patterns:</strong> Patterns with alternations or backreferences where
+     *       canonically equivalent forms have different lengths may behave differently than
+     *       {@link java.util.regex.Pattern}.</li>
+     * </ul>
+     *
+     * @see java.text.Normalizer
+     */
+    public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
     /* package-private */ final Pcre2Code code;
     /* package-private */ final Pcre2Code matchingCode;
     /* package-private */ final Pcre2Code lookingAtCode;
@@ -97,6 +163,15 @@ public class Pattern {
         this.regex = regex;
         this.flags = flags;
 
+        // When CANON_EQ is set, normalize the pattern to NFD form for compilation
+        // The original regex is preserved in this.regex for pattern() method
+        final String compiledRegex;
+        if ((flags & CANON_EQ) != 0) {
+            compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
+        } else {
+            compiledRegex = regex;
+        }
+
         final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
         if ((flags & CASE_INSENSITIVE) != 0) {
             compileOptions.add(Pcre2CompileOption.CASELESS);
@@ -113,6 +188,12 @@ public class Pattern {
         if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
             compileOptions.add(Pcre2CompileOption.UCP);
         }
+        if ((flags & COMMENTS) != 0) {
+            compileOptions.add(Pcre2CompileOption.EXTENDED);
+        }
+        // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
+        // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
+        // Note: CANON_EQ flag is handled above by normalizing the pattern to NFD form.
 
         final var compileContext = new Pcre2CompileContext(api, null);
         if ((flags & UNIX_LINES) != 0) {
@@ -126,7 +207,7 @@ public class Pattern {
             if (Pcre4jUtils.isJitSupported(api) && isJitAllowed) {
                 this.code = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         compileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -137,7 +218,7 @@ public class Pattern {
                 matchingCompileOptions.add(Pcre2CompileOption.ENDANCHORED);
                 this.matchingCode = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         matchingCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -147,7 +228,7 @@ public class Pattern {
                 lookingAtCompileOptions.add(Pcre2CompileOption.ANCHORED);
                 this.lookingAtCode = new Pcre2JitCode(
                         api,
-                        regex,
+                        compiledRegex,
                         lookingAtCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
@@ -155,7 +236,7 @@ public class Pattern {
             } else {
                 this.code = new Pcre2Code(
                         api,
-                        regex,
+                        compiledRegex,
                         compileOptions,
                         compileContext
                 );
@@ -288,7 +369,24 @@ public class Pattern {
         return regex;
     }
 
-    // TODO: quote(String s)
+    /**
+     * Returns a literal pattern String for the specified String.
+     *
+     * <p>This method returns a String that can be used to create a Pattern that would
+     * match the string {@code s} as if it were a literal pattern.</p>
+     *
+     * <p>Metacharacters or escape sequences in the input String will be given no special meaning.</p>
+     *
+     * @param s The string to be literalized
+     * @return A literal pattern String
+     */
+    public static String quote(String s) {
+        int slashEIndex = s.indexOf("\\E");
+        if (slashEIndex == -1) {
+            return "\\Q" + s + "\\E";
+        }
+        return "\\Q" + s.replace("\\E", "\\E\\\\E\\Q") + "\\E";
+    }
 
     /**
      * Splits the given input around matches of this pattern.

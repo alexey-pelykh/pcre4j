@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -14,8 +14,198 @@
  */
 package org.pcre4j.jna;
 
+import com.sun.jna.Callback;
+import com.sun.jna.Pointer;
+import org.junit.jupiter.api.Test;
+import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2UtfWidth;
+
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
+
+    private final Pcre2 pcre2;
+
     public Pcre2Tests() {
         super(new Pcre2());
+        this.pcre2 = (Pcre2) api;
+    }
+
+    @Override
+    public IPcre2 createApi(Pcre2UtfWidth width) {
+        return new Pcre2(width);
+    }
+
+    /**
+     * Callback interface for pcre2_callout_enumerate.
+     */
+    public interface CalloutEnumerateCallback extends Callback {
+        int invoke(Pointer block, Pointer userData);
+    }
+
+    @Test
+    public void calloutEnumerateWithNoCallouts() {
+        // Compile a pattern without callouts
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        long code = api.compile("abc", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        // Create a callback that counts invocations
+        final var calloutCount = new AtomicInteger(0);
+        CalloutEnumerateCallback callback = (block, userData) -> {
+            calloutCount.incrementAndGet();
+            return 0; // Continue enumeration
+        };
+
+        // Get the native function pointer for the callback
+        long callbackPtr = Pointer.nativeValue(
+                com.sun.jna.CallbackReference.getFunctionPointer(callback));
+
+        // Enumerate callouts
+        int result = api.calloutEnumerate(code, callbackPtr, 0);
+        assertEquals(0, result, "calloutEnumerate should return 0 for successful enumeration");
+        assertEquals(0, calloutCount.get(), "No callouts should be enumerated for pattern without callouts");
+
+        // Clean up
+        api.codeFree(code);
+    }
+
+    @Test
+    public void calloutEnumerateWithExplicitCallout() {
+        // Compile a pattern with an explicit callout (?C1)
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        long code = api.compile("a(?C1)b", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        // Create a callback that counts invocations
+        final var calloutCount = new AtomicInteger(0);
+        CalloutEnumerateCallback callback = (block, userData) -> {
+            calloutCount.incrementAndGet();
+            return 0; // Continue enumeration
+        };
+
+        // Get the native function pointer for the callback
+        long callbackPtr = Pointer.nativeValue(
+                com.sun.jna.CallbackReference.getFunctionPointer(callback));
+
+        // Enumerate callouts
+        int result = api.calloutEnumerate(code, callbackPtr, 0);
+        assertEquals(0, result, "calloutEnumerate should return 0 for successful enumeration");
+        assertEquals(1, calloutCount.get(), "One callout should be enumerated");
+
+        // Clean up
+        api.codeFree(code);
+    }
+
+    @Test
+    public void calloutEnumerateWithAutoCallout() {
+        // Compile a pattern with auto callout enabled
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        long code = api.compile("abc", IPcre2.AUTO_CALLOUT, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        // Create a callback that counts invocations
+        final var calloutCount = new AtomicInteger(0);
+        CalloutEnumerateCallback callback = (block, userData) -> {
+            calloutCount.incrementAndGet();
+            return 0; // Continue enumeration
+        };
+
+        // Get the native function pointer for the callback
+        long callbackPtr = Pointer.nativeValue(
+                com.sun.jna.CallbackReference.getFunctionPointer(callback));
+
+        // Enumerate callouts
+        int result = api.calloutEnumerate(code, callbackPtr, 0);
+        assertEquals(0, result, "calloutEnumerate should return 0 for successful enumeration");
+        assertTrue(calloutCount.get() > 0, "Auto callouts should be enumerated");
+
+        // Clean up
+        api.codeFree(code);
+    }
+
+    @Test
+    public void calloutEnumerateCallbackCanStopEnumeration() {
+        // Compile a pattern with multiple explicit callouts
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+        long code = api.compile("a(?C1)b(?C2)c(?C3)d", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        // Create a callback that stops after first callout
+        final var calloutCount = new AtomicInteger(0);
+        CalloutEnumerateCallback callback = (block, userData) -> {
+            calloutCount.incrementAndGet();
+            return 1; // Stop enumeration
+        };
+
+        // Get the native function pointer for the callback
+        long callbackPtr = Pointer.nativeValue(
+                com.sun.jna.CallbackReference.getFunctionPointer(callback));
+
+        // Enumerate callouts
+        int result = api.calloutEnumerate(code, callbackPtr, 0);
+        assertEquals(1, result, "calloutEnumerate should return callback's non-zero value");
+        assertEquals(1, calloutCount.get(), "Only one callout should be enumerated before stopping");
+
+        // Clean up
+        api.codeFree(code);
+    }
+
+    @Test
+    public void patternConvertEndToEnd() {
+        // End-to-end test: convert a glob pattern, compile the result, and use it to match
+
+        // Convert glob pattern "*.txt" to PCRE2
+        long[] buffer = new long[]{0};
+        long[] blength = new long[]{0};
+
+        int convertResult = api.patternConvert(
+                "*.txt",
+                IPcre2.CONVERT_GLOB,
+                buffer,
+                blength,
+                0
+        );
+        assertEquals(0, convertResult, "patternConvert should succeed");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer");
+        assertTrue(blength[0] > 0, "Pattern length should be positive");
+
+        // Read the converted pattern from native memory
+        Pointer pConvertedPattern = new Pointer(buffer[0]);
+        String convertedPattern = new String(
+                pConvertedPattern.getByteArray(0, (int) blength[0]),
+                StandardCharsets.UTF_8
+        );
+
+        // Compile the converted pattern
+        int[] errorcode = new int[1];
+        long[] erroroffset = new long[1];
+        long code = api.compile(convertedPattern, 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Converted pattern should compile successfully: " + convertedPattern);
+
+        // Create match data
+        long matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        // Test that the pattern matches "file.txt"
+        int matchResult = api.match(code, "file.txt", 0, 0, matchData, 0);
+        assertTrue(matchResult > 0, "Pattern should match 'file.txt', result=" + matchResult);
+
+        // Test that the pattern does NOT match "file.log"
+        matchResult = api.match(code, "file.log", 0, 0, matchData, 0);
+        assertEquals(IPcre2.ERROR_NOMATCH, matchResult, "Pattern should not match 'file.log'");
+
+        // Clean up
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+        api.convertedPatternFree(buffer[0]);
     }
 }

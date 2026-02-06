@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -100,6 +100,94 @@ public class Pcre2CompileContext {
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
             throw new RuntimeException("Failed set the newline convention", new IllegalStateException(errorMessage));
+        }
+    }
+
+    /**
+     * Set the BSR (backslash-R) convention
+     *
+     * @param bsr the BSR convention
+     */
+    public void setBsr(Pcre2Bsr bsr) {
+        if (bsr == null) {
+            throw new IllegalArgumentException("bsr cannot be null");
+        }
+        final var result = api.setBsr(handle, bsr.value());
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the BSR convention", new IllegalStateException(errorMessage));
+        }
+    }
+
+    /**
+     * Set the parentheses nesting limit.
+     * <p>
+     * This limit is used to prevent patterns with excessive parentheses nesting from consuming
+     * too many resources during compilation. The default limit is 250, but this can be changed
+     * at build time.
+     * <p>
+     * If a pattern exceeds this limit during compilation, the error {@code PCRE2_ERROR_PARENTHESES_NEST_TOO_DEEP}
+     * is returned.
+     *
+     * @param limit the maximum depth of nested parentheses allowed in a pattern
+     */
+    public void setParensNestLimit(int limit) {
+        final var result = api.setParensNestLimit(handle, limit);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the parentheses nest limit",
+                    new IllegalStateException(errorMessage));
+        }
+    }
+
+    /**
+     * Set the maximum pattern length.
+     * <p>
+     * This limit restricts the maximum length (in code units) of a pattern that can be compiled.
+     * If a pattern longer than this limit is passed to compilation, the compilation immediately
+     * fails with an error.
+     * <p>
+     * By default, there is no limit (the value is the maximum that a PCRE2_SIZE variable can hold).
+     * This can be used for security purposes to prevent excessively long patterns from being processed.
+     *
+     * @param length the maximum pattern length in code units
+     */
+    public void setMaxPatternLength(long length) {
+        final var result = api.setMaxPatternLength(handle, length);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the maximum pattern length",
+                    new IllegalStateException(errorMessage));
+        }
+    }
+
+    /**
+     * Set the extra compile options.
+     * <p>
+     * This method sets additional option bits for pattern compilation that are housed in the compile context.
+     * These options completely replace any previously set extra options.
+     * <p>
+     * The extra options provide fine-grained control over pattern compilation, such as restricting character
+     * class matching to ASCII or allowing special escape sequences.
+     *
+     * @param extraOptions the extra compile options to set
+     */
+    public void setCompileExtraOptions(Pcre2CompileExtraOption... extraOptions) {
+        if (extraOptions == null) {
+            throw new IllegalArgumentException("extraOptions cannot be null");
+        }
+        var extraOptionsValue = 0;
+        for (var extraOption : extraOptions) {
+            if (extraOption == null) {
+                throw new IllegalArgumentException("extraOptions cannot contain null");
+            }
+            extraOptionsValue |= extraOption.value();
+        }
+        final var result = api.setCompileExtraOptions(handle, extraOptionsValue);
+        if (result != 0) {
+            final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
+            throw new RuntimeException("Failed to set the extra compile options",
+                    new IllegalStateException(errorMessage));
         }
     }
 
