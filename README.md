@@ -18,11 +18,11 @@ The source code is hosted on [GitHub](https://github.com/alexey-pelykh/pcre4j).
 
 The PCRE4J library provides several APIs to interact with the PCRE library:
 
-- `java.util.regex`-alike API via `org.pcre4j.regex.Pattern` and `org.pcre4j.regex.Matcher`
+- `java.util.regex`-compatible API via `org.pcre4j.regex.Pattern` and `org.pcre4j.regex.Matcher`
 - The PCRE4J API via `org.pcre4j.Pcre2Code` and related classes
 - The `libpcre2` direct API via backends that implement `org.pcre4j.api.IPcre2`
 
-### Quick Start with `java.util.regex`-alike API
+### Quick Start with `java.util.regex`-compatible API
 
 Add the following dependencies to your `pom.xml` file:
 
@@ -179,6 +179,90 @@ public class Usage {
 ```
 
 See the exposed PCRE2 API functions list [here](./PCRE2_API.md).
+
+## `java.util.regex` API Compatibility
+
+The `regex` module provides a complete implementation of the `java.util.regex` API backed by PCRE2.
+
+### `Pattern`
+
+| Method | Supported |
+|--------|-----------|
+| `compile(String)` | ✅ |
+| `compile(String, int)` | ✅ |
+| `matches(String, CharSequence)` | ✅ |
+| `quote(String)` | ✅ |
+| `asPredicate()` | ✅ |
+| `asMatchPredicate()` | ✅ |
+| `flags()` | ✅ |
+| `matcher(CharSequence)` | ✅ |
+| `namedGroups()` | ✅ |
+| `pattern()` | ✅ |
+| `split(CharSequence)` | ✅ |
+| `split(CharSequence, int)` | ✅ |
+| `splitAsStream(CharSequence)` | ✅ |
+| `splitWithDelimiters(CharSequence, int)` | ✅ |
+| `toString()` | ✅ |
+
+### `Pattern` Flags
+
+| Flag | Supported | Notes |
+|------|-----------|-------|
+| `CASE_INSENSITIVE` | ✅ | Via `PCRE2_CASELESS` |
+| `COMMENTS` | ✅ | Via `PCRE2_EXTENDED` |
+| `DOTALL` | ✅ | Via `PCRE2_DOTALL` |
+| `LITERAL` | ✅ | Via `PCRE2_LITERAL` |
+| `MULTILINE` | ✅ | Via `PCRE2_MULTILINE` |
+| `UNICODE_CHARACTER_CLASS` | ✅ | Via `PCRE2_UCP` |
+| `UNICODE_CASE` | ✅ | PCRE2 with UTF mode already performs Unicode-aware case folding |
+| `UNIX_LINES` | ✅ | Via `PCRE2_NEWLINE_LF` |
+| `CANON_EQ` | ✅ | Via NFD normalization; see `Pattern.CANON_EQ` Javadoc for limitations |
+
+### `Matcher`
+
+| Method | Supported |
+|--------|-----------|
+| `appendReplacement(StringBuffer, String)` | ✅ |
+| `appendReplacement(StringBuilder, String)` | ✅ |
+| `appendTail(StringBuffer)` | ✅ |
+| `appendTail(StringBuilder)` | ✅ |
+| `end()` | ✅ |
+| `end(int)` | ✅ |
+| `end(String)` | ✅ |
+| `find()` | ✅ |
+| `find(int)` | ✅ |
+| `group()` | ✅ |
+| `group(int)` | ✅ |
+| `group(String)` | ✅ |
+| `groupCount()` | ✅ |
+| `hasAnchoringBounds()` | ✅ |
+| `hasMatch()` | ✅ |
+| `hasTransparentBounds()` | ✅ |
+| `hitEnd()` | ✅ |
+| `lookingAt()` | ✅ |
+| `matches()` | ✅ |
+| `namedGroups()` | ✅ |
+| `pattern()` | ✅ |
+| `quoteReplacement(String)` | ✅ |
+| `region(int, int)` | ✅ |
+| `regionEnd()` | ✅ |
+| `regionStart()` | ✅ |
+| `replaceAll(String)` | ✅ |
+| `replaceAll(Function)` | ✅ |
+| `replaceFirst(String)` | ✅ |
+| `replaceFirst(Function)` | ✅ |
+| `requireEnd()` | ✅ |
+| `reset()` | ✅ |
+| `reset(CharSequence)` | ✅ |
+| `results()` | ✅ |
+| `start()` | ✅ |
+| `start(int)` | ✅ |
+| `start(String)` | ✅ |
+| `toMatchResult()` | ✅ |
+| `toString()` | ✅ |
+| `useAnchoringBounds(boolean)` | ✅ |
+| `usePattern(Pattern)` | ✅ |
+| `useTransparentBounds(boolean)` | ✅ |
 
 ## Backends
 
