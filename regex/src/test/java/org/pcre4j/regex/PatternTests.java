@@ -937,4 +937,31 @@ public class PatternTests {
         assertTrue(pcre4jMatcher.matches());
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void splitAsStream(IPcre2 api) {
+        // Test splitAsStream against Java Pattern for multiple inputs and edge cases
+        Object[][] cases = new Object[][]{
+                {",", "a,b,c"},
+                {",", "a,b,c,"},
+                {",", ""},
+                {",", "abc"},
+                {"\\d", "a1b2c"}
+        };
+
+        for (Object[] c : cases) {
+            String regex = (String) c[0];
+            String input = (String) c[1];
+
+            var javaPattern = java.util.regex.Pattern.compile(regex);
+            var pcre4jPattern = Pattern.compile(api, regex);
+
+            assertArrayEquals(
+                    javaPattern.splitAsStream(input).toArray(),
+                    pcre4jPattern.splitAsStream(input).toArray(),
+                    "Mismatch for regex=" + regex + ", input=" + input
+            );
+        }
+    }
+
 }
