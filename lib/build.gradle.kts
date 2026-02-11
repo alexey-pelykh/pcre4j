@@ -27,8 +27,9 @@ repositories {
 
 dependencies {
     api(project(":api"))
-    testImplementation(project(":jna"))
-    testImplementation(project(":ffm"))
+    // Runtime-only: lib tests discover backends reflectively to avoid compile-time coupling
+    testRuntimeOnly(project(":jna"))
+    testRuntimeOnly(project(":ffm"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
