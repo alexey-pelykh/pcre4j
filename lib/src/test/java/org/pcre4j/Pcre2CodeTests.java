@@ -19,6 +19,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.stream.Stream;
 
 import java.util.EnumSet;
@@ -29,13 +30,27 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Pcre2CodeTests {
 
-    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
-    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
+    /**
+     * Reflectively instantiates an {@link IPcre2} backend by class name.
+     *
+     * @param className the fully qualified class name of the backend
+     * @return the backend instance
+     */
+    private static IPcre2 loadBackend(String className) {
+        try {
+            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("Backend " + className + " not found on classpath", e);
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
+                 | NoSuchMethodException e) {
+            throw new RuntimeException("Failed to instantiate backend " + className, e);
+        }
+    }
 
     private static Stream<Arguments> parameters() {
         return Stream.of(
-                Arguments.of(JNA_PCRE2),
-                Arguments.of(FFM_PCRE2)
+                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
+                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
         );
     }
 
