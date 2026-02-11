@@ -17,6 +17,19 @@ Use the [feature request template](https://github.com/alexey-pelykh/pcre4j/issue
 3. Ensure the build passes (see [Build Instructions](#build-instructions) below)
 4. Submit a pull request against `main`
 
+## Branch Protection
+
+The `main` branch has the following protection rules:
+
+- **Required status checks**: The `package` CI job must pass before merging (this transitively requires all `compatibility` matrix jobs to pass as well)
+- **Branch must be up to date**: PRs must be up to date with `main` before merging
+- **Required reviews**: At least 1 approving review is required
+- **Stale review dismissal**: Approvals are dismissed when new commits are pushed
+- **Signed commits**: All commits must be signed ([how to sign commits](https://docs.github.com/en/authentication/managing-commit-signature-verification/signing-commits))
+- **Admin enforcement**: These rules apply to everyone, including administrators
+- **No force pushes**: Force pushes to `main` are not allowed
+- **No branch deletion**: The `main` branch cannot be deleted
+
 ## Developer Certificate of Origin (DCO)
 
 All commits must be signed off to certify that you have the right to submit the contribution under the project's license. Add a `Signed-off-by` line to every commit message:
