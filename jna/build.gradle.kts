@@ -30,7 +30,7 @@ dependencies {
     implementation("net.java.dev.jna:jna-platform:5.14.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(project(":lib"))
-    testImplementation(project(":test"))
+    testImplementation(testFixtures(project(":lib")))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 

@@ -14,6 +14,7 @@
  */
 plugins {
     `java-library`
+    `java-test-fixtures`
     checkstyle
     `maven-publish`
     jacoco
@@ -27,6 +28,7 @@ repositories {
 
 dependencies {
     api(project(":api"))
+    testFixturesApi("org.junit.jupiter:junit-jupiter:5.10.2")
     // Runtime-only: lib tests discover backends reflectively to avoid compile-time coupling
     testRuntimeOnly(project(":jna"))
     testRuntimeOnly(project(":ffm"))

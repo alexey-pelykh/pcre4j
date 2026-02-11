@@ -16,7 +16,6 @@ rootProject.name = "pcre4j"
 
 include(":api")
 include(":lib")
-include(":test")
 include(":jna")
 include(":ffm")
 include(":regex")
