@@ -251,6 +251,86 @@ class Pcre2LibraryFinderTest {
         assertTrue(result.isEmpty());
     }
 
+    // --- validateDiscoveryPath ---
+
+    @Test
+    void validateDiscoveryPath_validAbsoluteDirectory(@TempDir Path tempDir) {
+        var result = Pcre2LibraryFinder.validateDiscoveryPath(tempDir.toString(), "test");
+        assertNotNull(result);
+        assertEquals(tempDir, result);
+    }
+
+    @Test
+    void validateDiscoveryPath_nullInput() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath(null, "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_emptyInput() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_blankInput() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("   ", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_nullByte() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib\0/evil", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharSemicolon() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib;rm -rf /", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharPipe() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib|cat /etc/passwd", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharAmpersand() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib&echo pwned", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharDollar() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/$HOME", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharBacktick() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/`id`", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharBackslash() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib\\evil", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_relativePath() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("relative/path", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_pathTraversal() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/../etc", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_nonExistentDirectory() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/nonexistent/directory/xyz/12345", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_fileNotDirectory(@TempDir Path tempDir) throws IOException {
+        var file = Files.createFile(tempDir.resolve("not-a-directory"));
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath(file.toString(), "test"));
+    }
+
     // --- DISCOVERY_PROPERTY constant ---
 
     @Test

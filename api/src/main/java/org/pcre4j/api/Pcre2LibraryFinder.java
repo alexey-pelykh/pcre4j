@@ -17,12 +17,14 @@ package org.pcre4j.api;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 /**
  * Utility for discovering the PCRE2 native library on the system.
@@ -51,6 +53,12 @@ public final class Pcre2LibraryFinder {
     public static final String DISCOVERY_PROPERTY = "pcre2.library.discovery";
 
     private static final long SUBPROCESS_TIMEOUT_SECONDS = 5;
+
+    /**
+     * Pattern matching characters that should not appear in a library directory path.
+     * Rejects shell metacharacters and other suspicious characters.
+     */
+    private static final Pattern SUSPICIOUS_PATH_CHARS = Pattern.compile("[;|&$`!<>\"'\\\\*?{}\\[\\]()]");
 
     private static final List<String> MACOS_WELL_KNOWN_PATHS = List.of(
             "/opt/homebrew/lib",
@@ -161,7 +169,12 @@ public final class Pcre2LibraryFinder {
             return Optional.empty();
         }
 
-        return checkLibrary(Path.of(libDir, mappedName), "pcre2-config");
+        var validatedDir = validateDiscoveryPath(libDir, "pcre2-config");
+        if (validatedDir == null) {
+            return Optional.empty();
+        }
+
+        return checkLibrary(validatedDir.resolve(mappedName), "pcre2-config");
     }
 
     /**
@@ -200,7 +213,12 @@ public final class Pcre2LibraryFinder {
             return Optional.empty();
         }
 
-        return checkLibrary(Path.of(output.trim(), mappedName), "pkg-config");
+        var validatedDir = validateDiscoveryPath(output.trim(), "pkg-config");
+        if (validatedDir == null) {
+            return Optional.empty();
+        }
+
+        return checkLibrary(validatedDir.resolve(mappedName), "pkg-config");
     }
 
     /**
@@ -231,6 +249,59 @@ public final class Pcre2LibraryFinder {
         }
 
         return Optional.empty();
+    }
+
+    /**
+     * Validate a library directory path obtained from an external command.
+     * <p>
+     * Rejects paths that are blank, contain null bytes, are not absolute, contain path traversal sequences
+     * ({@code ..}), contain shell metacharacters, or do not resolve to an existing directory.
+     *
+     * @param rawPath the raw path string from command output
+     * @param source  the discovery source name for logging
+     * @return the validated directory path, or {@code null} if validation fails
+     */
+    static Path validateDiscoveryPath(String rawPath, String source) {
+        if (rawPath == null || rawPath.isBlank()) {
+            LOG.log(Level.FINE, "Empty path from {0}", source);
+            return null;
+        }
+
+        if (rawPath.indexOf('\0') >= 0) {
+            LOG.log(Level.WARNING, "Null byte in path from {0}, rejecting", source);
+            return null;
+        }
+
+        if (SUSPICIOUS_PATH_CHARS.matcher(rawPath).find()) {
+            LOG.log(Level.WARNING, "Suspicious characters in path from {0}: {1}", new Object[]{source, rawPath});
+            return null;
+        }
+
+        Path path;
+        try {
+            path = Path.of(rawPath);
+        } catch (InvalidPathException e) {
+            LOG.log(Level.WARNING, "Invalid path from {0}: {1}", new Object[]{source, rawPath});
+            return null;
+        }
+
+        if (!path.isAbsolute()) {
+            LOG.log(Level.WARNING, "Non-absolute path from {0}: {1}", new Object[]{source, rawPath});
+            return null;
+        }
+
+        var normalized = path.normalize();
+        if (!normalized.equals(path)) {
+            LOG.log(Level.WARNING, "Path contains traversal sequences from {0}: {1}", new Object[]{source, rawPath});
+            return null;
+        }
+
+        if (!Files.isDirectory(normalized)) {
+            LOG.log(Level.FINE, "Path from {0} is not an existing directory: {1}", new Object[]{source, normalized});
+            return null;
+        }
+
+        return normalized;
     }
 
     /**
