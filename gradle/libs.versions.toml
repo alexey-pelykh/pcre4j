@@ -1,5 +1,5 @@
 [versions]
-jna = "5.14.0"
+jna = "5.18.1"
 junit-jupiter = "5.10.2"
 junit-platform = "1.10.2"
 jreleaser = "1.22.0"
