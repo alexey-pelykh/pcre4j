@@ -41,10 +41,16 @@ public class MatchLimitTests {
     }
 
     private String savedJitProperty;
+    private String savedMatchLimitProperty;
+    private String savedDepthLimitProperty;
+    private String savedHeapLimitProperty;
 
     @BeforeEach
-    void clearProperties() {
+    void saveAndClearProperties() {
         savedJitProperty = System.getProperty("pcre2.regex.jit");
+        savedMatchLimitProperty = System.getProperty(Matcher.MATCH_LIMIT_PROPERTY);
+        savedDepthLimitProperty = System.getProperty(Matcher.DEPTH_LIMIT_PROPERTY);
+        savedHeapLimitProperty = System.getProperty(Matcher.HEAP_LIMIT_PROPERTY);
         System.clearProperty(Matcher.MATCH_LIMIT_PROPERTY);
         System.clearProperty(Matcher.DEPTH_LIMIT_PROPERTY);
         System.clearProperty(Matcher.HEAP_LIMIT_PROPERTY);
@@ -52,13 +58,17 @@ public class MatchLimitTests {
 
     @AfterEach
     void restoreProperties() {
-        System.clearProperty(Matcher.MATCH_LIMIT_PROPERTY);
-        System.clearProperty(Matcher.DEPTH_LIMIT_PROPERTY);
-        System.clearProperty(Matcher.HEAP_LIMIT_PROPERTY);
-        if (savedJitProperty != null) {
-            System.setProperty("pcre2.regex.jit", savedJitProperty);
+        restoreProperty("pcre2.regex.jit", savedJitProperty);
+        restoreProperty(Matcher.MATCH_LIMIT_PROPERTY, savedMatchLimitProperty);
+        restoreProperty(Matcher.DEPTH_LIMIT_PROPERTY, savedDepthLimitProperty);
+        restoreProperty(Matcher.HEAP_LIMIT_PROPERTY, savedHeapLimitProperty);
+    }
+
+    private static void restoreProperty(String name, String savedValue) {
+        if (savedValue != null) {
+            System.setProperty(name, savedValue);
         } else {
-            System.clearProperty("pcre2.regex.jit");
+            System.clearProperty(name);
         }
     }
 

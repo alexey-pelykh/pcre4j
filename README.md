@@ -273,8 +273,9 @@ of protection against ReDoS attacks.
 ### JIT Compilation (Enabled by Default)
 
 The `regex` module enables PCRE2 JIT compilation by default when the platform supports it.
-JIT-compiled patterns use a fixed-size machine stack that inherently limits execution time,
-providing a first line of defense against catastrophic backtracking.
+JIT-compiled patterns use a fixed-size machine stack, which can mitigate some forms of
+catastrophic backtracking and runaway recursion, but explicit match limits (see below) should
+still be used for stronger guarantees on CPU and memory usage.
 
 To disable JIT: `-Dpcre2.regex.jit=false`
 

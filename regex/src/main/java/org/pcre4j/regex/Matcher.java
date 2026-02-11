@@ -233,27 +233,32 @@ public class Matcher implements java.util.regex.MatchResult {
     }
 
     /**
-     * Parses a system property value as a positive integer.
+     * Parses a system property value as a positive integer suitable for PCRE2 limit values.
+     * <p>
+     * Values are parsed as {@code long} to provide clear error messages for out-of-range inputs,
+     * then validated to fit within the range accepted by the PCRE2 API (1 to {@link Integer#MAX_VALUE}).
      *
      * @param propertyName the name of the system property (for error messages)
      * @param value        the string value to parse
      * @return the parsed positive integer
-     * @throws IllegalArgumentException if the value is not a valid positive integer
+     * @throws IllegalArgumentException if the value is not a valid positive integer in the accepted range
      */
     private static int parsePositiveInt(String propertyName, String value) {
+        final long result;
         try {
-            final var result = Integer.parseInt(value);
-            if (result <= 0) {
-                throw new IllegalArgumentException(
-                        "System property " + propertyName + " must be a positive integer, got: " + value
-                );
-            }
-            return result;
+            result = Long.parseLong(value);
         } catch (NumberFormatException e) {
             throw new IllegalArgumentException(
                     "System property " + propertyName + " must be a positive integer, got: " + value, e
             );
         }
+        if (result <= 0 || result > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException(
+                    "System property " + propertyName + " must be between 1 and " + Integer.MAX_VALUE
+                            + ", got: " + value
+            );
+        }
+        return (int) result;
     }
 
     /**
@@ -1377,6 +1382,10 @@ public class Matcher implements java.util.regex.MatchResult {
                     if (result < 1) {
                         if (result != IPcre2.ERROR_NOMATCH) {
                             checkMatchLimitResult(abCode.api(), result);
+                            final var errorMessage = Pcre4jUtils.getErrorMessage(abCode.api(), result);
+                            throw new RuntimeException(
+                                    "Failed to find a match", new IllegalStateException(errorMessage)
+                            );
                         }
                         // If no match with transformed pattern, fall through to normal matching.
                         // This allows patterns without ^ to still find matches.
