@@ -111,9 +111,10 @@ gh release create <version> --title <version> --generate-notes
 ```
 
 **Workflow**:
-1. `gh release create <version> --title <version> --generate-notes` creates tag + GitHub Release (using tag as title)
-2. Tag push triggers `.github/workflows/release.yaml` for Maven Central publish via JReleaser
-3. Update README.md version references, commit, push
+1. Update `CHANGELOG.md`: move Unreleased items into a new version section with the release date
+2. `gh release create <version> --title <version> --generate-notes` creates tag + GitHub Release (using tag as title)
+3. Tag push triggers `.github/workflows/release.yaml` for Maven Central publish via JReleaser
+4. Update README.md version references, commit, push
 
 **Note**: `skipRelease: true` in jreleaser.yml exists because the GitHub Release is already created by `gh release create` before JReleaser runs.
 
