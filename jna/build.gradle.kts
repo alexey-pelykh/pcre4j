@@ -27,11 +27,11 @@ repositories {
 
 dependencies {
     api(project(":api"))
-    implementation("net.java.dev.jna:jna-platform:5.14.0")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
+    implementation(libs.jna.platform)
+    testImplementation(libs.junit.jupiter)
     testImplementation(project(":lib"))
     testImplementation(testFixtures(project(":lib")))
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 configurations {
@@ -98,43 +98,12 @@ publishing {
     publications {
         create<MavenPublication>("mavenJava") {
             from(components["java"])
-
-            groupId = "org.pcre4j"
             artifactId = project.name
-            version = project.version.toString()
 
             pom {
                 name = "org.pcre4j:${project.name}"
                 description = "PCRE4J JNA Backend"
-                url = "https://pcre4j.org"
-
-                licenses {
-                    license {
-                        name = "GNU Lesser General Public License v3.0"
-                        url = "https://www.gnu.org/licenses/lgpl-3.0.txt"
-                    }
-                }
-                developers {
-                    developer {
-                        name = "Alexey Pelykh"
-                        email = "alexey.pelykh@gmail.com"
-                        organization = "The PCRE4J Project"
-                        organizationUrl = "https://pcre4j.org"
-                    }
-                }
-                scm {
-                    connection = "scm:git:git://github.com/alexey-pelykh/pcre4j.git"
-                    developerConnection = "scm:git:ssh://github.com:alexey-pelykh/pcre4j.git"
-                    url = "https://github.com/alexey-pelykh/pcre4j"
-                }
             }
-        }
-    }
-
-    repositories {
-        maven {
-            name = "StagingDeploy"
-            url = uri(layout.buildDirectory.dir("staging-deploy"))
         }
     }
 }
