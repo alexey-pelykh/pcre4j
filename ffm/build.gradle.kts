@@ -29,7 +29,7 @@ dependencies {
     api(project(":api"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.2")
     testImplementation(project(":lib"))
-    testImplementation(project(":test"))
+    testImplementation(testFixtures(project(":lib")))
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -163,7 +163,7 @@ dependencies {
     // Java 22 test classes need to see the main JAR (for MRJAR resolution)
     "testJava22ClassesImplementation"(project(":api"))
     "testJava22ClassesImplementation"(project(":lib"))
-    "testJava22ClassesImplementation"(project(":test"))
+    "testJava22ClassesImplementation"(testFixtures(project(":lib")))
     "testJava22ClassesImplementation"("org.junit.jupiter:junit-jupiter:5.10.2")
 }
 
