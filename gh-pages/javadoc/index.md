@@ -4,4 +4,4 @@
 - [`org.pcre4j.lib`](./lib)
 - [`org.pcre4j.jna`](./jna)
 - [`org.pcre4j.ffm`](./ffm)
-- [`org.pcre4j.regex`](./ffm)
+- [`org.pcre4j.regex`](./regex)
