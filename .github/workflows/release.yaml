@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Need both JDKs for MRJAR build
       - name: Set up temurin-jdk-21 (for MRJAR base)
