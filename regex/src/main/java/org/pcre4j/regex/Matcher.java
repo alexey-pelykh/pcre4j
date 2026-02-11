@@ -36,6 +36,44 @@ public class Matcher implements java.util.regex.MatchResult {
     private final static long JIT_STACK_MAX_SIZE = 512 * 1024;
 
     /**
+     * System property name for configuring the match limit.
+     * <p>
+     * The match limit caps the number of times the internal {@code match()} function can be called
+     * during a single match operation. This provides protection against catastrophic backtracking
+     * (ReDoS) by terminating matches that require excessive backtracking.
+     * <p>
+     * When not set, the PCRE2 library's compiled-in default is used (typically 10,000,000).
+     *
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_match_limit.html">pcre2_set_match_limit</a>
+     */
+    public static final String MATCH_LIMIT_PROPERTY = "pcre2.regex.match.limit";
+
+    /**
+     * System property name for configuring the backtracking depth limit.
+     * <p>
+     * The depth limit caps the depth of nested backtracking during a single match operation.
+     * This provides protection against patterns that cause deep recursion.
+     * <p>
+     * When not set, the PCRE2 library's compiled-in default is used (typically 250).
+     *
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_depth_limit.html">pcre2_set_depth_limit</a>
+     */
+    public static final String DEPTH_LIMIT_PROPERTY = "pcre2.regex.depth.limit";
+
+    /**
+     * System property name for configuring the heap memory limit.
+     * <p>
+     * The heap limit caps the amount of heap memory (in kibibytes) that can be used during
+     * a single match operation. This provides protection against patterns that consume
+     * excessive memory during matching.
+     * <p>
+     * When not set, the PCRE2 library's compiled-in default is used (typically 20,000 KiB).
+     *
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_heap_limit.html">pcre2_set_heap_limit</a>
+     */
+    public static final String HEAP_LIMIT_PROPERTY = "pcre2.regex.heap.limit";
+
+    /**
      * The pattern that this matcher used to match the input against
      */
     private Pattern pattern;
@@ -155,6 +193,7 @@ public class Matcher implements java.util.regex.MatchResult {
         } else {
             this.jitStack = null;
         }
+        configureMatchLimits(this.matchContext);
         this.groupNameToIndex = pattern.namedGroups();
 
         this.input = input.toString();
@@ -166,6 +205,70 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         reset();
+    }
+
+    /**
+     * Configures match limits on the given match context from system properties.
+     * <p>
+     * This reads the {@link #MATCH_LIMIT_PROPERTY}, {@link #DEPTH_LIMIT_PROPERTY},
+     * and {@link #HEAP_LIMIT_PROPERTY} system properties and applies them to the match context.
+     *
+     * @param matchContext the match context to configure
+     */
+    private static void configureMatchLimits(Pcre2MatchContext matchContext) {
+        final var matchLimit = System.getProperty(MATCH_LIMIT_PROPERTY);
+        if (matchLimit != null) {
+            matchContext.setMatchLimit(parsePositiveInt(MATCH_LIMIT_PROPERTY, matchLimit));
+        }
+
+        final var depthLimit = System.getProperty(DEPTH_LIMIT_PROPERTY);
+        if (depthLimit != null) {
+            matchContext.setDepthLimit(parsePositiveInt(DEPTH_LIMIT_PROPERTY, depthLimit));
+        }
+
+        final var heapLimit = System.getProperty(HEAP_LIMIT_PROPERTY);
+        if (heapLimit != null) {
+            matchContext.setHeapLimit(parsePositiveInt(HEAP_LIMIT_PROPERTY, heapLimit));
+        }
+    }
+
+    /**
+     * Parses a system property value as a positive integer.
+     *
+     * @param propertyName the name of the system property (for error messages)
+     * @param value        the string value to parse
+     * @return the parsed positive integer
+     * @throws IllegalArgumentException if the value is not a valid positive integer
+     */
+    private static int parsePositiveInt(String propertyName, String value) {
+        try {
+            final var result = Integer.parseInt(value);
+            if (result <= 0) {
+                throw new IllegalArgumentException(
+                        "System property " + propertyName + " must be a positive integer, got: " + value
+                );
+            }
+            return result;
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException(
+                    "System property " + propertyName + " must be a positive integer, got: " + value, e
+            );
+        }
+    }
+
+    /**
+     * Checks a match result code and throws an appropriate exception if it indicates a limit error.
+     *
+     * @param api    the PCRE2 API instance
+     * @param result the match result code
+     * @throws MatchLimitException if the result indicates a match, depth, or heap limit was exceeded
+     */
+    private static void checkMatchLimitResult(IPcre2 api, int result) {
+        if (result == IPcre2.ERROR_MATCHLIMIT
+                || result == IPcre2.ERROR_DEPTHLIMIT
+                || result == IPcre2.ERROR_HEAPLIMIT) {
+            throw new MatchLimitException(Pcre4jUtils.getErrorMessage(api, result), result);
+        }
     }
 
     /**
@@ -677,7 +780,8 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.lookingAtCode.api(), result);
+            checkMatchLimitResult(lookingAtCode.api(), result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(lookingAtCode.api(), result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
@@ -729,8 +833,9 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorMessage = Pcre4jUtils.getErrorMessage(
-                    pattern.matchingCode != null ? pattern.matchingCode.api() : pattern.code.api(), result);
+            final var errorApi = pattern.matchingCode != null ? pattern.matchingCode.api() : pattern.code.api();
+            checkMatchLimitResult(errorApi, result);
+            final var errorMessage = Pcre4jUtils.getErrorMessage(errorApi, result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
         }
 
@@ -1184,6 +1289,7 @@ public class Matcher implements java.util.regex.MatchResult {
         } else {
             this.jitStack = null;
         }
+        configureMatchLimits(this.matchContext);
         this.groupNameToIndex = newPattern.namedGroups();
 
         // Clear cached transformed pattern since the pattern changed
@@ -1268,7 +1374,13 @@ public class Matcher implements java.util.regex.MatchResult {
                             matchData,
                             matchContext
                     );
-                    if (result >= 1) {
+                    if (result < 1) {
+                        if (result != IPcre2.ERROR_NOMATCH) {
+                            checkMatchLimitResult(abCode.api(), result);
+                        }
+                        // If no match with transformed pattern, fall through to normal matching.
+                        // This allows patterns without ^ to still find matches.
+                    } else {
                         // Process to get match indices
                         processMatchResult(matchData, new RegionSubject(input, searchStart, 0));
 
@@ -1294,8 +1406,6 @@ public class Matcher implements java.util.regex.MatchResult {
                         lastMatchData = null;
                         lastMatchIndices = null;
                     }
-                    // If no match with transformed pattern, fall through to normal matching.
-                    // This allows patterns without ^ to still find matches.
                 }
             }
 
@@ -1314,6 +1424,7 @@ public class Matcher implements java.util.regex.MatchResult {
                     return false;
                 }
 
+                checkMatchLimitResult(pattern.code.api(), result);
                 final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
                 throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
             }
