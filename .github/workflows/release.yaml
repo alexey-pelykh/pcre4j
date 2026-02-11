@@ -22,13 +22,13 @@ jobs:
 
       # Need both JDKs for MRJAR build
       - name: Set up temurin-jdk-21 (for MRJAR base)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 21
 
       - name: Set up temurin-jdk-22 (for MRJAR overlay)
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 22
