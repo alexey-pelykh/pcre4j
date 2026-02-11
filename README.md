@@ -264,6 +264,49 @@ The `regex` module provides a complete implementation of the `java.util.regex` A
 | `usePattern(Pattern)` | ✅ |
 | `useTransparentBounds(boolean)` | ✅ |
 
+## Security: ReDoS Protection
+
+Regular Expression Denial of Service (ReDoS) occurs when a crafted input causes catastrophic
+backtracking in a regex engine, leading to excessive CPU usage. PCRE4J provides several layers
+of protection against ReDoS attacks.
+
+### JIT Compilation (Enabled by Default)
+
+The `regex` module enables PCRE2 JIT compilation by default when the platform supports it.
+JIT-compiled patterns use a fixed-size machine stack that inherently limits execution time,
+providing a first line of defense against catastrophic backtracking.
+
+To disable JIT: `-Dpcre2.regex.jit=false`
+
+### Match Limits
+
+PCRE2 provides configurable limits that terminate match operations exceeding resource thresholds.
+The `regex` module exposes these via system properties:
+
+| System Property | Description | PCRE2 Default |
+|----------------|-------------|---------------|
+| `pcre2.regex.match.limit` | Maximum number of internal match function calls | ~10,000,000 |
+| `pcre2.regex.depth.limit` | Maximum backtracking depth | ~250 |
+| `pcre2.regex.heap.limit` | Maximum heap memory in KiB | ~20,000 |
+
+When a limit is exceeded, a `MatchLimitException` is thrown (a `RuntimeException` subclass)
+with the specific PCRE2 error code indicating which limit was hit.
+
+**Example: Tightening limits for untrusted input:**
+
+```bash
+java -Dpcre2.regex.match.limit=1000000 -Dpcre2.regex.depth.limit=100 -jar myapp.jar
+```
+
+**Note:** The PCRE2 library's compiled-in defaults already provide baseline protection. The system
+properties allow applications to tighten these limits further for security-sensitive use cases.
+When not set, the library defaults are used.
+
+### Low-Level API
+
+For fine-grained control, the `lib` module provides `Pcre2MatchContext` with `setMatchLimit()`,
+`setDepthLimit()`, and `setHeapLimit()` methods that can be applied on a per-match basis.
+
 ## Backends
 
 The PCRE4J library supports several backends to invoke the `pcre2` API.
