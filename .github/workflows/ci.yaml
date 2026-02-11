@@ -7,6 +7,9 @@ on:
   pull_request:
     branches:
       - main
+  schedule:
+    # Weekly full compatibility run (Sundays at 06:00 UTC)
+    - cron: '0 6 * * 0'
 
 permissions: {}
 
@@ -18,22 +21,15 @@ jobs:
 
     timeout-minutes: 30
 
+    # Tiered CI matrix:
+    # - pull_request: Temurin only, LTS + latest Java, latest PCRE2 (~2 jobs)
+    # - push to main / schedule: Full matrix (~240 jobs)
     strategy:
       matrix:
         os: [ ubuntu-24.04 ]
-        java-distribution:
-          - temurin
-          - zulu
-          - adopt-hotspot
-          - adopt-openj9
-          - liberica
-          - microsoft
-          - corretto
-          - semeru
-          - oracle
-#          - dragonwell
-        java-version: [ 21, 22, 25 ]
-        pcre2-version: [ '10.42', '10.43', '10.47' ]
+        java-distribution: ${{ github.event_name == 'pull_request' && fromJson('["temurin"]') || fromJson('["temurin", "zulu", "adopt-hotspot", "adopt-openj9", "liberica", "microsoft", "corretto", "semeru", "oracle"]') }}
+        java-version: ${{ github.event_name == 'pull_request' && fromJson('[21, 25]') || fromJson('[21, 22, 25]') }}
+        pcre2-version: ${{ github.event_name == 'pull_request' && fromJson('["10.47"]') || fromJson('["10.42", "10.43", "10.47"]') }}
         exclude:
           # Some distributions may not have all Java versions yet
           - java-distribution: adopt-hotspot
