@@ -8,9 +8,16 @@ on:
     branches:
       - main
 
+permissions: {}
+
 jobs:
 
   compatibility:
+    permissions:
+      contents: read
+
+    timeout-minutes: 30
+
     strategy:
       matrix:
         os: [ ubuntu-24.04 ]
@@ -107,6 +114,8 @@ jobs:
 
     permissions:
       contents: read
+
+    timeout-minutes: 30
 
     needs:
       - compatibility
@@ -225,6 +234,8 @@ jobs:
       contents: read
       pages: write
       id-token: write
+
+    timeout-minutes: 10
 
     needs:
       - package
