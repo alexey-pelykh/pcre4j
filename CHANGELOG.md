@@ -84,6 +84,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [0.4.4] - 2026-01-18
 
+> **Note:** The 18-month gap between 0.4.3 and 0.4.4 reflects a period where the project was on hold.
+> Development resumed in January 2026 with renewed focus on `java.util.regex` API compatibility and
+> expanded PCRE2 API coverage.
+
 ### Fixed
 
 - Allow matching empty strings ([#68](https://github.com/alexey-pelykh/pcre4j/pull/68))
