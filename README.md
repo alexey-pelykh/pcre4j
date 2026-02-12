@@ -17,6 +17,38 @@ library author [Philip Hazel](https://github.com/PhilipHazel) and its contributo
 
 The source code is hosted on [GitHub](https://github.com/alexey-pelykh/pcre4j).
 
+## Module Architecture
+
+PCRE4J is organized into layered modules published as separate Maven artifacts under `org.pcre4j`:
+
+```
+regex  ──→  lib  ──→  api  ←──  jna
+                       ↑
+                       └──────  ffm
+```
+
+| Artifact | Description |
+|----------|-------------|
+| `api` | Backend interface contract (`IPcre2`) with PCRE2 constants |
+| `lib` | Core wrapper (`Pcre2Code`, match data, compile/match options, utilities). Depends on `api` |
+| `jna` | [JNA](https://github.com/java-native-access/jna) backend. Depends on `api` |
+| `ffm` | [FFM](https://docs.oracle.com/en/java/javase/22/core/foreign-function-and-memory-api.html) backend. Depends on `api` |
+| `regex` | `java.util.regex`-compatible API (`Pattern`, `Matcher`). Depends on `api` and `lib` |
+
+### Dependency Chain for Consumers
+
+Each API tier requires a different set of artifacts. The `regex` and `lib` artifacts declare their
+upstream dependencies as transitive, so your dependency manager pulls them automatically:
+
+| API Tier | You Declare | Resolved Transitively |
+|----------|-------------|----------------------|
+| `java.util.regex`-compatible | `regex` + `jna` or `ffm` | `api`, `lib` |
+| PCRE4J wrapper | `lib` + `jna` or `ffm` | `api` |
+| Direct PCRE2 | `jna` or `ffm` | `api` |
+
+A backend (`jna` or `ffm`) is always required at runtime but is intentionally not a transitive
+dependency of `regex` or `lib`, letting consumers choose which native access mechanism to use.
+
 ## Usage
 
 The PCRE4J library provides several APIs to interact with the PCRE library:
