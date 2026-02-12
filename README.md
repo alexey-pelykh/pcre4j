@@ -335,4 +335,4 @@ The `ffm` module is packaged as a Multi-Release JAR supporting both:
 
 ## Javadoc
 
-Please see [the Javadoc Index](./gh-pages/javadoc/index.md) for the detailed API documentation.
+Please see [the Javadoc Index](https://alexey-pelykh.com/pcre4j/javadoc/) for the detailed API documentation.
