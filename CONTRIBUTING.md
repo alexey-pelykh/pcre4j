@@ -21,7 +21,7 @@ Use the [feature request template](https://github.com/alexey-pelykh/pcre4j/issue
 
 The `main` branch has the following protection rules:
 
-- **Required status checks**: The `package` CI job must pass before merging (this transitively requires all `compatibility` matrix jobs to pass as well)
+- **Required status checks**: The `package` CI job must pass before merging (this transitively requires `lint` and all `compatibility` matrix jobs to pass as well)
 - **Branch must be up to date**: PRs must be up to date with `main` before merging
 - **Required reviews**: At least 1 approving review is required
 - **Stale review dismissal**: Approvals are dismissed when new commits are pushed
