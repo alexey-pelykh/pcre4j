@@ -26,7 +26,7 @@ public class Pcre2JitCode extends Pcre2Code {
     /**
      * The supported match options for JIT-compiled patterns.
      */
-    private final static EnumSet<Pcre2MatchOption> SUPPORTED_MATCH_OPTIONS = EnumSet.of(
+    private static final EnumSet<Pcre2MatchOption> SUPPORTED_MATCH_OPTIONS = EnumSet.of(
             Pcre2MatchOption.NOTBOL,
             Pcre2MatchOption.NOTEOL,
             Pcre2MatchOption.NOTEMPTY,
