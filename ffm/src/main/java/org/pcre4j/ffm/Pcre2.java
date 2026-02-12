@@ -795,7 +795,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int config(int what) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pWhat = MemorySegment.ofAddress(0);
 
             return (int) pcre2_config.invokeExact(
@@ -843,7 +843,7 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("where must be direct");
         }
 
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pWhere = MemorySegment.ofBuffer(where);
 
             return (int) pcre2_config.invokeExact(
@@ -858,7 +858,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long generalContextCreate(long privateMalloc, long privateFree, long memoryData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pPrivateMalloc = MemorySegment.ofAddress(privateMalloc);
             final var pPrivateFree = MemorySegment.ofAddress(privateFree);
             final var pMemoryData = MemorySegment.ofAddress(memoryData);
@@ -878,7 +878,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long generalContextCopy(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pNewGContext = (MemorySegment) pcre2_general_context_copy.invokeExact(
@@ -894,7 +894,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void generalContextFree(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             pcre2_general_context_free.invokeExact(
@@ -908,7 +908,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long maketables(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pTables = (MemorySegment) pcre2_maketables.invokeExact(
@@ -924,7 +924,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void maketablesFree(long gcontext, long tables) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
             final var pTables = MemorySegment.ofAddress(tables);
 
@@ -940,7 +940,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long compileContextCreate(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pCContext = (MemorySegment) pcre2_compile_context_create.invokeExact(
@@ -956,7 +956,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long compileContextCopy(long ccontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             final var pNewCContext = (MemorySegment) pcre2_compile_context_copy.invokeExact(
@@ -972,7 +972,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void compileContextFree(long ccontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             pcre2_compile_context_free.invokeExact(
@@ -1025,7 +1025,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long codeCopy(long code) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
 
             final var pNewCode = (MemorySegment) pcre2_code_copy.invokeExact(
@@ -1041,7 +1041,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long codeCopyWithTables(long code) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
 
             final var pNewCode = (MemorySegment) pcre2_code_copy_with_tables.invokeExact(
@@ -1057,7 +1057,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void codeFree(long code) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
 
             pcre2_code_free.invokeExact(
@@ -1096,7 +1096,7 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("buffer must be direct");
         }
 
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pszBuffer = MemorySegment.ofBuffer(buffer);
             final var bufferSize = MemorySegment.ofAddress(buffer.capacity());
 
@@ -1113,7 +1113,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int patternInfo(long code, int what) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
             final var pWhere = MemorySegment.ofAddress(0);
 
@@ -1212,7 +1212,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int jitCompile(long code, int options) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
 
             return (int) pcre2_jit_compile.invokeExact(
@@ -1256,7 +1256,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long jitStackCreate(long startsize, long maxsize, long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var startSize = MemorySegment.ofAddress(startsize);
             final var maxSize = MemorySegment.ofAddress(maxsize);
             final var pGContext = MemorySegment.ofAddress(gcontext);
@@ -1276,7 +1276,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void jitStackFree(long jitStack) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pJitStack = MemorySegment.ofAddress(jitStack);
 
             pcre2_jit_stack_free.invokeExact(
@@ -1290,7 +1290,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void jitStackAssign(long mcontext, long callback, long data) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMContext = MemorySegment.ofAddress(mcontext);
             final var pCallback = MemorySegment.ofAddress(callback);
             final var pData = MemorySegment.ofAddress(data);
@@ -1308,7 +1308,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void jitFreeUnusedMemory(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             pcre2_jit_free_unused_memory.invokeExact(
@@ -1322,7 +1322,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long matchDataCreate(int ovecsize, long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pMatchData = (MemorySegment) pcre2_match_data_create.invokeExact(
@@ -1339,7 +1339,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long matchDataCreateFromPattern(long code, long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCode = MemorySegment.ofAddress(code);
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
@@ -1357,7 +1357,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void matchDataFree(long matchData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             pcre2_match_data_free.invokeExact(
@@ -1371,7 +1371,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long matchContextCreate(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pMatchContext = (MemorySegment) pcre2_match_context_create.invokeExact(
@@ -1387,7 +1387,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long matchContextCopy(long mcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
 
             final var pNewMatchContext = (MemorySegment) pcre2_match_context_copy.invokeExact(
@@ -1403,7 +1403,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void matchContextFree(long mcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchContext = MemorySegment.ofAddress(mcontext);
 
             pcre2_match_context_free.invokeExact(
@@ -1417,7 +1417,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long convertContextCreate(long gcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pGContext = MemorySegment.ofAddress(gcontext);
 
             final var pCvContext = (MemorySegment) pcre2_convert_context_create.invokeExact(
@@ -1433,7 +1433,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long convertContextCopy(long cvcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCvContext = MemorySegment.ofAddress(cvcontext);
 
             final var pNewCvContext = (MemorySegment) pcre2_convert_context_copy.invokeExact(
@@ -1449,7 +1449,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void convertContextFree(long cvcontext) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCvContext = MemorySegment.ofAddress(cvcontext);
 
             pcre2_convert_context_free.invokeExact(
@@ -1463,7 +1463,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setGlobEscape(long cvcontext, int escapeChar) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCvContext = MemorySegment.ofAddress(cvcontext);
 
             return (int) pcre2_set_glob_escape.invokeExact(
@@ -1478,7 +1478,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setGlobSeparator(long cvcontext, int separatorChar) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCvContext = MemorySegment.ofAddress(cvcontext);
 
             return (int) pcre2_set_glob_separator.invokeExact(
@@ -1533,7 +1533,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public void convertedPatternFree(long convertedPattern) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pConvertedPattern = MemorySegment.ofAddress(convertedPattern);
 
             pcre2_converted_pattern_free.invokeExact(
@@ -1627,7 +1627,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int getOvectorCount(long matchData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             return (int) pcre2_get_ovector_count.invokeExact(
@@ -1641,7 +1641,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long getMatchDataSize(long matchData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             final var result = (MemorySegment) pcre2_get_match_data_size.invokeExact(
@@ -1661,7 +1661,7 @@ public class Pcre2 implements IPcre2 {
             throw new IllegalArgumentException("ovector must not be null");
         }
 
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             final var pOvector = (MemorySegment) pcre2_get_ovector_pointer.invokeExact(
@@ -1677,7 +1677,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long getStartchar(long matchData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             final var result = (MemorySegment) pcre2_get_startchar.invokeExact(
@@ -1693,7 +1693,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public long getMark(long matchData) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMatchData = MemorySegment.ofAddress(matchData);
 
             final var result = (MemorySegment) pcre2_get_mark.invokeExact(
@@ -1709,7 +1709,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setNewline(long ccontext, int newline) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             return (int) pcre2_set_newline.invokeExact(
@@ -1724,7 +1724,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setBsr(long ccontext, int value) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             return (int) pcre2_set_bsr.invokeExact(
@@ -1739,7 +1739,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setParensNestLimit(long ccontext, int limit) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             return (int) pcre2_set_parens_nest_limit.invokeExact(
@@ -1754,7 +1754,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setMaxPatternLength(long ccontext, long length) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
             final var pLength = MemorySegment.ofAddress(length);
 
@@ -1770,7 +1770,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setCompileExtraOptions(long ccontext, int extraOptions) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
 
             return (int) pcre2_set_compile_extra_options.invokeExact(
@@ -1785,7 +1785,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setCharacterTables(long ccontext, long tables) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pCContext = MemorySegment.ofAddress(ccontext);
             final var pTables = MemorySegment.ofAddress(tables);
 
@@ -1819,7 +1819,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setMatchLimit(long mcontext, int limit) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMContext = MemorySegment.ofAddress(mcontext);
 
             return (int) pcre2_set_match_limit.invokeExact(
@@ -1834,7 +1834,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setDepthLimit(long mcontext, int limit) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMContext = MemorySegment.ofAddress(mcontext);
 
             return (int) pcre2_set_depth_limit.invokeExact(
@@ -1849,7 +1849,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setHeapLimit(long mcontext, int limit) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMContext = MemorySegment.ofAddress(mcontext);
 
             return (int) pcre2_set_heap_limit.invokeExact(
@@ -1864,7 +1864,7 @@ public class Pcre2 implements IPcre2 {
 
     @Override
     public int setOffsetLimit(long mcontext, long limit) {
-        try (var arena = Arena.ofConfined()) {
+        try {
             final var pMContext = MemorySegment.ofAddress(mcontext);
             final var pLimit = MemorySegment.ofAddress(limit);
 
