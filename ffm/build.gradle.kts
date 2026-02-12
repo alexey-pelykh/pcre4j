@@ -67,6 +67,14 @@ dependencies {
 // ============================================================
 // Java version configuration - Java 21 as base (with preview)
 // ============================================================
+// The Foreign Function & Memory (FFM) API was a preview feature in Java 21
+// and became GA in Java 22. Since this module targets Java 21 as the base,
+// --enable-preview is required for:
+//   - compileJava / compileTestJava: compiler must accept preview API usage
+//   - test JVM args: runtime must enable preview features
+//   - javadoc: must recognize preview API references
+// The java22 source set targets Java 22+ where FFM is GA, so no preview
+// flag is needed there.
 java {
     sourceCompatibility = JavaVersion.VERSION_21
     targetCompatibility = JavaVersion.VERSION_21
