@@ -308,6 +308,33 @@ public class Pcre2CodePatternInfoTests {
         assertTrue(foundSecond, "Name table should contain 'second' mapped to group 2");
     }
 
+    // --- matchLimit ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchLimitFromPattern(IPcre2 api) {
+        var code = new Pcre2Code(api, "(*LIMIT_MATCH=5000)test");
+        assertEquals(5000, code.matchLimit());
+    }
+
+    // --- depthLimit ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void depthLimitFromPattern(IPcre2 api) {
+        var code = new Pcre2Code(api, "(*LIMIT_DEPTH=3000)test");
+        assertEquals(3000, code.depthLimit());
+    }
+
+    // --- heapLimit ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void heapLimitFromPattern(IPcre2 api) {
+        var code = new Pcre2Code(api, "(*LIMIT_HEAP=8000)test");
+        assertEquals(8000, code.heapLimit());
+    }
+
     // --- size ---
 
     @ParameterizedTest
