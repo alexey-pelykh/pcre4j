@@ -23,6 +23,9 @@ import java.nio.ByteBuffer;
  */
 public interface IPcre2 {
 
+    // Option bits for pcre2_compile(), pcre2_match(), pcre2_dfa_match(), pcre2_jit_match(), and pcre2_substitute().
+    // Some also apply to pcre2_pattern_convert().
+
     /**
      * Force pattern anchoring
      */
@@ -37,6 +40,8 @@ public interface IPcre2 {
      * Pattern can match only at end of subject
      */
     static final int ENDANCHORED = 0x20000000;
+
+    // Option bits for pcre2_compile() only
 
     /**
      * Allow empty classes
@@ -170,6 +175,8 @@ public interface IPcre2 {
      */
     static final int MATCH_INVALID_UTF = 0x04000000;
 
+    // Extra compile options available via pcre2_set_compile_extra_options()
+
     static final int EXTRA_ALLOW_SURROGATE_ESCAPES = 0x00000001;
     static final int EXTRA_BAD_ESCAPE_IS_LITERAL = 0x00000002;
     static final int EXTRA_MATCH_WORD = 0x00000004;
@@ -183,6 +190,8 @@ public interface IPcre2 {
     static final int EXTRA_ASCII_BSW = 0x00000400;
     static final int EXTRA_ASCII_POSIX = 0x00000800;
     static final int EXTRA_ASCII_DIGIT = 0x00001000;
+
+    // Option bits for pcre2_jit_compile()
 
     /**
      * Compile code for full matching
@@ -204,6 +213,8 @@ public interface IPcre2 {
      */
     @Deprecated
     static final int JIT_INVALID_UTF = 0x00000100;
+
+    // Option bits for pcre2_match(), pcre2_dfa_match(), pcre2_jit_match(), and pcre2_substitute()
 
     /**
      * Subject string is not the beginning of a line
@@ -257,6 +268,8 @@ public interface IPcre2 {
     static final int SUBSTITUTE_REPLACEMENT_ONLY = 0x00020000;
     static final int DISABLE_RECURSELOOP_CHECK = 0x00040000;
 
+    // Option bits for pcre2_pattern_convert()
+
     static final int CONVERT_UTF = 0x00000001;
     static final int CONVERT_NO_UTF_CHECK = 0x00000002;
     static final int CONVERT_POSIX_BASIC = 0x00000004;
@@ -264,6 +277,8 @@ public interface IPcre2 {
     static final int CONVERT_GLOB = 0x00000010;
     static final int CONVERT_GLOB_NO_WILD_SEPARATOR = 0x00000030;
     static final int CONVERT_GLOB_NO_STARSTAR = 0x00000050;
+
+    // Newline and \R settings, for use in compile contexts
 
     /**
      * Carriage return only (\r)
@@ -304,6 +319,8 @@ public interface IPcre2 {
      * \R corresponds to CR, LF, and CRLF only
      */
     static final int BSR_ANYCRLF = 2;
+
+    // Error codes: compile-time errors (positive values)
 
     static final int ERROR_END_BACKSLASH = 101;
     static final int ERROR_END_BACKSLASH_C = 102;
@@ -406,8 +423,12 @@ public interface IPcre2 {
     static final int ERROR_CONDITION_ATOMIC_ASSERTION_EXPECTED = 198;
     static final int ERROR_BACKSLASH_K_IN_LOOKAROUND = 199;
 
+    // Error codes: "expected" matching errors
+
     static final int ERROR_NOMATCH = -1;
     static final int ERROR_PARTIAL = -2;
+    // Error codes: UTF-8 validity check errors
+
     static final int ERROR_UTF8_ERR1 = -3;
     static final int ERROR_UTF8_ERR2 = -4;
     static final int ERROR_UTF8_ERR3 = -5;
@@ -429,11 +450,17 @@ public interface IPcre2 {
     static final int ERROR_UTF8_ERR19 = -21;
     static final int ERROR_UTF8_ERR20 = -22;
     static final int ERROR_UTF8_ERR21 = -23;
+    // Error codes: UTF-16 validity check errors
+
     static final int ERROR_UTF16_ERR1 = -24;
     static final int ERROR_UTF16_ERR2 = -25;
     static final int ERROR_UTF16_ERR3 = -26;
+    // Error codes: UTF-32 validity check errors
+
     static final int ERROR_UTF32_ERR1 = -27;
     static final int ERROR_UTF32_ERR2 = -28;
+    // Error codes: miscellaneous errors for pcre2[_dfa]_match(), pcre2_substitute(), and serialization
+
     static final int ERROR_BADDATA = -29;
     static final int ERROR_MIXEDTABLES = -30;
     static final int ERROR_BADMAGIC = -31;
@@ -475,6 +502,8 @@ public interface IPcre2 {
     static final int ERROR_INTERNAL_DUPMATCH = -65;
     static final int ERROR_DFA_UINVALID_UTF = -66;
     static final int ERROR_INVALIDOFFSET = -67;
+
+    // Request types for pcre2_pattern_info()
 
     /**
      * Final options after compiling
@@ -629,6 +658,8 @@ public interface IPcre2 {
      * Extra options that were passed in the compile context
      */
     static final int INFO_EXTRAOPTIONS = 26;
+
+    // Request types for pcre2_config()
 
     static final int CONFIG_BSR = 0;
     static final int CONFIG_JIT = 1;
