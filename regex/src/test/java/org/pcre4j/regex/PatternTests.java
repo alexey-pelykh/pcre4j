@@ -27,6 +27,17 @@ public class PatternTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void toStringReturnsPattern(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPattern = java.util.regex.Pattern.compile(regex);
+        var pcre4jPattern = Pattern.compile(api, regex);
+
+        assertEquals(javaPattern.toString(), pcre4jPattern.toString());
+        assertEquals(regex, pcre4jPattern.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void namedGroups(IPcre2 api) {
         var regex = "(?<number>42)";
         var javaPattern = java.util.regex.Pattern.compile(regex);
