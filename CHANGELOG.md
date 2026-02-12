@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
 ## [0.7.0] - 2026-02-02
 
 ### Added
@@ -181,6 +183,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Minimum viable implementation with JNA and FFM backends ([#1](https://github.com/alexey-pelykh/pcre4j/pull/1))
 
+[Unreleased]: https://github.com/alexey-pelykh/pcre4j/compare/0.7.0...HEAD
 [0.7.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.4.4...0.5.0
