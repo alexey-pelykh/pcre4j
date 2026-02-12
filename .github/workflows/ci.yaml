@@ -271,7 +271,7 @@ jobs:
           -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
       - name: Publish snapshots to Maven Central
-        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_NEXUS2_SNAPSHOTS_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -281,8 +281,7 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: >
           ./gradlew jreleaserDeploy
-          ${{ github.event_name == 'pull_request' && '--dryrun' || '' }}
-          -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
+          -Ppcre4j.version=main-SNAPSHOT
 
   publish-github-pages:
     if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
