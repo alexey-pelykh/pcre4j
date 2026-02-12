@@ -27,17 +27,29 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class ResourceCleanupTests {
 
     /**
+     * The maximum number of GC attempts before giving up.
+     */
+    private static final int MAX_GC_ATTEMPTS = 20;
+
+    /**
      * Triggers garbage collection and waits for a weak reference to be cleared.
+     * <p>
+     * Allocates temporary objects between GC calls to create memory pressure,
+     * which encourages the garbage collector to reclaim weakly-reachable objects
+     * more reliably.
      *
      * @param ref the weak reference to wait for
      * @param maxAttempts the maximum number of GC attempts
      * @return true if the reference was cleared
      */
+    @SuppressWarnings("unused")
     private static boolean awaitGc(WeakReference<?> ref, int maxAttempts) {
         for (int i = 0; i < maxAttempts && ref.get() != null; i++) {
+            // Allocate temporary objects to create memory pressure
+            byte[] pressure = new byte[1024 * 1024];
             System.gc();
             try {
-                Thread.sleep(50);
+                Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -63,7 +75,7 @@ public class ResourceCleanupTests {
         var code = new Pcre2Code(api, "first");
         var ref = new WeakReference<>(code);
         code = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var newCode = new Pcre2Code(api, "second");
@@ -80,7 +92,7 @@ public class ResourceCleanupTests {
             var code = new Pcre2Code(api, "pattern" + i);
             lastRef = new WeakReference<>(code);
         }
-        awaitGc(lastRef, 10);
+        awaitGc(lastRef, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var code = new Pcre2Code(api, "after-bulk");
@@ -116,7 +128,7 @@ public class ResourceCleanupTests {
         var matchData = new Pcre2MatchData(api, 10);
         var ref = new WeakReference<>(matchData);
         matchData = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var code = new Pcre2Code(api, "(test)");
@@ -133,7 +145,7 @@ public class ResourceCleanupTests {
             var matchData = new Pcre2MatchData(api, 10);
             lastRef = new WeakReference<>(matchData);
         }
-        awaitGc(lastRef, 10);
+        awaitGc(lastRef, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var code = new Pcre2Code(api, "test");
@@ -159,7 +171,7 @@ public class ResourceCleanupTests {
         var ctx = new Pcre2GeneralContext(api);
         var ref = new WeakReference<>(ctx);
         ctx = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var newCtx = new Pcre2GeneralContext(api);
@@ -195,7 +207,7 @@ public class ResourceCleanupTests {
         ctx.setNewline(Pcre2Newline.LF);
         var ref = new WeakReference<>(ctx);
         ctx = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var newCtx = new Pcre2CompileContext(api, null);
@@ -231,7 +243,7 @@ public class ResourceCleanupTests {
         ctx.setMatchLimit(1000);
         var ref = new WeakReference<>(ctx);
         ctx = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var newCtx = new Pcre2MatchContext(api, null);
@@ -256,7 +268,7 @@ public class ResourceCleanupTests {
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
         var ref = new WeakReference<>(stack);
         stack = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(
                 () -> new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null),
@@ -290,7 +302,7 @@ public class ResourceCleanupTests {
         jitStack = null;
         generalCtx = null;
 
-        awaitGc(generalCtxRef, 20);
+        awaitGc(generalCtxRef, MAX_GC_ATTEMPTS * 2);
 
         assertDoesNotThrow(() -> {
             var newCode = new Pcre2Code(api, "test");
@@ -311,7 +323,7 @@ public class ResourceCleanupTests {
         var matchData = new Pcre2MatchData(code);
         var ref = new WeakReference<>(matchData);
         matchData = null;
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
 
         assertDoesNotThrow(() -> {
             var newMatchData = new Pcre2MatchData(code);
@@ -324,7 +336,7 @@ public class ResourceCleanupTests {
      * Helper that awaits GC and returns the (now expected null) referent for assertion.
      */
     private static Object awaitGcAndReturn(WeakReference<?> ref) {
-        awaitGc(ref, 10);
+        awaitGc(ref, MAX_GC_ATTEMPTS);
         return ref.get();
     }
 }
