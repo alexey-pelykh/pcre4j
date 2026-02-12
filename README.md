@@ -270,6 +270,8 @@ Regular Expression Denial of Service (ReDoS) occurs when a crafted input causes 
 backtracking in a regex engine, leading to excessive CPU usage. PCRE4J provides several layers
 of protection against ReDoS attacks.
 
+For reporting security vulnerabilities, please see the [Security Policy](./SECURITY.md).
+
 ### JIT Compilation (Enabled by Default)
 
 The `regex` module enables PCRE2 JIT compilation by default when the platform supports it.
