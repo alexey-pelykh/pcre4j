@@ -28,10 +28,12 @@ repositories {
 
 dependencies {
     api(project(":api"))
+    testFixturesApi(platform(libs.junit.bom))
     testFixturesApi(libs.junit.jupiter)
     // Runtime-only: lib tests discover backends reflectively to avoid compile-time coupling
     testRuntimeOnly(project(":jna"))
     testRuntimeOnly(project(":ffm"))
+    testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
 }

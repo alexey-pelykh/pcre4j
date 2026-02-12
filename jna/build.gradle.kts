@@ -28,6 +28,7 @@ repositories {
 dependencies {
     api(project(":api"))
     implementation(libs.jna.platform)
+    testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(project(":lib"))
     testImplementation(testFixtures(project(":lib")))

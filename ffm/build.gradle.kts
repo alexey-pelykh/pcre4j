@@ -27,6 +27,7 @@ repositories {
 
 dependencies {
     api(project(":api"))
+    testImplementation(platform(libs.junit.bom))
     testImplementation(libs.junit.jupiter)
     testImplementation(project(":lib"))
     testImplementation(testFixtures(project(":lib")))
@@ -163,6 +164,7 @@ configurations["testJava22ClassesRuntimeOnly"].extendsFrom(configurations.testRu
 
 dependencies {
     // Java 22 test classes need to see the main JAR (for MRJAR resolution)
+    "testJava22ClassesImplementation"(platform(libs.junit.bom))
     "testJava22ClassesImplementation"(project(":api"))
     "testJava22ClassesImplementation"(project(":lib"))
     "testJava22ClassesImplementation"(testFixtures(project(":lib")))
