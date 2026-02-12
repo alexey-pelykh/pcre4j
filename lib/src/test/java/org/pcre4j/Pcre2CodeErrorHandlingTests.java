@@ -15,13 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -32,34 +29,16 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre2CodeErrorHandlingTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     // --- Pcre2Code constructor null checks ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void constructorNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2Code(null, "test"));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void constructorNullPatternThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2Code(api, null));
     }
@@ -67,7 +46,7 @@ public class Pcre2CodeErrorHandlingTests {
     // --- Various invalid patterns ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unmatchedBracketThrows(IPcre2 api) {
         var error = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "[abc"));
         assertNotNull(error.pattern());
@@ -76,25 +55,25 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unmatchedParenthesisThrows(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "(abc"));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidQuantifierThrows(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "?"));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidEscapeThrows(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "\\"));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidRepetitionRangeThrows(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "a{5,3}"));
     }
@@ -102,7 +81,7 @@ public class Pcre2CodeErrorHandlingTests {
     // --- Pcre2CompileError fields ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileErrorContainsPatternInfo(IPcre2 api) {
         var error = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "(?P<>)"));
         assertNotNull(error.getMessage());
@@ -111,7 +90,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileErrorLongPatternRegion(IPcre2 api) {
         // Pattern with error far from the start to exercise getPatternRegion truncation
         // Use a long valid prefix followed by an invalid construct
@@ -124,7 +103,7 @@ public class Pcre2CodeErrorHandlingTests {
     // --- match() null/invalid parameter checks ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchNullSubjectThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var matchData = new Pcre2MatchData(code);
@@ -133,7 +112,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchNegativeStartOffsetThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var matchData = new Pcre2MatchData(code);
@@ -142,7 +121,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchNullMatchDataThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -150,7 +129,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchNoMatchReturnsNegative(IPcre2 api) {
         var code = new Pcre2Code(api, "xyz");
         var matchData = new Pcre2MatchData(code);
@@ -161,7 +140,7 @@ public class Pcre2CodeErrorHandlingTests {
     // --- substitute() null/invalid parameter checks ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteNullSubjectThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -169,7 +148,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteNegativeStartOffsetThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -177,7 +156,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteStartOffsetPastEndThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -185,7 +164,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteNullReplacementThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -195,13 +174,13 @@ public class Pcre2CodeErrorHandlingTests {
     // --- Pcre2MatchData constructor null checks ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchDataNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2MatchData(null, 10));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchDataNullCodeThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2MatchData(null));
     }
@@ -209,25 +188,25 @@ public class Pcre2CodeErrorHandlingTests {
     // --- Context null checks ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2CompileContext(null, null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2MatchContext(null, null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void generalContextNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> new Pcre2GeneralContext(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () ->
                 new Pcre2JitStack(null, 32 * 1024, 512 * 1024, null));
@@ -236,14 +215,14 @@ public class Pcre2CodeErrorHandlingTests {
     // --- JitCode error handling ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeBadPatternThrows(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () ->
                 new Pcre2JitCode(api, "?", null, null, null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeMatchNullSubjectThrows(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -252,7 +231,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeMatchNegativeOffsetThrows(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -261,7 +240,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeMatchOffsetPastEndThrows(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -270,7 +249,7 @@ public class Pcre2CodeErrorHandlingTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeMatchNullMatchDataThrows(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test", null, null, null);
         assertThrows(IllegalArgumentException.class, () ->

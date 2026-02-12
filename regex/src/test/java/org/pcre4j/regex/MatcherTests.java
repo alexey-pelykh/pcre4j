@@ -15,11 +15,8 @@
 package org.pcre4j.regex;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
-
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,18 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class MatcherTests {
 
-    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
-    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(JNA_PCRE2),
-                Arguments.of(FFM_PCRE2)
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeOneByte(IPcre2 api) {
         var regex = "Å";
         var input = "Å";
@@ -64,7 +51,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeTwoBytes(IPcre2 api) {
         var regex = "Ǎ";
         var input = "Ǎ";
@@ -86,7 +73,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeThreeBytes(IPcre2 api) {
         var regex = "•";
         var input = "•";
@@ -108,7 +95,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeFourBytes(IPcre2 api) {
         var regex = "\uD83C\uDF0D";
         var input = "\uD83C\uDF0D";
@@ -130,7 +117,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicode(IPcre2 api) {
         var regex = "ÅǍ•\uD83C\uDF0D!";
         var input = "ÅǍ•\uD83C\uDF0D!";
@@ -152,7 +139,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeRegion(IPcre2 api) {
         var regex = "\uD83C\uDF0D";
         var input = "ÅǍ•\uD83C\uDF0D!";
@@ -177,7 +164,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesTrue(IPcre2 api) {
         var regex = "42";
         var input = "42";
@@ -199,7 +186,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesFalse(IPcre2 api) {
         var regex = "42";
         var input = "42!";
@@ -227,7 +214,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42]";
@@ -252,7 +239,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesFalseRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42!]";
@@ -283,7 +270,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void lookingAtTrue(IPcre2 api) {
         var regex = "42";
         var input = "42!";
@@ -305,7 +292,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void lookingAtFalse(IPcre2 api) {
         var regex = "42";
         var input = "!42";
@@ -333,7 +320,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void lookingAtTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42!]";
@@ -358,7 +345,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void lookingAtFalseRegion(IPcre2 api) {
         var regex = "42";
         var input = "[!42]";
@@ -389,7 +376,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findTrue(IPcre2 api) {
         var regex = "42";
         var input = "42!";
@@ -411,7 +398,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findFalse(IPcre2 api) {
         var regex = "42!";
         var input = "42";
@@ -439,7 +426,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findTrueInRegion(IPcre2 api) {
         var regex = "42";
         var input = "[42]";
@@ -463,7 +450,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findFalseInRegion(IPcre2 api) {
         var regex = "42!";
         var input = "[42]";
@@ -493,7 +480,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findTrueAtOffset(IPcre2 api) {
         var regex = "42";
         var input = "!!42";
@@ -515,7 +502,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findFalseAtOffset(IPcre2 api) {
         var regex = "42";
         var input = "!!test";
@@ -543,7 +530,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findMultiple(IPcre2 api) {
         var regex = "42";
         var input = "42!42";
@@ -578,7 +565,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findMultipleWithinRegion(IPcre2 api) {
         var regex = "42";
         var input = "42!42!42!42";
@@ -616,7 +603,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findMultipleOutsideRegion(IPcre2 api) {
         var regex = "42";
         var input = "42!__!__!42";
@@ -647,7 +634,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void captureGroups(IPcre2 api) {
         var regex = "(?<four>4)(.*)(?<two>2)";
         var input = "4test2";
@@ -675,7 +662,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyGroup(IPcre2 api) {
         var regex = "!*";
         var input = "42";
@@ -699,7 +686,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void singleUnmatchedGroup(IPcre2 api) {
         var regex = "(42)?";
         var input = "test";
@@ -723,7 +710,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unmatchedGroups(IPcre2 api) {
         var regex = "42((?<exclamation>!)|(?<question>\\?))";
         var input = "42!";
@@ -751,7 +738,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void positiveLookaround(IPcre2 api) {
         var regex = "(?<=(?<lWrapper>\\W))?(\\d+)(?=(?<rWrapper>\\W))?";
         var input = "(42)";
@@ -779,7 +766,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void positiveUnmatchedLookaround(IPcre2 api) {
         var regex = "(?<=(?<lWrapper>\\W))?(\\d+)(?=(?<rWrapper>\\W))?";
         var input = "42]";
@@ -807,7 +794,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyStringMatches(IPcre2 api) {
         var regex = "^$";
         var input = "";
@@ -818,7 +805,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyStringFind(IPcre2 api) {
         var regex = "^$";
         var input = "";
@@ -837,7 +824,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findAtEndOfString(IPcre2 api) {
         var regex = "$";
         var input = "abc";
@@ -849,7 +836,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findExhaustedInRegion(IPcre2 api) {
         // Test find() behavior when iterating through all matches in a region
         var regex = "a";
@@ -875,7 +862,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void findWithZeroWidthMatchExhaustsRegion(IPcre2 api) {
         // Test that after a zero-width match at regionEnd, the next find() returns false
         // This exercises the start > regionEnd branch in find():
@@ -910,7 +897,7 @@ public class MatcherTests {
     // ========================================================================
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void quoteReplacement(IPcre2 api) {
         // Test basic string without special characters
         assertEquals(
@@ -944,7 +931,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllBasic(IPcre2 api) {
         var regex = "world";
         var input = "hello world";
@@ -956,7 +943,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllMultiple(IPcre2 api) {
         var regex = "o";
         var input = "hello world";
@@ -968,7 +955,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllWithGroupReference(IPcre2 api) {
         var regex = "(\\w+) (\\w+)";
         var input = "hello world";
@@ -980,7 +967,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllWithNamedGroupReference(IPcre2 api) {
         var regex = "(?<first>\\w+) (?<second>\\w+)";
         var input = "hello world";
@@ -992,7 +979,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllNoMatch(IPcre2 api) {
         var regex = "xyz";
         var input = "hello world";
@@ -1004,7 +991,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllEmptyReplacement(IPcre2 api) {
         var regex = "world";
         var input = "hello world";
@@ -1016,7 +1003,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllUnicode(IPcre2 api) {
         var regex = "🌐";
         var input = "hello 🌐 world 🌐";
@@ -1028,7 +1015,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceFirstBasic(IPcre2 api) {
         var regex = "o";
         var input = "hello world";
@@ -1040,7 +1027,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceFirstWithGroupReference(IPcre2 api) {
         var regex = "(\\w+) (\\w+)";
         var input = "hello world, foo bar";
@@ -1052,7 +1039,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceFirstNoMatch(IPcre2 api) {
         var regex = "xyz";
         var input = "hello world";
@@ -1064,7 +1051,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceAllWithFunction(IPcre2 api) {
         var regex = "\\d+";
         var input = "a1b22c333";
@@ -1079,7 +1066,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceFirstWithFunction(IPcre2 api) {
         var regex = "\\d+";
         var input = "a1b22c333";
@@ -1094,7 +1081,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void replaceFirstWithFunctionNoMatch(IPcre2 api) {
         var regex = "xyz";
         var input = "hello world";
@@ -1108,7 +1095,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementStringBuffer(IPcre2 api) {
         var regex = "(\\w+)";
         var input = "one two three";
@@ -1129,7 +1116,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementStringBuilder(IPcre2 api) {
         var regex = "(\\w+)";
         var input = "one two three";
@@ -1150,7 +1137,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementWithNamedGroup(IPcre2 api) {
         var regex = "(?<word>\\w+)";
         var input = "one two three";
@@ -1171,7 +1158,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementEscapedCharacters(IPcre2 api) {
         var regex = "\\d+";
         var input = "test123value";
@@ -1193,7 +1180,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementLiteralText(IPcre2 api) {
         var regex = "world";
         var input = "hello world!";
@@ -1214,7 +1201,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendTailOnly(IPcre2 api) {
         var regex = "xyz";
         var input = "hello world";
@@ -1232,7 +1219,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementNoMatch(IPcre2 api) {
         var regex = "\\d+";
         var input = "hello world";
@@ -1245,7 +1232,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementMultipleGroups(IPcre2 api) {
         var regex = "(\\w)(\\w)(\\w)";
         var input = "abc def ghi";
@@ -1266,7 +1253,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementGroupZero(IPcre2 api) {
         var regex = "\\w+";
         var input = "hello world";
@@ -1287,7 +1274,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void appendReplacementUnicode(IPcre2 api) {
         var regex = "🌐";
         var input = "hello 🌐 world 🌐!";
@@ -1312,7 +1299,7 @@ public class MatcherTests {
     // ========================================================================
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsBasic(IPcre2 api) {
         var regex = "\\d+";
         var input = "a1b22c333d";
@@ -1331,7 +1318,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsNoMatches(IPcre2 api) {
         var regex = "xyz";
         var input = "hello world";
@@ -1346,7 +1333,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsSingleMatch(IPcre2 api) {
         var regex = "world";
         var input = "hello world!";
@@ -1364,7 +1351,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsWithGroups(IPcre2 api) {
         var regex = "(\\w)(\\d)";
         var input = "a1 b2 c3";
@@ -1384,7 +1371,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsImmutableSnapshots(IPcre2 api) {
         var regex = "\\w+";
         var input = "one two three";
@@ -1409,7 +1396,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsDoesNotReset(IPcre2 api) {
         var regex = "\\w+";
         var input = "one two three";
@@ -1433,7 +1420,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsZeroWidthMatches(IPcre2 api) {
         var regex = "(?=\\d)";  // Zero-width positive lookahead for digit
         var input = "a1b2c3";
@@ -1453,7 +1440,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsEmptyString(IPcre2 api) {
         var regex = ".*";
         var input = "";
@@ -1467,7 +1454,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsUnicode(IPcre2 api) {
         var regex = "\\p{L}+";
         var input = "hello мир 世界";
@@ -1486,7 +1473,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsStreamOperations(IPcre2 api) {
         var regex = "\\d+";
         var input = "a1b22c333d4444";
@@ -1506,7 +1493,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsCount(IPcre2 api) {
         var regex = "a";
         var input = "abracadabra";
@@ -1525,7 +1512,7 @@ public class MatcherTests {
     // ========================================================================
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hasAnchoringBoundsDefault(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1538,7 +1525,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useAnchoringBoundsReturnsThis(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1550,7 +1537,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useAnchoringBoundsFalse(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1565,7 +1552,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useAnchoringBoundsTrue(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1581,7 +1568,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsCaretWithRegion(IPcre2 api) {
         // Test that ^ matches at region start with anchoring bounds enabled (default)
         var regex = "^test";
@@ -1600,7 +1587,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsCaretWithRegionDisabled(IPcre2 api) {
         // Test that ^ does NOT match at region start with anchoring bounds disabled
         var regex = "^test";
@@ -1617,7 +1604,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsDollarWithRegion(IPcre2 api) {
         // Test that $ matches at region end with anchoring bounds enabled (default)
         var regex = "test$";
@@ -1633,7 +1620,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsDollarWithRegionDisabled(IPcre2 api) {
         // Test that $ does NOT match at region end with anchoring bounds disabled
         var regex = "test$";
@@ -1649,7 +1636,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsLookingAtWithRegion(IPcre2 api) {
         // Test lookingAt() with ^ pattern in a region
         var regex = "^test";
@@ -1665,7 +1652,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsLookingAtWithRegionDisabled(IPcre2 api) {
         // Test lookingAt() with ^ pattern in a region with anchoring bounds disabled
         var regex = "^test";
@@ -1681,7 +1668,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsMatchesWithRegion(IPcre2 api) {
         // Test matches() with ^ and $ pattern in a region
         var regex = "^test$";
@@ -1697,7 +1684,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsMatchesWithRegionDisabled(IPcre2 api) {
         // Test matches() with ^ and $ pattern in a region with anchoring bounds disabled
         var regex = "^test$";
@@ -1713,7 +1700,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsPreservedAfterReset(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1732,7 +1719,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsPreservedAfterResetWithInput(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1751,7 +1738,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsWithFullInput(IPcre2 api) {
         // When region covers full input, anchoring bounds should have no effect
         var regex = "^test$";
@@ -1771,7 +1758,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsWordBoundaryWithRegion(IPcre2 api) {
         // Test that \b (word boundary) behavior with regions
         var regex = "\\bword\\b";
@@ -1787,7 +1774,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void anchoringBoundsWordBoundaryWithRegionDisabled(IPcre2 api) {
         // Test that \b (word boundary) behavior with regions and non-anchoring bounds.
         // Note: In Java, useAnchoringBounds(false) only affects ^ and $.
@@ -1812,7 +1799,7 @@ public class MatcherTests {
     // ========================================================================
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hasTransparentBoundsDefault(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1825,7 +1812,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useTransparentBoundsReturnsThis(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1837,7 +1824,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useTransparentBoundsTrue(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1852,7 +1839,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void useTransparentBoundsFalse(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -1868,7 +1855,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLookbehindCanSeeBeforeRegion(IPcre2 api) {
         // Test that lookbehind can see text before region start with transparent bounds enabled
         var regex = "(?<=foo)bar";
@@ -1888,7 +1875,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLookbehindCannotSeeBeforeRegionWhenOpaque(IPcre2 api) {
         // Test that lookbehind cannot see text before region start with opaque bounds (default)
         var regex = "(?<=foo)bar";
@@ -1908,7 +1895,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLookaheadCanSeeAfterRegion(IPcre2 api) {
         // Test that lookahead can see text after region end with transparent bounds enabled
         var regex = "bar(?=XXX)";
@@ -1928,7 +1915,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLookaheadCannotSeeAfterRegionWhenOpaque(IPcre2 api) {
         // Test that lookahead cannot see text after region end with opaque bounds (default)
         var regex = "bar(?=XXX)";
@@ -1948,7 +1935,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWordBoundaryCanSeeBeforeRegion(IPcre2 api) {
         // Test that \b (word boundary) can see text before region with transparent bounds
         var regex = "\\bword";
@@ -1969,7 +1956,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWordBoundaryWithOpaqueRegion(IPcre2 api) {
         // Test that \b (word boundary) treats region start as word boundary with opaque bounds
         var regex = "\\bword";
@@ -1990,7 +1977,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsPreservedAfterReset(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -2009,7 +1996,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsPreservedAfterResetWithInput(IPcre2 api) {
         var regex = "test";
         var input = "test";
@@ -2028,7 +2015,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsCombinedWithAnchoringBounds(IPcre2 api) {
         // Test that transparent bounds and anchoring bounds can be used together
         var regex = "(?<=foo)^bar$(?=XXX)";
@@ -2051,7 +2038,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLookingAtWithLookbehind(IPcre2 api) {
         // Test lookingAt() with lookbehind and transparent bounds
         var regex = "(?<=foo)bar";
@@ -2067,7 +2054,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchesWithLookaround(IPcre2 api) {
         // Test matches() with lookaround and transparent bounds
         var regex = "(?<=foo)bar(?=XXX)";
@@ -2083,7 +2070,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsNegativeLookbehind(IPcre2 api) {
         // Test negative lookbehind with transparent bounds
         var regex = "(?<!foo)bar";
@@ -2103,7 +2090,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsNegativeLookahead(IPcre2 api) {
         // Test negative lookahead with transparent bounds
         var regex = "bar(?!XXX)";
@@ -2123,7 +2110,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithFind(IPcre2 api) {
         // Test find() with transparent bounds
         var regex = "(?<=\\d)\\w+";
@@ -2144,7 +2131,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsUnicodeWithLookbehind(IPcre2 api) {
         // Test transparent bounds with Unicode and lookbehind
         var regex = "(?<=🌐)test";
@@ -2163,7 +2150,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithUsePattern(IPcre2 api) {
         // Test that usePattern() works correctly with transparent bounds
         // This exercises the anchoringBoundsCode = null path in usePattern()
@@ -2190,7 +2177,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithCaseInsensitive(IPcre2 api) {
         // Test transparent bounds with CASE_INSENSITIVE flag
         var regex = "(?<=FOO)bar";
@@ -2209,7 +2196,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithDotall(IPcre2 api) {
         // Test transparent bounds with DOTALL flag
         var regex = "(?<=foo).";
@@ -2228,7 +2215,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithMultiline(IPcre2 api) {
         // Test transparent bounds with MULTILINE flag
         // MULTILINE affects ^ behavior - should still work with transparent bounds
@@ -2247,7 +2234,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchExtendsBeyondRegion(IPcre2 api) {
         // Test where greedy match would extend beyond region - should find shorter match
         var regex = "(?<=foo)\\w+";
@@ -2267,7 +2254,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsNoMatchWhenConstrainedToRegion(IPcre2 api) {
         // Test where match only exists beyond region - should not match
         var regex = "(?<=foo)XXX";
@@ -2286,7 +2273,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithAnchoringBoundsAndAnchors(IPcre2 api) {
         // Test transparent + anchoring bounds with ^ and $ in pattern
         var regex = "^bar$";
@@ -2307,7 +2294,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchesConstrainedSubject(IPcre2 api) {
         // Test matches() with transparent bounds where match would extend beyond region
         var regex = "(?<=foo)\\w+(?=YYY)";
@@ -2326,7 +2313,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithComments(IPcre2 api) {
         // Test transparent bounds with COMMENTS flag
         var regex = "(?<=foo) bar  # match bar after foo";
@@ -2344,7 +2331,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithUnicodeCharacterClass(IPcre2 api) {
         // Test transparent bounds with UNICODE_CHARACTER_CLASS flag
         var regex = "(?<=foo)\\w+";
@@ -2363,7 +2350,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithUnixLines(IPcre2 api) {
         // Test transparent bounds with UNIX_LINES flag
         var regex = "(?<=foo)bar";
@@ -2381,7 +2368,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsCachedTransformedPattern(IPcre2 api) {
         // Test that the transformed pattern is cached and reused
         var regex = "^bar$";
@@ -2399,7 +2386,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsNoTransformationNeeded(IPcre2 api) {
         // Test pattern without ^ or $ (no transformation needed)
         var regex = "(?<=foo)bar(?=XXX)";
@@ -2418,7 +2405,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringBoundsWithOnlyDollar(IPcre2 api) {
         // Test pattern with only $ (transformation removes $)
         var regex = "(?<=foo)bar$";
@@ -2437,7 +2424,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringBoundsWithOnlyCaret(IPcre2 api) {
         // Test pattern with only ^ (transformation replaces ^ with \G)
         var regex = "^bar";
@@ -2456,7 +2443,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsEscapedAnchors(IPcre2 api) {
         // Test that escaped ^ and $ are not transformed
         var regex = "\\^bar\\$";
@@ -2475,7 +2462,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchorsInCharacterClass(IPcre2 api) {
         // Test that ^ and $ inside character classes are not transformed
         var regex = "[^a]ar[$]";
@@ -2493,7 +2480,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchDoesNotEndAtRegionEnd(IPcre2 api) {
         // Test where anchored match doesn't end exactly at regionEnd
         var regex = "^ba$";
@@ -2512,7 +2499,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMultipleFlagsCombined(IPcre2 api) {
         // Test transparent bounds with multiple flags combined
         var regex = "(?<=FOO) bar  # comment";
@@ -2535,7 +2522,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsConstrainedMatchFailsAdvancesPosition(IPcre2 api) {
         // Test that when a match extends beyond regionEnd and the constrained match fails,
         // the search continues from the next position and eventually finds a valid match.
@@ -2556,7 +2543,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void opaqueBoundsWithRegionStartGreaterThanZero(IPcre2 api) {
         // Test opaque bounds (default) with regionStart > 0 to exercise getRegionSubject() branch
         var regex = "bar";
@@ -2578,7 +2565,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void opaqueBoundsLookbehindBlocked(IPcre2 api) {
         // Test that with opaque bounds (default), lookbehind cannot see before region
         // This uses regionStart > 0 to exercise the substring branch in getRegionSubject()
@@ -2599,7 +2586,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithLiteralFlag(IPcre2 api) {
         // Test transparent bounds with LITERAL flag - pattern treated as literal
         var regex = "^ba";  // With LITERAL, ^ and $ are literal characters, not anchors
@@ -2616,7 +2603,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nonAnchoringBoundsWithMiddleRegion(IPcre2 api) {
         // Test non-anchoring bounds with region in middle of input
         // This exercises getMatchOptions() with both NOTBOL and NOTEOL
@@ -2638,7 +2625,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsSearchStartAdvancesOnConstraintFailure(IPcre2 api) {
         // Test the loop where searchStart advances after constrained match fails
         // Pattern: b+ (greedy) would match multiple b's
@@ -2664,7 +2651,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringBoundsWithTransformFailedMatch(IPcre2 api) {
         // Test PATH 1 where transformed pattern matches but doesn't end at regionEnd,
         // then falls through to PATH 2 for normal matching
@@ -2685,7 +2672,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nonAnchoringBoundsOnlyNotbol(IPcre2 api) {
         // Test non-anchoring bounds with only NOTBOL (regionStart > 0, regionEnd == input.length())
         var regex = "test";
@@ -2704,7 +2691,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nonAnchoringBoundsOnlyNoteol(IPcre2 api) {
         // Test non-anchoring bounds with only NOTEOL (regionStart == 0, regionEnd < input.length())
         var regex = "test";
@@ -2723,7 +2710,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void opaqueBoundsRegionStartZero(IPcre2 api) {
         // Test opaque bounds with regionStart == 0 to exercise else branch in getRegionSubject()
         var regex = "test";
@@ -2744,7 +2731,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithDollarAnchorAtRegionEnd(IPcre2 api) {
         // Test transparent + anchoring bounds with pattern that has $ and match ends at regionEnd
         var regex = "^bar$";
@@ -2765,7 +2752,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsTransformedPatternNoMatch(IPcre2 api) {
         // Test PATH 1 where transformed pattern doesn't match, falls through to PATH 2
         var regex = "^xyz";  // Pattern with ^ that won't match at regionStart
@@ -2784,7 +2771,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchExtendsAndConstrainedFails(IPcre2 api) {
         // Test PATH 3 where match extends beyond regionEnd and constrained match also fails
         // Pattern: "bbb" requires 3 b's, but region only has 2 b's
@@ -2805,7 +2792,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsSearchLoopExhaustsPositions(IPcre2 api) {
         // Test that search loop correctly terminates when all positions exhausted
         var regex = "xyz";  // Pattern that won't match anywhere in region
@@ -2823,7 +2810,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithDollarPatternNotEndingAtRegionEnd(IPcre2 api) {
         // Test pattern with $ where the match doesn't end at regionEnd
         // This exercises the path where originalHadDollar is true but lastMatchIndices[1] != regionEnd
@@ -2842,7 +2829,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsPatternWithOnlyDollarAnchor(IPcre2 api) {
         // Test transparent + anchoring bounds with pattern that has only $ (no ^)
         // This exercises patternContainsDollarAnchor returning true for patterns without ^
@@ -2861,7 +2848,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsGreedyQuantifierConstrainedMatch(IPcre2 api) {
         // Test greedy quantifier where transparent bounds sees more but constrained match works
         var regex = "a+";  // Greedy quantifier
@@ -2883,7 +2870,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithNestedCharacterClass(IPcre2 api) {
         // Test pattern with POSIX character class (nested brackets) containing $
         // This exercises the charClassDepth tracking in patternContainsDollarAnchor
@@ -2901,7 +2888,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMatchStartsAfterRegionStart(IPcre2 api) {
         // Test transparent bounds where match doesn't start at regionStart
         // This ensures PATH 1 is skipped when searchStart != regionStart
@@ -2923,7 +2910,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void opaqueBoundsWithIndexAdjustment(IPcre2 api) {
         // Test that index adjustment works correctly for opaque bounds with regionStart > 0
         var regex = "(test)";  // Capturing group
@@ -2948,7 +2935,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsMultipleFinds(IPcre2 api) {
         // Test multiple find() calls with transparent bounds
         var regex = "a";
@@ -2978,7 +2965,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsEmptyRegion(IPcre2 api) {
         // Test transparent bounds with empty region
         var regex = "";  // Empty pattern matches empty string
@@ -2996,7 +2983,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsFullInputRegion(IPcre2 api) {
         // Test transparent bounds when region covers full input
         var regex = "(?<=X)test(?=Y)";
@@ -3015,7 +3002,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringWithCaseInsensitiveFlag(IPcre2 api) {
         // Test transparent + anchoring bounds with CASE_INSENSITIVE flag
         // This exercises the CASELESS option in getOrCreateAnchoringBoundsCode()
@@ -3035,7 +3022,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringWithDotallFlag(IPcre2 api) {
         // Test transparent + anchoring bounds with DOTALL flag
         // This exercises the DOTALL option in getOrCreateAnchoringBoundsCode()
@@ -3054,7 +3041,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringWithUnicodeCharacterClassFlag(IPcre2 api) {
         // Test transparent + anchoring bounds with UNICODE_CHARACTER_CLASS flag
         // This exercises the UCP option in getOrCreateAnchoringBoundsCode()
@@ -3075,7 +3062,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringWithCommentsFlag(IPcre2 api) {
         // Test transparent + anchoring bounds with COMMENTS flag
         // This exercises the EXTENDED option in getOrCreateAnchoringBoundsCode()
@@ -3094,7 +3081,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsAnchoringWithUnixLinesFlag(IPcre2 api) {
         // Test transparent + anchoring bounds with UNIX_LINES flag
         // This exercises the LF newline option in getOrCreateAnchoringBoundsCode()
@@ -3113,7 +3100,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsConstrainedMatchFailsAndAdvances(IPcre2 api) {
         // Test PATH 3 where match extends beyond regionEnd, constrained fails, and searchStart advances
         // Pattern "bb" would match at position 3 (matching "bb"), extending to position 5
@@ -3135,7 +3122,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void patternContainsDollarAnchorEscapedDollar(IPcre2 api) {
         // Test patternContainsDollarAnchor with escaped $ (should return false)
         // This exercises the escaped character handling path
@@ -3154,7 +3141,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void patternContainsDollarAnchorInCharClass(IPcre2 api) {
         // Test patternContainsDollarAnchor with $ inside character class (should return false)
         // This exercises the character class depth tracking
@@ -3172,7 +3159,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsLoopAdvancesMultipleTimes(IPcre2 api) {
         // Test that search loop can advance multiple times before finding a match
         // Pattern needs to fail at multiple positions before succeeding
@@ -3196,7 +3183,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void transparentBoundsWithAllFlagsAndAnchors(IPcre2 api) {
         // Test with multiple flags combined plus anchors
         int javaFlags = java.util.regex.Pattern.CASE_INSENSITIVE
@@ -3221,7 +3208,7 @@ public class MatcherTests {
     // hitEnd() and requireEnd() tests
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndBeforeMatchOperation(IPcre2 api) {
         // Before any match operation, hitEnd should return false
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testing");
@@ -3232,7 +3219,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndBeforeMatchOperation(IPcre2 api) {
         // Before any match operation, requireEnd should return false
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testing");
@@ -3243,7 +3230,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndAfterPartialMatch(IPcre2 api) {
         // Pattern "AAB" against input "AA" - no full match, but partial match exists
         var javaMatcher = java.util.regex.Pattern.compile("AAB").matcher("AA");
@@ -3258,7 +3245,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndAfterSuccessfulMatchAtEnd(IPcre2 api) {
         // Pattern "test" matches exactly at end of input - hitEnd is false in Java
         // because the literal pattern matched completely
@@ -3273,7 +3260,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndAfterSuccessfulMatchNotAtEnd(IPcre2 api) {
         // Pattern matches but not at the end - hitEnd should be false
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test123");
@@ -3287,7 +3274,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithNoMatchNoPartial(IPcre2 api) {
         // Pattern cannot possibly match - hitEnd is still true in Java because
         // the search engine had to examine the entire input to determine no match
@@ -3302,7 +3289,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithDollarAnchor(IPcre2 api) {
         // Pattern with $ anchor matching at end - requireEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
@@ -3316,7 +3303,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithoutAnchor(IPcre2 api) {
         // Pattern without end anchor - requireEnd should be false even if match at end
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
@@ -3330,7 +3317,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithBackslashZ(IPcre2 api) {
         // Pattern with \z anchor (absolute end) - requireEnd is FALSE in Java
         // because \z only matches at the absolute end, so more input cannot
@@ -3346,7 +3333,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithBackslashZUppercase(IPcre2 api) {
         // Pattern with \Z anchor (end before final newline) - requireEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("test\\Z").matcher("test");
@@ -3360,7 +3347,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithLookingAt(IPcre2 api) {
         // Test hitEnd with lookingAt
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
@@ -3373,7 +3360,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithMatches(IPcre2 api) {
         // Test hitEnd with matches
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("test");
@@ -3386,7 +3373,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndPersistsAfterReset(IPcre2 api) {
         // In Java, hitEnd persists after reset() - it is NOT cleared
         var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
@@ -3408,7 +3395,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndPersistsAfterReset(IPcre2 api) {
         // In Java, requireEnd persists after reset() - it is NOT cleared
         var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
@@ -3430,7 +3417,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithGreedyQuantifier(IPcre2 api) {
         // Greedy quantifier at end - hitEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
@@ -3443,7 +3430,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithCharacterClass(IPcre2 api) {
         // Character class at end - hitEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("[a-z]+").matcher("abc");
@@ -3456,7 +3443,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithDot(IPcre2 api) {
         // Dot at end can match more - hitEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("a.").matcher("ab");
@@ -3469,7 +3456,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndAndRequireEndWithDollarNoMatch(IPcre2 api) {
         // Pattern ends with $ but doesn't match - requireEnd meaningless, hitEnd indicates partial
         var javaMatcher = java.util.regex.Pattern.compile("xyz$").matcher("abc");
@@ -3483,7 +3470,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithRegion(IPcre2 api) {
         // Test hitEnd with region
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("XXtestXX");
@@ -3499,7 +3486,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithDollarInCharacterClass(IPcre2 api) {
         // $ inside character class is literal, not anchor - requireEnd should be false
         var javaMatcher = java.util.regex.Pattern.compile("[$]").matcher("$");
@@ -3513,7 +3500,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndAfterMultipleFinds(IPcre2 api) {
         // Multiple finds - hitEnd should reflect the last find
         var javaMatcher = java.util.regex.Pattern.compile("a").matcher("aXa");
@@ -3537,7 +3524,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithCharacterClassNoQuantifier(IPcre2 api) {
         // Character class without quantifier at end - matches exactly one char, hitEnd should be false
         var javaMatcher = java.util.regex.Pattern.compile("[a-z]").matcher("a");
@@ -3551,7 +3538,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithWordEscape(IPcre2 api) {
         // \w at end without quantifier - matches exactly one char
         var javaMatcher = java.util.regex.Pattern.compile("\\w").matcher("a");
@@ -3564,7 +3551,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithDigitEscape(IPcre2 api) {
         // \d at end without quantifier
         var javaMatcher = java.util.regex.Pattern.compile("\\d").matcher("5");
@@ -3577,7 +3564,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithSpaceEscape(IPcre2 api) {
         // \s at end without quantifier
         var javaMatcher = java.util.regex.Pattern.compile("\\s").matcher(" ");
@@ -3590,7 +3577,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithLookingAtQuantifier(IPcre2 api) {
         // lookingAt with quantifier at end
         var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
@@ -3603,7 +3590,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithMatchesQuantifier(IPcre2 api) {
         // matches with quantifier
         var javaMatcher = java.util.regex.Pattern.compile("a+").matcher("aaa");
@@ -3616,7 +3603,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithMatchesDollar(IPcre2 api) {
         // matches() with $ - requireEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
@@ -3630,7 +3617,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithLookingAtDollar(IPcre2 api) {
         // lookingAt() with $ - requireEnd should be true when matched at end
         var javaMatcher = java.util.regex.Pattern.compile("test$").matcher("test");
@@ -3643,7 +3630,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void requireEndWithBraceQuantifier(IPcre2 api) {
         // Pattern with {n,} quantifier - hitEnd should be true
         var javaMatcher = java.util.regex.Pattern.compile("a{2,}").matcher("aaa");
@@ -3656,7 +3643,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hitEndWithMatchNotAtEnd(IPcre2 api) {
         // Match found but not at end of input - hitEnd should be false
         var javaMatcher = java.util.regex.Pattern.compile("test").matcher("testXYZ");
@@ -3672,7 +3659,7 @@ public class MatcherTests {
     // Empty region anchor semantics tests (regression tests for issue #69)
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyRegionAtEndWithAnchors_find(IPcre2 api) {
         // Regression test for issue #69: ^$ pattern should match empty region at end of input
         var regex = "^$";
@@ -3691,7 +3678,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyRegionAtEndWithAnchors_matches(IPcre2 api) {
         // Regression test for issue #69: ^$ pattern should match empty region at end of input
         var regex = "^$";
@@ -3707,7 +3694,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyRegionAtStartWithAnchors_find(IPcre2 api) {
         // Test ^$ pattern with empty region at start of input
         var regex = "^$";
@@ -3723,7 +3710,7 @@ public class MatcherTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyRegionInMiddleWithAnchors_find(IPcre2 api) {
         // Test ^$ pattern with empty region in middle of input
         var regex = "^$";

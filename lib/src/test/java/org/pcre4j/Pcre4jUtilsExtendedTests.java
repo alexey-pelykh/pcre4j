@@ -16,14 +16,11 @@ package org.pcre4j;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2UtfWidth;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,28 +35,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre4jUtilsExtendedTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     // === Configuration query methods ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getVersion(IPcre2 api) {
         var version = Pcre4jUtils.getVersion(api);
         assertNotNull(version);
@@ -68,13 +47,13 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getVersionNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getVersion(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isVersionAtLeast(IPcre2 api) {
         // PCRE2 10.x should be present
         assertTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 0));
@@ -83,20 +62,20 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isVersionAtLeastSameMajorHigherMinor(IPcre2 api) {
         // Should handle same major with higher minor correctly
         assertTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 0));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isVersionAtLeastNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.isVersionAtLeast(null, 10, 0));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getUnicodeVersion(IPcre2 api) {
         var version = Pcre4jUtils.getUnicodeVersion(api);
         assertNotNull(version);
@@ -104,91 +83,91 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getUnicodeVersionNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getUnicodeVersion(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isUnicodeSupported(IPcre2 api) {
         // Standard PCRE2 builds support Unicode
         assertTrue(Pcre4jUtils.isUnicodeSupported(api));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isUnicodeSupportedNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.isUnicodeSupported(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultParenthesesNestingLimit(IPcre2 api) {
         var limit = Pcre4jUtils.getDefaultParenthesesNestingLimit(api);
         assertTrue(limit > 0, "Default parens nesting limit should be positive");
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultParenthesesNestingLimitNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultParenthesesNestingLimit(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultNewline(IPcre2 api) {
         var newline = Pcre4jUtils.getDefaultNewline(api);
         assertNotNull(newline);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultNewlineNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultNewline(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isBackslashCDisabled(IPcre2 api) {
         // Just verify it doesn't throw
         Pcre4jUtils.isBackslashCDisabled(api);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isBackslashCDisabledNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.isBackslashCDisabled(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultMatchLimit(IPcre2 api) {
         var limit = Pcre4jUtils.getDefaultMatchLimit(api);
         assertTrue(limit > 0, "Default match limit should be positive");
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultMatchLimitNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultMatchLimit(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getInternalLinkSize(IPcre2 api) {
         var linkSize = Pcre4jUtils.getInternalLinkSize(api);
         assertTrue(linkSize > 0, "Internal link size should be positive");
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getInternalLinkSizeNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getInternalLinkSize(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getJitTarget(IPcre2 api) {
         var target = Pcre4jUtils.getJitTarget(api);
         // May return null if JIT not supported, or a non-empty string
@@ -198,52 +177,52 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getJitTargetNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getJitTarget(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isJitSupported(IPcre2 api) {
         // Just verify it doesn't throw; JIT support depends on build
         Pcre4jUtils.isJitSupported(api);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isJitSupportedNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.isJitSupported(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultHeapLimit(IPcre2 api) {
         var limit = Pcre4jUtils.getDefaultHeapLimit(api);
         assertTrue(limit >= 0, "Default heap limit should be non-negative");
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultHeapLimitNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultHeapLimit(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultDepthLimit(IPcre2 api) {
         var limit = Pcre4jUtils.getDefaultDepthLimit(api);
         assertTrue(limit > 0, "Default depth limit should be positive");
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultDepthLimitNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultDepthLimit(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getCompiledWidths(IPcre2 api) {
         var widths = Pcre4jUtils.getCompiledWidths(api);
         assertNotNull(widths);
@@ -252,13 +231,13 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getCompiledWidthsNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getCompiledWidths(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultBsr(IPcre2 api) {
         var bsr = Pcre4jUtils.getDefaultBsr(api);
         assertNotNull(bsr);
@@ -266,7 +245,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getDefaultBsrNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getDefaultBsr(null));
     }
@@ -274,7 +253,7 @@ public class Pcre4jUtilsExtendedTests {
     // === getErrorMessage ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getErrorMessageValidCode(IPcre2 api) {
         // ERROR_NOMATCH is -1
         var msg = Pcre4jUtils.getErrorMessage(api, IPcre2.ERROR_NOMATCH);
@@ -283,7 +262,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getErrorMessageNullApiThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getErrorMessage(null, 0));
     }
@@ -413,7 +392,7 @@ public class Pcre4jUtilsExtendedTests {
     // === getGroupNames ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getGroupNamesNoNames(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)");
         var names = Pcre4jUtils.getGroupNames(code);
@@ -425,7 +404,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getGroupNamesWithNames(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(?<second>b)");
         var names = Pcre4jUtils.getGroupNames(code);
@@ -435,7 +414,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getGroupNamesMixedNaming(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(b)(?<third>c)");
         var names = Pcre4jUtils.getGroupNames(code);
@@ -446,7 +425,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getGroupNamesNullThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () -> Pcre4jUtils.getGroupNames(null));
     }
@@ -454,7 +433,7 @@ public class Pcre4jUtilsExtendedTests {
     // === getMatchGroups ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsWithMatchData(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello) (world)");
         var matchData = new Pcre2MatchData(code);
@@ -468,7 +447,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsWithOvector(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello) (world)");
         var matchData = new Pcre2MatchData(code);
@@ -483,14 +462,14 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsNullCodeThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () ->
                 Pcre4jUtils.getMatchGroups(null, "test", new long[]{0, 4}));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsNullSubjectThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -498,7 +477,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsNullOvectorThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -506,7 +485,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getMatchGroupsNullMatchDataThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -516,7 +495,7 @@ public class Pcre4jUtilsExtendedTests {
     // === getNamedMatchGroups ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getNamedMatchGroupsNullMatchDataThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<greeting>hello)");
         assertThrows(IllegalArgumentException.class, () ->
@@ -524,14 +503,14 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getNamedMatchGroupsNullCodeThrows(IPcre2 api) {
         assertThrows(IllegalArgumentException.class, () ->
                 Pcre4jUtils.getNamedMatchGroups(null, "test", new long[]{0, 4}));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getNamedMatchGroupsNullSubjectThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
@@ -539,7 +518,7 @@ public class Pcre4jUtilsExtendedTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getNamedMatchGroupsNullOvectorThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->

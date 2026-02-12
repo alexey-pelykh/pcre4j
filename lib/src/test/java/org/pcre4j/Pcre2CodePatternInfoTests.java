@@ -15,13 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,35 +32,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre2CodePatternInfoTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     // --- backRefMax ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void backRefMaxNoBackrefs(IPcre2 api) {
         var code = new Pcre2Code(api, "hello");
         assertEquals(0, code.backRefMax());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void backRefMaxWithBackrefs(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)\\2");
         assertEquals(2, code.backRefMax());
@@ -72,7 +51,7 @@ public class Pcre2CodePatternInfoTests {
     // --- argOptions ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void argOptionsDefault(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var options = code.argOptions();
@@ -82,7 +61,7 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void argOptionsWithCaseless(IPcre2 api) {
         var code = new Pcre2Code(api, "test", EnumSet.of(Pcre2CompileOption.CASELESS));
         var options = code.argOptions();
@@ -90,7 +69,7 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void argOptionsWithMultipleOptions(IPcre2 api) {
         var code = new Pcre2Code(api, "test",
                 EnumSet.of(Pcre2CompileOption.CASELESS, Pcre2CompileOption.DOTALL));
@@ -102,21 +81,21 @@ public class Pcre2CodePatternInfoTests {
     // --- captureCount ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void captureCountNoGroups(IPcre2 api) {
         var code = new Pcre2Code(api, "hello");
         assertEquals(0, code.captureCount());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void captureCountWithGroups(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)(c)");
         assertEquals(3, code.captureCount());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void captureCountNonCapturing(IPcre2 api) {
         var code = new Pcre2Code(api, "(?:a)(b)");
         assertEquals(1, code.captureCount());
@@ -125,7 +104,7 @@ public class Pcre2CodePatternInfoTests {
     // --- bsr ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void bsrReturnsValidValue(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var bsr = code.bsr();
@@ -136,7 +115,7 @@ public class Pcre2CodePatternInfoTests {
     // --- frameSize ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void frameSizePositive(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)");
         assertTrue(code.frameSize() > 0);
@@ -145,7 +124,7 @@ public class Pcre2CodePatternInfoTests {
     // --- firstCodeType ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void firstCodeTypeAnchored(IPcre2 api) {
         // Pattern anchored with ^ and starting with a literal should return 1 (first code unit set)
         var code = new Pcre2Code(api, "^test");
@@ -153,7 +132,7 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void firstCodeTypeNoFixedStart(IPcre2 api) {
         // Pattern starting with .* is implicitly anchored, returns 2
         var code = new Pcre2Code(api, ".*test");
@@ -163,7 +142,7 @@ public class Pcre2CodePatternInfoTests {
     // --- hasBackslashC ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hasBackslashCFalse(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertFalse(code.hasBackslashC());
@@ -172,14 +151,14 @@ public class Pcre2CodePatternInfoTests {
     // --- hasCrOrLf ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hasCrOrLfFalse(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertFalse(code.hasCrOrLf());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void hasCrOrLfTrue(IPcre2 api) {
         var code = new Pcre2Code(api, "test\\r");
         // The pattern has an explicit CR
@@ -189,14 +168,14 @@ public class Pcre2CodePatternInfoTests {
     // --- jChanged ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jChangedFalse(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertFalse(code.jChanged());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jChangedTrue(IPcre2 api) {
         var code = new Pcre2Code(api, "(?J)(?<name>a)(?<name>b)");
         assertTrue(code.jChanged());
@@ -205,14 +184,14 @@ public class Pcre2CodePatternInfoTests {
     // --- jitSize ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitSizeZeroForNonJit(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertEquals(0, code.jitSize());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitSizePositiveForJit(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test", null, null, null);
         assertTrue(code.jitSize() > 0);
@@ -221,14 +200,14 @@ public class Pcre2CodePatternInfoTests {
     // --- matchEmpty ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchEmptyFalse(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertFalse(code.matchEmpty());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchEmptyTrue(IPcre2 api) {
         var code = new Pcre2Code(api, "a*");
         assertTrue(code.matchEmpty());
@@ -237,14 +216,14 @@ public class Pcre2CodePatternInfoTests {
     // --- maxLookBehind ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void maxLookBehindZero(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertEquals(0, code.maxLookBehind());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void maxLookBehindPositive(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<=abc)test");
         assertEquals(3, code.maxLookBehind());
@@ -253,14 +232,14 @@ public class Pcre2CodePatternInfoTests {
     // --- minLength ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void minLengthSimple(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertEquals(4, code.minLength());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void minLengthWithOptional(IPcre2 api) {
         // "te?st" matches "tst" (3 chars) or "test" (4 chars), minimum is 3
         var code = new Pcre2Code(api, "te?st");
@@ -270,14 +249,14 @@ public class Pcre2CodePatternInfoTests {
     // --- nameCount ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nameCountZero(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)");
         assertEquals(0, code.nameCount());
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nameCountWithNamedGroups(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(?<second>b)");
         assertEquals(2, code.nameCount());
@@ -286,7 +265,7 @@ public class Pcre2CodePatternInfoTests {
     // --- newline ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void newlineReturnsValidValue(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var newline = code.newline();
@@ -296,7 +275,7 @@ public class Pcre2CodePatternInfoTests {
     // --- nameEntrySize ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nameEntrySizeWithNamedGroups(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)");
         assertTrue(code.nameEntrySize() > 0);
@@ -305,14 +284,14 @@ public class Pcre2CodePatternInfoTests {
     // --- nameTable ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nameTableEmpty(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)");
         assertEquals(0, code.nameTable().length);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void nameTableWithNamedGroups(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(?<second>b)");
         var nameTable = code.nameTable();
@@ -332,7 +311,7 @@ public class Pcre2CodePatternInfoTests {
     // --- size ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void sizePositive(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertTrue(code.size() > 0);
@@ -341,7 +320,7 @@ public class Pcre2CodePatternInfoTests {
     // --- api() and handle() ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void apiReturnsNonNull(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertNotNull(code.api());
@@ -349,7 +328,7 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void handleReturnsNonZero(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertTrue(code.handle() != 0);
@@ -358,7 +337,7 @@ public class Pcre2CodePatternInfoTests {
     // --- groupNumberFromName ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void groupNumberFromNameValid(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(?<second>b)");
         assertEquals(1, code.groupNumberFromName("first"));
@@ -366,21 +345,21 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void groupNumberFromNameNullThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
         assertThrows(IllegalArgumentException.class, () -> code.groupNumberFromName(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void groupNumberFromNameNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
         assertThrows(Pcre2NoSubstringError.class, () -> code.groupNumberFromName("nonexistent"));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void groupNumberFromNameDuplicateThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)|(?<name>b)",
                 EnumSet.of(Pcre2CompileOption.DUPNAMES));
@@ -390,7 +369,7 @@ public class Pcre2CodePatternInfoTests {
     // --- scanNametable ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void scanNametableValid(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>a)(?<second>b)");
         var groups = code.scanNametable("first");
@@ -398,7 +377,7 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void scanNametableDuplicateNames(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)|(?<name>b)",
                 EnumSet.of(Pcre2CompileOption.DUPNAMES));
@@ -409,14 +388,14 @@ public class Pcre2CodePatternInfoTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void scanNametableNullThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
         assertThrows(IllegalArgumentException.class, () -> code.scanNametable(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void scanNametableNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
         assertThrows(Pcre2NoSubstringError.class, () -> code.scanNametable("nonexistent"));

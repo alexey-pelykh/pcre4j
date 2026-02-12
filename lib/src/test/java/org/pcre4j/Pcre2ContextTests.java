@@ -15,13 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -35,28 +32,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre2ContextTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     // === Pcre2GeneralContext ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void generalContextCreation(IPcre2 api) {
         var ctx = new Pcre2GeneralContext(api);
         assertNotNull(ctx);
@@ -66,14 +45,14 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void generalContextUsableForCompileContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         assertDoesNotThrow(() -> new Pcre2CompileContext(api, generalCtx));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void generalContextUsableForMatchContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         assertDoesNotThrow(() -> new Pcre2MatchContext(api, generalCtx));
@@ -82,7 +61,7 @@ public class Pcre2ContextTests {
     // === Pcre2CompileContext ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextCreation(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertNotNull(ctx);
@@ -92,7 +71,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetNewline(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setNewline(Pcre2Newline.LF));
@@ -104,14 +83,14 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetNewlineNullThrows(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setNewline(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetBsr(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setBsr(Pcre2Bsr.UNICODE));
@@ -119,35 +98,35 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetBsrNullThrows(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setBsr(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetParensNestLimit(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setParensNestLimit(100));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetMaxPatternLength(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setMaxPatternLength(1024));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetCompileExtraOptions(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setCompileExtraOptions(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetCompileExtraOptionsNullThrows(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertThrows(IllegalArgumentException.class, () ->
@@ -155,7 +134,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetCompileExtraOptionsNullElementThrows(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertThrows(IllegalArgumentException.class, () ->
@@ -163,7 +142,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextUsedInCompilation(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         ctx.setNewline(Pcre2Newline.CR);
@@ -177,7 +156,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextParensLimitEnforced(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         ctx.setParensNestLimit(2);
@@ -188,7 +167,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextMaxPatternLengthEnforced(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         ctx.setMaxPatternLength(3);
@@ -201,7 +180,7 @@ public class Pcre2ContextTests {
     // === Pcre2MatchContext ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextCreation(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertNotNull(ctx);
@@ -211,63 +190,63 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetMatchLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setMatchLimit(1000));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetMatchLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setMatchLimit(-1));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetDepthLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setDepthLimit(500));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetDepthLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setDepthLimit(-1));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetHeapLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setHeapLimit(1024));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetHeapLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setHeapLimit(-1));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetOffsetLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setOffsetLimit(100));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetOffsetLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setOffsetLimit(-1));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextAssignJitStack(IPcre2 api) {
         var matchCtx = new Pcre2MatchContext(api, null);
         var jitStack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
@@ -275,14 +254,14 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextAssignJitStackNullThrows(IPcre2 api) {
         var matchCtx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> matchCtx.assignJitStack(null));
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextLowMatchLimitCausesError(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         ctx.setMatchLimit(1); // Extremely low limit
@@ -298,7 +277,7 @@ public class Pcre2ContextTests {
     // === Pcre2JitStack ===
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackCreation(IPcre2 api) {
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
         assertNotNull(stack);
@@ -308,7 +287,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackWithGeneralContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, generalCtx);
@@ -317,7 +296,7 @@ public class Pcre2ContextTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackUsedInMatch(IPcre2 api) {
         var matchCtx = new Pcre2MatchContext(api, null);
         var jitStack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);

@@ -15,13 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -33,26 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre2JitCodeTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSupportedMatchOptions(IPcre2 api) {
         var options = Pcre2JitCode.getSupportedMatchOptions();
         assertNotNull(options);
@@ -68,7 +47,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitMatchSuccess(IPcre2 api) {
         var code = new Pcre2JitCode(api, "(hello) (world)", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -78,7 +57,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitMatchNoMatch(IPcre2 api) {
         var code = new Pcre2JitCode(api, "xyz", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -87,7 +66,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitMatchWithStartOffset(IPcre2 api) {
         var code = new Pcre2JitCode(api, "o", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -102,7 +81,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitMatchWithMatchContext(IPcre2 api) {
         var matchCtx = new Pcre2MatchContext(api, null);
         var jitStack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
@@ -115,7 +94,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeWithSpecificJitOptions(IPcre2 api) {
         // Compile with only COMPLETE (not PARTIAL_SOFT and PARTIAL_HARD)
         var code = new Pcre2JitCode(api, "test", null,
@@ -126,7 +105,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeWithCompileOptions(IPcre2 api) {
         var code = new Pcre2JitCode(api, "test",
                 EnumSet.of(Pcre2CompileOption.CASELESS), null, null);
@@ -136,7 +115,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeWithCompileContext(IPcre2 api) {
         var compileCtx = new Pcre2CompileContext(api, null);
         compileCtx.setNewline(Pcre2Newline.LF);
@@ -148,7 +127,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeWithMatchOptions(IPcre2 api) {
         var code = new Pcre2JitCode(api, "^test", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -160,7 +139,7 @@ public class Pcre2JitCodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodePartialMatch(IPcre2 api) {
         var code = new Pcre2JitCode(api, "testing", null, null, null);
         var matchData = new Pcre2MatchData(code);
