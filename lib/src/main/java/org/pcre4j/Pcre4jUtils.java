@@ -185,7 +185,7 @@ public final class Pcre4jUtils {
         }
 
         final var backslashCDisabled = new int[1];
-        final var result = api.config(IPcre2.CONFIG_BSR, backslashCDisabled);
+        final var result = api.config(IPcre2.CONFIG_NEVER_BACKSLASH_C, backslashCDisabled);
         if (result < 0) {
             throw new IllegalStateException(getErrorMessage(api, result));
         }
