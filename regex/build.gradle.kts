@@ -113,8 +113,8 @@ publishing {
             artifactId = project.name
 
             pom {
-                name = "org.pcre4j:${project.name}"
-                description = "PCRE4J java.util.regex-alike API"
+                name = "PCRE4J Regex"
+                description = "PCRE4J java.util.regex-compatible API"
             }
         }
     }
