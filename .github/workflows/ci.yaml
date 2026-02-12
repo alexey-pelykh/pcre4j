@@ -11,6 +11,10 @@ on:
     # Weekly full compatibility run (Sundays at 06:00 UTC)
     - cron: '0 6 * * 0'
 
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:
