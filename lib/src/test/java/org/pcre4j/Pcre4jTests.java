@@ -14,10 +14,10 @@
  */
 package org.pcre4j;
 
-import org.junit.jupiter.api.MethodOrderer;
-import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
+
+import java.lang.reflect.Field;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -27,15 +27,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests for {@link Pcre4j} bootstrap failure modes.
  *
  * <p>Verifies that the bootstrap singleton produces clear, actionable errors for misconfiguration scenarios.</p>
- *
- * <p>Test ordering is required because {@link Pcre4j} is a static singleton: the {@code api()} test must run before
- * any test that might call {@code setup()}, since the singleton state cannot be reset.</p>
  */
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class Pcre4jTests {
 
+    @BeforeEach
+    void resetSingleton() throws Exception {
+        Field apiField = Pcre4j.class.getDeclaredField("api");
+        apiField.setAccessible(true);
+        apiField.set(null, null);
+    }
+
     @Test
-    @Order(1)
     void api_beforeSetup_throwsIllegalStateException() {
         var error = assertThrows(
                 IllegalStateException.class,
@@ -49,7 +51,6 @@ public class Pcre4jTests {
     }
 
     @Test
-    @Order(2)
     void setup_nullApi_throwsIllegalArgumentException() {
         var error = assertThrows(
                 IllegalArgumentException.class,
