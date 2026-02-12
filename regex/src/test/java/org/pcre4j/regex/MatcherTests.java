@@ -3725,4 +3725,48 @@ public class MatcherTests {
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
     }
 
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void toStringBeforeMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "abc123def";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var result = pcre4jMatcher.toString();
+
+        assertTrue(result.startsWith("org.pcre4j.regex.Matcher["));
+        assertTrue(result.contains("pattern=" + regex));
+        assertTrue(result.contains("region=0," + input.length()));
+        assertTrue(result.contains("lastMatchIndices=null"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void toStringAfterMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "abc123def";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.find();
+
+        var result = pcre4jMatcher.toString();
+
+        assertTrue(result.startsWith("org.pcre4j.regex.Matcher["));
+        assertTrue(result.contains("pattern=" + regex));
+        assertTrue(result.contains("region=0," + input.length()));
+        assertTrue(result.contains("lastMatchIndices=[3, 6]"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void toStringWithRegion(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "abc123def";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        pcre4jMatcher.region(3, 6);
+
+        var result = pcre4jMatcher.toString();
+
+        assertTrue(result.contains("region=3,6"));
+    }
+
 }
