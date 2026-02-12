@@ -168,11 +168,11 @@ jobs:
 
       - name: Test (Java 21 with preview)
         if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 }}
-        run: ./gradlew ffm:test jna:test -Dpcre2.library.path=/opt/pcre2/lib
+        run: ./gradlew lib:test regex:test ffm:test jna:test -Dpcre2.library.path=/opt/pcre2/lib
 
       - name: Test (Java 22+ with MRJAR)
         if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version >= 22 }}
-        run: ./gradlew ffm:testJava22 jna:test -Dpcre2.library.path=/opt/pcre2/lib -PtestJavaVersion=${{ matrix.java-version }}
+        run: ./gradlew lib:test regex:test ffm:testJava22 jna:test -Dpcre2.library.path=/opt/pcre2/lib -PtestJavaVersion=${{ matrix.java-version }}
 
   compatibility-all:
     runs-on: ubuntu-24.04
