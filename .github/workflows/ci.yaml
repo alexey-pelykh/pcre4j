@@ -32,13 +32,6 @@ jobs:
         java-distribution: ${{ github.event_name == 'pull_request' && fromJson('["temurin"]') || fromJson('["temurin","zulu","adopt-hotspot","adopt-openj9","liberica","microsoft","corretto","semeru","oracle"]') }}
         java-version: ${{ github.event_name == 'pull_request' && fromJson('[21, 25]') || fromJson('[21, 22, 25]') }}
         pcre2-version: ${{ github.event_name == 'pull_request' && fromJson('["10.47"]') || fromJson('["10.42","10.43","10.47"]') }}
-        include:
-          - pcre2-version: '10.42'
-            pcre2-sha256: 'c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f'
-          - pcre2-version: '10.43'
-            pcre2-sha256: '889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e'
-          - pcre2-version: '10.47'
-            pcre2-sha256: 'c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16'
         exclude:
           # Some distributions may not have all Java versions yet
           - java-distribution: adopt-hotspot
@@ -99,11 +92,23 @@ jobs:
           path: /opt/pcre2
           key: pcre2-${{ matrix.pcre2-version }}-${{ matrix.os }}
 
+      - name: Resolve PCRE2 source checksum
+        if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
+        id: pcre2-checksum
+        run: |
+          case "${{ matrix.pcre2-version }}" in
+            10.42) sha256="c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f" ;;
+            10.43) sha256="889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e" ;;
+            10.47) sha256="c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16" ;;
+            *) echo "Unknown PCRE2 version: ${{ matrix.pcre2-version }}" && exit 1 ;;
+          esac
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
       - name: Download and verify PCRE2 source
         if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
         run: |
           curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ matrix.pcre2-version }}/pcre2-${{ matrix.pcre2-version }}.tar.gz"
-          echo "${{ matrix.pcre2-sha256 }}  pcre2.tar.gz" | sha256sum -c
+          echo "${{ steps.pcre2-checksum.outputs.sha256 }}  pcre2.tar.gz" | sha256sum -c
           tar xzf pcre2.tar.gz
 
       - name: Build PCRE2 from source
