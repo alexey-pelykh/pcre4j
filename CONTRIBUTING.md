@@ -99,6 +99,110 @@ Ensure the following pass:
 
 If your changes add new PCRE2 API bindings, update `PCRE2_API.md` to mark the API as implemented.
 
+## Testing Guide
+
+PCRE4J supports two native backends — JNA and FFM — and tests must verify behavior across both. The test infrastructure provides several patterns for backend instantiation depending on the test's scope.
+
+### Parameterized Tests with `BackendProvider`
+
+Most tests in the `lib` and `regex` modules use JUnit 5 parameterized tests with a shared `BackendProvider` that supplies both backend instances. Each test method runs once per backend automatically:
+
+```java
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.pcre4j.api.IPcre2;
+
+@ParameterizedTest
+@MethodSource("org.pcre4j.test.BackendProvider#parameters")
+void myTest(IPcre2 api) {
+    var code = new Pcre2Code(api, "\\d+");
+    // ... assertions using api
+}
+```
+
+`BackendProvider` (in `lib/src/testFixtures`) loads backends reflectively to avoid compile-time coupling:
+
+```java
+public static Stream<Arguments> parameters() {
+    return Stream.of(
+            Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
+            Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
+    );
+}
+```
+
+Use this pattern when testing `lib` or `regex` classes that accept an `IPcre2` parameter and should behave identically regardless of backend.
+
+### Contract Test Interfaces
+
+The `lib/src/testFixtures` directory defines contract test interfaces — Java interfaces with `default` test methods that act as reusable test traits:
+
+```java
+public interface Pcre2MatchingContractTest<T extends IPcre2> {
+    T getApi();
+
+    @Test
+    default void plainStringMatch() {
+        var code = new Pcre2Code(getApi(), "42", EnumSet.noneOf(Pcre2CompileOption.class), null);
+        // ... assertions
+    }
+}
+```
+
+There are 12 contract interfaces covering all PCRE2 functionality areas (configuration, matching, substitution, substrings, match context, DFA matching, compile context, serialization, JIT, pattern conversion, miscellaneous, and UTF width support).
+
+### Base Test Class (`Pcre2Tests`)
+
+The abstract `org.pcre4j.test.Pcre2Tests` base class aggregates all 12 contract interfaces. Each backend module extends this class and provides its own backend instance:
+
+```java
+// In jna/src/test/java/org/pcre4j/jna/Pcre2Tests.java
+public class Pcre2Tests extends org.pcre4j.test.Pcre2Tests {
+    public Pcre2Tests() {
+        super(new Pcre2());  // Direct JNA backend instantiation
+    }
+
+    @Override
+    public IPcre2 createApi(Pcre2UtfWidth width) {
+        return new Pcre2(width);
+    }
+}
+```
+
+The FFM backend follows the same structure. This pattern guarantees both backends run identical contract tests and also allows backend-specific tests (e.g., JNA callback handling via `com.sun.jna.Callback` vs FFM upcall stubs via `MethodHandle`).
+
+### Backend-Agnostic Tests
+
+Some tests don't need a backend at all — they test utility logic, enum constants, or bootstrap error handling:
+
+```java
+// In lib/src/test/java/org/pcre4j/Pcre4jTests.java
+public class Pcre4jTests {
+    @BeforeEach
+    void resetSingleton() throws Exception {
+        Field apiField = Pcre4j.class.getDeclaredField("api");
+        apiField.setAccessible(true);
+        apiField.set(null, null);
+    }
+
+    @Test
+    void api_beforeSetup_throwsIllegalStateException() {
+        assertThrows(IllegalStateException.class, () -> Pcre4j.api());
+    }
+}
+```
+
+Use this pattern for tests that exercise backend-independent code paths.
+
+### Choosing a Pattern
+
+| Scenario | Pattern | Example |
+|----------|---------|---------|
+| Testing `lib`/`regex` classes against both backends | Parameterized with `BackendProvider` | `Pcre2CodeTests`, `PatternTests` |
+| Adding low-level PCRE2 API contract tests | Contract test interface + `Pcre2Tests` base class | `Pcre2MatchingContractTest` |
+| Testing backend-specific behavior (callbacks, FFI) | Backend-specific test methods in `jna`/`ffm` `Pcre2Tests` | JNA `CalloutEnumerateCallback` tests |
+| Testing utilities, enums, or bootstrap logic | Backend-agnostic tests (no parameterization) | `Pcre4jTests`, `Pcre2EnumTests` |
+
 ## License
 
 By contributing to PCRE4J, you agree that your contributions will be licensed under the [GNU Lesser General Public License v3.0](LICENSE).
