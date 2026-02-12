@@ -14,12 +14,7 @@
  */
 package org.pcre4j.jna;
 
-import org.junit.jupiter.api.Test;
-import org.pcre4j.api.Pcre2LibraryFinder;
-
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.pcre4j.test.Pcre2LoadingContractTest;
 
 /**
  * Tests for JNA backend native library loading failure modes.
@@ -27,48 +22,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>Verifies that the JNA {@link Pcre2} backend produces clear, actionable errors when the PCRE2 native library
  * cannot be loaded.</p>
  */
-class Pcre2LoadingTests {
+class Pcre2LoadingTests implements Pcre2LoadingContractTest {
 
-    @Test
-    void loadNonExistentLibraryByName_throwsUnsatisfiedLinkError() {
-        System.setProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY, "false");
-        try {
-            var error = assertThrows(
-                    UnsatisfiedLinkError.class,
-                    () -> new Pcre2("nonexistent-pcre2-library-xyz", "_8")
-            );
-            assertNotNull(error.getMessage(), "Error message must not be null");
-            assertTrue(
-                    error.getMessage().contains("nonexistent-pcre2-library-xyz"),
-                    "Error message should mention the library name, got: " + error.getMessage()
-            );
-        } finally {
-            System.clearProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY);
-        }
-    }
-
-    @Test
-    void loadLibraryFromNonExistentPath_throwsUnsatisfiedLinkError() {
-        var error = assertThrows(
-                UnsatisfiedLinkError.class,
-                () -> new Pcre2("/nonexistent/path/to/libpcre2-8.so", "_8")
-        );
-        assertNotNull(error.getMessage(), "Error message must not be null");
-    }
-
-    @Test
-    void loadNullLibraryName_throwsIllegalArgumentException() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> new Pcre2(null, "_8")
-        );
-    }
-
-    @Test
-    void loadNullSuffix_throwsIllegalArgumentException() {
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> new Pcre2("pcre2-8", null)
-        );
+    @Override
+    public void createBackend(String library, String suffix) {
+        new Pcre2(library, suffix);
     }
 }
