@@ -17,6 +17,7 @@ package org.pcre4j;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
+import java.util.EnumSet;
 
 public class Pcre2CompileContext {
 
@@ -170,17 +171,14 @@ public class Pcre2CompileContext {
      *
      * @param extraOptions the extra compile options to set
      */
-    public void setCompileExtraOptions(Pcre2CompileExtraOption... extraOptions) {
+    public void setCompileExtraOptions(EnumSet<Pcre2CompileExtraOption> extraOptions) {
         if (extraOptions == null) {
             throw new IllegalArgumentException("extraOptions cannot be null");
         }
-        var extraOptionsValue = 0;
-        for (var extraOption : extraOptions) {
-            if (extraOption == null) {
-                throw new IllegalArgumentException("extraOptions cannot contain null");
-            }
-            extraOptionsValue |= extraOption.value();
-        }
+        final var extraOptionsValue = extraOptions
+                .stream()
+                .mapToInt(Pcre2CompileExtraOption::value)
+                .sum();
         final var result = api.setCompileExtraOptions(handle, extraOptionsValue);
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);

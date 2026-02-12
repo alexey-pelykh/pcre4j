@@ -287,21 +287,14 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
     default void setCompileExtraOptionsNullThrows() {
         final var compileContext = new Pcre2CompileContext(getApi(), null);
         assertThrows(IllegalArgumentException.class,
-                () -> compileContext.setCompileExtraOptions((Pcre2CompileExtraOption[]) null));
-    }
-
-    @Test
-    default void setCompileExtraOptionsNullElementThrows() {
-        final var compileContext = new Pcre2CompileContext(getApi(), null);
-        assertThrows(IllegalArgumentException.class,
-                () -> compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_WORD, null));
+                () -> compileContext.setCompileExtraOptions(null));
     }
 
     @Test
     default void setCompileExtraOptionsEmpty() {
         final var compileContext = new Pcre2CompileContext(getApi(), null);
-        // Should not throw with empty varargs
-        compileContext.setCompileExtraOptions();
+        // Should not throw with empty EnumSet
+        compileContext.setCompileExtraOptions(EnumSet.noneOf(Pcre2CompileExtraOption.class));
 
         // Pattern should still compile and match
         final var code = new Pcre2Code(
@@ -332,7 +325,7 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
                 "Skipping test: ASCII_BSD requires PCRE2 10.43+");
 
         final var compileContext = new Pcre2CompileContext(api, null);
-        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.ASCII_BSD);
+        compileContext.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.ASCII_BSD));
 
         // With ASCII_BSD, \d should only match ASCII digits even with UCP+UTF
         final var code = new Pcre2Code(
@@ -368,7 +361,7 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
     @Test
     default void setCompileExtraOptionsMatchWord() {
         final var compileContext = new Pcre2CompileContext(getApi(), null);
-        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_WORD);
+        compileContext.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.MATCH_WORD));
 
         // With MATCH_WORD, pattern should only match whole words
         final var code = new Pcre2Code(
@@ -404,7 +397,7 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
     @Test
     default void setCompileExtraOptionsMatchLine() {
         final var compileContext = new Pcre2CompileContext(getApi(), null);
-        compileContext.setCompileExtraOptions(Pcre2CompileExtraOption.MATCH_LINE);
+        compileContext.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.MATCH_LINE));
 
         // With MATCH_LINE, pattern should only match whole lines
         final var code = new Pcre2Code(
@@ -446,11 +439,11 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
 
         final var compileContext = new Pcre2CompileContext(api, null);
         // Set multiple extra options at once
-        compileContext.setCompileExtraOptions(
+        compileContext.setCompileExtraOptions(EnumSet.of(
                 Pcre2CompileExtraOption.ASCII_BSD,
                 Pcre2CompileExtraOption.ASCII_BSS,
                 Pcre2CompileExtraOption.ASCII_BSW
-        );
+        ));
 
         // With all ASCII options, \w should only match ASCII word characters even with UCP+UTF
         final var code = new Pcre2Code(
