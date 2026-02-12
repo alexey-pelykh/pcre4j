@@ -117,7 +117,7 @@ public enum Pcre2UtfWidth {
      * @param value the integer value
      * @return the enum entry
      */
-    public static Optional<Pcre2UtfWidth> valueOf(int value) {
+    public static Optional<Pcre2UtfWidth> fromValue(int value) {
         return Arrays.stream(values())
                 .filter(entry -> entry.value == value)
                 .findFirst();
