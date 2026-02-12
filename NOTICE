@@ -1,0 +1,64 @@
+PCRE4J
+Copyright (C) 2024-2026 Oleksii PELYKH and the PCRE4J contributors
+
+This product is licensed under the GNU Lesser General Public License v3.0.
+See the LICENSE and COPYING files for details.
+
+This product includes or depends on the following third-party software:
+
+--------------------------------------------------------------------------------
+
+PCRE2 - Perl Compatible Regular Expressions
+https://github.com/PCRE2Project/pcre2
+
+Copyright (c) 1997-2024 University of Cambridge
+Copyright (c) 2009-2024 Zoltan Herczeg
+
+Licensed under the BSD License.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+
+    * Neither the name of the University of Cambridge nor the names of any
+      contributors may be used to endorse or promote products derived from
+      this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+PCRE4J links to the PCRE2 native library at runtime but does not include or
+redistribute the PCRE2 library itself. Users must install PCRE2 separately.
+
+--------------------------------------------------------------------------------
+
+Java Native Access (JNA)
+https://github.com/java-native-access/jna
+
+Copyright (c) 2007 Timothy Wall, All Rights Reserved
+
+Licensed under the Apache License, Version 2.0 (the "License") or the
+GNU Lesser General Public License, Version 2.1 or later (the "LGPL").
+
+You may obtain a copy of the License at:
+    https://www.apache.org/licenses/LICENSE-2.0
+
+You may obtain a copy of the LGPL at:
+    https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html
+
+JNA is a runtime dependency of the PCRE4J JNA backend module (org.pcre4j:jna).
