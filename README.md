@@ -59,21 +59,26 @@ The PCRE4J library provides several APIs to interact with the PCRE library:
 
 ### Quick Start with `java.util.regex`-compatible API
 
-Add the following dependencies to your `pom.xml` file:
+Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
 
 ```xml
+<properties>
+    <pcre4j.version><!-- latest version --></pcre4j.version>
+</properties>
+
 <dependencies>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>regex</artifactId>
-        <version>0.7.0</version>
+        <version>${pcre4j.version}</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.7.0</version>
+        <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -111,21 +116,26 @@ can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
 
 ### Advanced Usage via PCRE4J API
 
-Add the following dependencies to your `pom.xml` file:
+Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
 
 ```xml
+<properties>
+    <pcre4j.version><!-- latest version --></pcre4j.version>
+</properties>
+
 <dependencies>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>lib</artifactId>
-        <version>0.7.0</version>
+        <version>${pcre4j.version}</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.7.0</version>
+        <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
 ```
@@ -174,16 +184,21 @@ public class Usage {
 
 ### Low-Level Usage
 
-Add the following dependencies to your `pom.xml` file:
+Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
 
 ```xml
+<properties>
+    <pcre4j.version><!-- latest version --></pcre4j.version>
+</properties>
+
 <dependencies>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>0.7.0</version>
+        <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
 ```
