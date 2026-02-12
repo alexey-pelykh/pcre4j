@@ -54,18 +54,64 @@ public class Pcre4jUtilsExtendedTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
-    void isVersionAtLeast(IPcre2 api) {
-        // PCRE2 10.x should be present
-        assertTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 0));
-        // Version 99.0 should not be reached
-        assertFalse(Pcre4jUtils.isVersionAtLeast(api, 99, 0));
+    void isVersionAtLeastExactVersion(IPcre2 api) {
+        var version = Pcre4jUtils.getVersion(api);
+        var versionPart = version.contains(" ") ? version.substring(0, version.indexOf(' ')) : version;
+        var parts = versionPart.split("\\.");
+        var actualMajor = Integer.parseInt(parts[0]);
+        var actualMinor = Integer.parseInt(parts[1]);
+
+        // Exact version match should return true
+        assertTrue(Pcre4jUtils.isVersionAtLeast(api, actualMajor, actualMinor));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void isVersionAtLeastLowerMajor(IPcre2 api) {
+        var version = Pcre4jUtils.getVersion(api);
+        var versionPart = version.contains(" ") ? version.substring(0, version.indexOf(' ')) : version;
+        var parts = versionPart.split("\\.");
+        var actualMajor = Integer.parseInt(parts[0]);
+
+        // Lower major version should return true
+        assertTrue(Pcre4jUtils.isVersionAtLeast(api, actualMajor - 1, 0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void isVersionAtLeastHigherMajor(IPcre2 api) {
+        var version = Pcre4jUtils.getVersion(api);
+        var versionPart = version.contains(" ") ? version.substring(0, version.indexOf(' ')) : version;
+        var parts = versionPart.split("\\.");
+        var actualMajor = Integer.parseInt(parts[0]);
+
+        // Higher major version should return false
+        assertFalse(Pcre4jUtils.isVersionAtLeast(api, actualMajor + 1, 0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void isVersionAtLeastSameMajorLowerMinor(IPcre2 api) {
+        var version = Pcre4jUtils.getVersion(api);
+        var versionPart = version.contains(" ") ? version.substring(0, version.indexOf(' ')) : version;
+        var parts = versionPart.split("\\.");
+        var actualMajor = Integer.parseInt(parts[0]);
+
+        // Same major, lower minor should return true
+        assertTrue(Pcre4jUtils.isVersionAtLeast(api, actualMajor, 0));
     }
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void isVersionAtLeastSameMajorHigherMinor(IPcre2 api) {
-        // Should handle same major with higher minor correctly
-        assertTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 0));
+        var version = Pcre4jUtils.getVersion(api);
+        var versionPart = version.contains(" ") ? version.substring(0, version.indexOf(' ')) : version;
+        var parts = versionPart.split("\\.");
+        var actualMajor = Integer.parseInt(parts[0]);
+        var actualMinor = Integer.parseInt(parts[1]);
+
+        // Same major, higher minor should return false
+        assertFalse(Pcre4jUtils.isVersionAtLeast(api, actualMajor, actualMinor + 1));
     }
 
     @ParameterizedTest
