@@ -1,0 +1,53 @@
+name: Build PCRE2
+description: Cache or build PCRE2 from source with checksum verification
+
+inputs:
+  version:
+    description: PCRE2 version to build
+    required: true
+
+outputs:
+  library-path:
+    description: Path to the built PCRE2 libraries
+    value: /opt/pcre2/lib
+
+runs:
+  using: composite
+  steps:
+    - name: Cache PCRE2
+      uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+      id: cache-pcre2
+      with:
+        path: /opt/pcre2
+        key: pcre2-${{ inputs.version }}-${{ runner.os }}-${{ runner.arch }}
+
+    - name: Resolve PCRE2 source checksum
+      if: steps.cache-pcre2.outputs.cache-hit != 'true'
+      id: pcre2-checksum
+      shell: bash
+      run: |
+        case "${{ inputs.version }}" in
+          10.42) sha256="c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f" ;;
+          10.43) sha256="889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e" ;;
+          10.47) sha256="c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16" ;;
+          *) echo "::error::Unknown PCRE2 version: ${{ inputs.version }}" && exit 1 ;;
+        esac
+        echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+
+    - name: Download and verify PCRE2 source
+      if: steps.cache-pcre2.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ inputs.version }}/pcre2-${{ inputs.version }}.tar.gz"
+        echo "${{ steps.pcre2-checksum.outputs.sha256 }}  pcre2.tar.gz" | sha256sum -c
+        tar xzf pcre2.tar.gz
+
+    - name: Build PCRE2 from source
+      if: steps.cache-pcre2.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get install -y build-essential
+        cd pcre2-${{ inputs.version }}
+        ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
+        make -j$(nproc)
+        sudo make install

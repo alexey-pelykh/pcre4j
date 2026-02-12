@@ -128,41 +128,10 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}
 
-      - name: Cache PCRE2
-        if: ${{ matrix.os == 'ubuntu-24.04' }}
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
-        id: cache-pcre2
+      - name: Build PCRE2
+        uses: ./.github/actions/build-pcre2
         with:
-          path: /opt/pcre2
-          key: pcre2-${{ matrix.pcre2-version }}-${{ matrix.os }}
-
-      - name: Resolve PCRE2 source checksum
-        if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
-        id: pcre2-checksum
-        run: |
-          case "${{ matrix.pcre2-version }}" in
-            10.42) sha256="c33b418e3b936ee3153de2c61cc638e7e4fe3156022a5c77d0711bcbb9d64f1f" ;;
-            10.43) sha256="889d16be5abb8d05400b33c25e151638b8d4bac0e2d9c76e9d6923118ae8a34e" ;;
-            10.47) sha256="c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16" ;;
-            *) echo "Unknown PCRE2 version: ${{ matrix.pcre2-version }}" && exit 1 ;;
-          esac
-          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
-
-      - name: Download and verify PCRE2 source
-        if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
-        run: |
-          curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${{ matrix.pcre2-version }}/pcre2-${{ matrix.pcre2-version }}.tar.gz"
-          echo "${{ steps.pcre2-checksum.outputs.sha256 }}  pcre2.tar.gz" | sha256sum -c
-          tar xzf pcre2.tar.gz
-
-      - name: Build PCRE2 from source
-        if: ${{ matrix.os == 'ubuntu-24.04' && steps.cache-pcre2.outputs.cache-hit != 'true' }}
-        run: |
-          sudo apt-get install -y build-essential
-          cd pcre2-${{ matrix.pcre2-version }}
-          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
-          make -j$(nproc)
-          sudo make install
+          version: ${{ matrix.pcre2-version }}
 
       - name: Test (Java 21 with preview)
         if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 }}
@@ -216,7 +185,6 @@ jobs:
 
     env:
       PCRE2_VERSION: '10.47'
-      PCRE2_SHA256: 'c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16'
 
     steps:
       - name: Checkout
@@ -253,28 +221,10 @@ jobs:
       - name: Checkstyle
         run: ./gradlew checkstyleMain checkstyleTest
 
-      - name: Cache PCRE2
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
-        id: cache-pcre2
+      - name: Build PCRE2
+        uses: ./.github/actions/build-pcre2
         with:
-          path: /opt/pcre2
-          key: pcre2-${{ env.PCRE2_VERSION }}-ubuntu-24.04
-
-      - name: Download and verify PCRE2 source
-        if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
-        run: |
-          curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz"
-          echo "${PCRE2_SHA256}  pcre2.tar.gz" | sha256sum -c
-          tar xzf pcre2.tar.gz
-
-      - name: Build PCRE2 from source
-        if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
-        run: |
-          sudo apt-get install -y build-essential
-          cd pcre2-${PCRE2_VERSION}
-          ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
-          make -j$(nproc)
-          sudo make install
+          version: ${{ env.PCRE2_VERSION }}
 
       - name: Build artifacts
         run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/opt/pcre2/lib
