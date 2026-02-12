@@ -63,6 +63,39 @@ jobs:
 
           echo "All commits have valid DCO sign-off."
 
+  lint:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4
+
+      - name: Set up temurin-jdk-21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Cache Gradle packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}
+
+      - name: Checkstyle
+        run: ./gradlew checkstyleMain checkstyleTest
+
   compatibility:
     permissions:
       contents: read
@@ -181,6 +214,7 @@ jobs:
     timeout-minutes: 30
 
     needs:
+      - lint
       - compatibility-all
 
     env:
@@ -217,9 +251,6 @@ jobs:
             ~/.gradle/wrapper
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}
-
-      - name: Checkstyle
-        run: ./gradlew checkstyleMain checkstyleTest
 
       - name: Build PCRE2
         uses: ./.github/actions/build-pcre2
