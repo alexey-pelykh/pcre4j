@@ -274,7 +274,7 @@ publishing {
             artifactId = project.name
 
             pom {
-                name = "org.pcre4j:${project.name}"
+                name = "PCRE4J FFM Backend"
                 description = "PCRE4J FFM Backend"
             }
         }

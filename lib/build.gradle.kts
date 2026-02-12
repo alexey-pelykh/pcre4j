@@ -115,7 +115,7 @@ publishing {
             artifactId = project.name
 
             pom {
-                name = "org.pcre4j:${project.name}"
+                name = "PCRE4J Library"
                 description = "PCRE4J Library"
             }
         }
