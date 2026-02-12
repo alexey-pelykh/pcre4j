@@ -128,6 +128,37 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version >= 22 }}
         run: ./gradlew ffm:testJava22 jna:test -Dpcre2.library.path=/opt/pcre2/lib -PtestJavaVersion=${{ matrix.java-version }}
 
+  compatibility-all:
+    runs-on: ubuntu-24.04
+
+    if: always()
+
+    needs:
+      - compatibility
+
+    steps:
+      - name: Check compatibility results
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const result = '${{ needs.compatibility.result }}';
+            if (result !== 'success') {
+              core.setFailed(`Compatibility checks ${result}`);
+              return;
+            }
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              filter: 'latest',
+            });
+            const compatJobs = jobs.filter(j => j.name.startsWith('compatibility ('));
+            if (compatJobs.length === 0) {
+              core.setFailed('No compatibility matrix jobs were executed');
+              return;
+            }
+            core.info(`${compatJobs.length} compatibility job(s) completed successfully`);
+
   package:
     runs-on: ubuntu-24.04
 
@@ -137,7 +168,7 @@ jobs:
     timeout-minutes: 30
 
     needs:
-      - compatibility
+      - compatibility-all
 
     steps:
       - name: Checkout
