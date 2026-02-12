@@ -39,12 +39,6 @@ configurations {
     }
 }
 
-sourceSets {
-    main {
-        java.srcDir("src/main/java")
-    }
-}
-
 // ============================================================
 // MRJAR: Java 22+ source set for finalized FFM API
 // ============================================================
