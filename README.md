@@ -49,6 +49,17 @@ upstream dependencies as transitive, so your dependency manager pulls them autom
 A backend (`jna` or `ffm`) is always required at runtime but is intentionally not a transitive
 dependency of `regex` or `lib`, letting consumers choose which native access mechanism to use.
 
+## Prerequisites
+
+- **Java 21 or later**
+- **PCRE2 native library** installed on your system:
+  - **Ubuntu/Debian**: `sudo apt install libpcre2-8-0`
+  - **macOS** (Homebrew): `brew install pcre2`
+  - **Windows**: Download the PCRE2 DLL and add its location to `PATH`
+
+The library is located automatically via `pcre2-config`, `pkg-config`, or well-known platform
+paths. You can also set the path explicitly with `-Dpcre2.library.path=/path/to/lib`.
+
 ## Usage
 
 The PCRE4J library provides several APIs to interact with the PCRE library:
