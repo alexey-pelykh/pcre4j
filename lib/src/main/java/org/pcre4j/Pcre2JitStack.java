@@ -93,10 +93,10 @@ public class Pcre2JitStack {
         return handle;
     }
 
-    private record Clean(IPcre2 api, long matchContext) implements Runnable {
+    private record Clean(IPcre2 api, long jitStack) implements Runnable {
         @Override
         public void run() {
-            api.jitStackFree(matchContext);
+            api.jitStackFree(jitStack);
         }
     }
 
