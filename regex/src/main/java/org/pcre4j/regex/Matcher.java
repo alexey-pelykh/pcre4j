@@ -2037,9 +2037,8 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     private void processMatchResult(Pcre2MatchData matchData, RegionSubject regionSubject) {
         lastMatchData = matchData;
-        final var subjectBytes = regionSubject.subject().getBytes(StandardCharsets.UTF_8);
         lastMatchIndices = Pcre4jUtils.convertOvectorToStringIndices(
-                regionSubject.subject(), subjectBytes, matchData.ovector()
+                regionSubject.subject(), matchData.ovector()
         );
 
         // Adjust indices back to full input coordinate space

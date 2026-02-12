@@ -565,25 +565,6 @@ public final class Pcre4jUtils {
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
         }
-
-        return convertOvectorToStringIndices(subject, subject.getBytes(StandardCharsets.UTF_8), ovector);
-    }
-
-    /**
-     * Convert the byte-based ovector offset pairs to string index pairs
-     *
-     * @param subject     the string to which the ovector values correspond
-     * @param subjectUtf8 the {@param subject} string encoded as UTF-8 {@code byte[]}
-     * @param ovector     the byte-based ovector offset pairs
-     * @return a string index pairs
-     */
-    public static int[] convertOvectorToStringIndices(String subject, byte[] subjectUtf8, long[] ovector) {
-        if (subject == null) {
-            throw new IllegalArgumentException("subject must not be null");
-        }
-        if (subjectUtf8 == null) {
-            throw new IllegalArgumentException("subjectUtf8 must not be null");
-        }
         if (ovector == null) {
             throw new IllegalArgumentException("ovector must not be null");
         }
@@ -594,67 +575,62 @@ public final class Pcre4jUtils {
             throw new IllegalArgumentException("ovector must have an even number of elements");
         }
 
-        final var ovectorMin = Arrays
-                .stream(ovector)
-                .filter(value -> value != -1)
-                .min();
-        if (ovectorMin.isEmpty()) {
+        // Find the maximum byte offset to determine how far we need to map
+        var maxByteOffset = -1L;
+        for (final var value : ovector) {
+            if (value > maxByteOffset) {
+                maxByteOffset = value;
+            }
+        }
+
+        // If all ovector entries are unmatched, return all -1
+        if (maxByteOffset == -1) {
             final var result = new int[ovector.length];
             Arrays.fill(result, -1);
             return result;
         }
-        final var matchSince = (int) ovectorMin.getAsLong();
 
-        final var matchUntil = (int) Arrays
-                .stream(ovector)
-                .max()
-                .orElseThrow();
-        final var matchSizeInBytes = matchUntil - matchSince;
-
-        // Calculate the mapping of byte offsets to string indices for the relevant subject region of the match
+        // Build a mapping from byte offsets to string indices by walking through the subject
+        final var limit = (int) maxByteOffset;
+        final var byteOffsetToStringIndex = new int[limit + 1];
+        var byteOffset = 0;
         var stringIndex = 0;
-        final var byteOffsetToStringIndex = new int[matchSizeInBytes + 1];
-        for (var byteIndex = 0; byteIndex < matchUntil; ) {
-            if (byteIndex >= matchSince) {
-                byteOffsetToStringIndex[byteIndex - matchSince] = stringIndex;
-            }
+        while (byteOffset <= limit && stringIndex < subject.length()) {
+            byteOffsetToStringIndex[byteOffset] = stringIndex;
 
-            final var subjectChar = subject.charAt(stringIndex);
-
-            final int subjectCharByteLength;
-            if (subjectChar <= 0x7F) {
-                subjectCharByteLength = 1;
-            } else if (subjectChar <= 0x7FF) {
-                subjectCharByteLength = 2;
-            } else if (Character.isHighSurrogate(subjectChar) || Character.isLowSurrogate(subjectChar)) {
-                subjectCharByteLength = 2;
+            final var ch = subject.charAt(stringIndex);
+            final int charByteLength;
+            if (ch <= 0x7F) {
+                charByteLength = 1;
+            } else if (ch <= 0x7FF) {
+                charByteLength = 2;
+            } else if (Character.isHighSurrogate(ch)) {
+                charByteLength = 4;
+                stringIndex++;
             } else {
-                subjectCharByteLength = 3;
+                charByteLength = 3;
             }
 
-            for (var subjectCharByteIndex = 0; subjectCharByteIndex < subjectCharByteLength; subjectCharByteIndex++) {
-                if (byteIndex >= matchSince) {
-                    byteOffsetToStringIndex[byteIndex - matchSince] = stringIndex;
-                }
-                byteIndex += 1;
+            for (var b = 1; b < charByteLength && byteOffset + b <= limit; b++) {
+                byteOffsetToStringIndex[byteOffset + b] = stringIndex;
             }
-
+            byteOffset += charByteLength;
             stringIndex++;
         }
-        byteOffsetToStringIndex[matchSizeInBytes] = stringIndex;
+        // Handle end-of-match offsets that land exactly at the next character boundary
+        if (byteOffset <= limit) {
+            byteOffsetToStringIndex[byteOffset] = stringIndex;
+        }
 
         // Convert byte offsets to string indices
         final var stringIndices = new int[ovector.length];
-        for (var valueIndex = 0; valueIndex < ovector.length; valueIndex++) {
-            final var byteIndex = (int) ovector[valueIndex];
-
-            // Handle case when group was not matched
-            if (byteIndex == -1) {
-                stringIndices[valueIndex] = -1;
-                continue;
+        for (var i = 0; i < ovector.length; i++) {
+            final var value = ovector[i];
+            if (value == -1) {
+                stringIndices[i] = -1;
+            } else {
+                stringIndices[i] = byteOffsetToStringIndex[(int) value];
             }
-
-            stringIndices[valueIndex] = byteOffsetToStringIndex[byteIndex - matchSince];
         }
 
         return stringIndices;
