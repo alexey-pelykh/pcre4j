@@ -963,7 +963,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesStaticFullMatch(IPcre2 api) {
         var regex = "\\d+";
 
@@ -975,7 +975,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesStaticNoMatch(IPcre2 api) {
         var regex = "\\d+";
 
@@ -987,7 +987,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesStaticPartialInputDoesNotMatch(IPcre2 api) {
         var regex = "\\d+";
 
@@ -999,7 +999,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchesStaticEmptyInput(IPcre2 api) {
         var regex = ".*";
 
@@ -1011,7 +1011,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asPredicateFindsPartialMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
@@ -1022,7 +1022,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asPredicateFullMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
@@ -1033,7 +1033,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asPredicateNoMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
@@ -1044,7 +1044,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asPredicateEmptyInput(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
@@ -1055,7 +1055,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asMatchPredicateFullMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
@@ -1066,7 +1066,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asMatchPredicatePartialInputDoesNotMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
@@ -1077,7 +1077,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asMatchPredicateNoMatch(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
@@ -1088,7 +1088,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asMatchPredicateEmptyInput(IPcre2 api) {
         var regex = "\\d+";
         var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
@@ -1099,7 +1099,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void asPredicateVsAsMatchPredicate(IPcre2 api) {
         var regex = "\\d+";
         var asPredicate = Pattern.compile(api, regex).asPredicate();
