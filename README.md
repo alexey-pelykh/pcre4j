@@ -335,6 +335,12 @@ The `ffm` module is packaged as a Multi-Release JAR supporting both:
 
 > **Note:** Automatic library discovery can be disabled by setting `-Dpcre2.library.discovery=false`.
 
+## Contributing
+
+Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+All commits must be signed off to certify the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). Use `git commit -s` to add the required `Signed-off-by` line.
+
 ## Javadoc
 
 Please see [the Javadoc Index](https://alexey-pelykh.com/pcre4j/javadoc/) for the detailed API documentation.
