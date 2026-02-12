@@ -122,7 +122,8 @@ public class Pcre2ContextTests {
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetCompileExtraOptions(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
-        assertDoesNotThrow(() -> ctx.setCompileExtraOptions(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL));
+        assertDoesNotThrow(() ->
+                ctx.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL)));
     }
 
     @ParameterizedTest
@@ -130,15 +131,7 @@ public class Pcre2ContextTests {
     void compileContextSetCompileExtraOptionsNullThrows(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertThrows(IllegalArgumentException.class, () ->
-                ctx.setCompileExtraOptions((Pcre2CompileExtraOption[]) null));
-    }
-
-    @ParameterizedTest
-    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
-    void compileContextSetCompileExtraOptionsNullElementThrows(IPcre2 api) {
-        var ctx = new Pcre2CompileContext(api, null);
-        assertThrows(IllegalArgumentException.class, () ->
-                ctx.setCompileExtraOptions(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL, null));
+                ctx.setCompileExtraOptions(null));
     }
 
     @ParameterizedTest

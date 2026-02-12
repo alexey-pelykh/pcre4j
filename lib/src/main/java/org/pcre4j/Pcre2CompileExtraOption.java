@@ -22,7 +22,7 @@ import java.util.Optional;
 /**
  * Extra compile options for PCRE2 patterns.
  * <p>
- * These options are set via {@link Pcre2CompileContext#setCompileExtraOptions(Pcre2CompileExtraOption...)} and provide
+ * These options are set via {@link Pcre2CompileContext#setCompileExtraOptions(java.util.EnumSet)} and provide
  * additional control over pattern compilation beyond the standard compile options.
  */
 public enum Pcre2CompileExtraOption {
