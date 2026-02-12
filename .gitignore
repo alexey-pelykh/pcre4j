@@ -206,3 +206,32 @@ gradle-app.setting
 .project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
+
+## Defensive patterns for sensitive files
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.jceks
+*.keystore
+
+# GPG keys
+*.gpg
+*.asc
+
+# Environment and secrets files
+.env
+.env.*
+
+# Gradle user-specific properties (may contain credentials)
+gradle.properties
+local.properties
+
+# Maven settings (may contain repository credentials)
+settings.xml
+
+# JReleaser local overrides (may contain secrets)
+jreleaser-local.yml
