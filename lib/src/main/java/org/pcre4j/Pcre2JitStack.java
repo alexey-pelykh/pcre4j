@@ -20,8 +20,6 @@ import java.lang.ref.Cleaner;
 
 public class Pcre2JitStack {
 
-    private static final Cleaner cleaner = Cleaner.create();
-
     /**
      * The JIT stack handle
      */
@@ -72,7 +70,7 @@ public class Pcre2JitStack {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Pcre2JitStack.Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2JitStack.Clean(api, handle));
     }
 
     /**

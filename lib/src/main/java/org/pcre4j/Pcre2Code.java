@@ -27,8 +27,6 @@ import java.util.EnumSet;
  */
 public class Pcre2Code {
 
-    private static final Cleaner cleaner = Cleaner.create();
-
     /**
      * The compiled pattern handle
      */
@@ -155,7 +153,7 @@ public class Pcre2Code {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Clean(api, handle));
     }
 
     /**

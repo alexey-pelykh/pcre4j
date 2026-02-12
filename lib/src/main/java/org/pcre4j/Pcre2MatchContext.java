@@ -20,8 +20,6 @@ import java.lang.ref.Cleaner;
 
 public class Pcre2MatchContext {
 
-    private static final Cleaner cleaner = Cleaner.create();
-
     /**
      * The match context handle
      */
@@ -66,7 +64,7 @@ public class Pcre2MatchContext {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Pcre2MatchContext.Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2MatchContext.Clean(api, handle));
     }
 
     /**

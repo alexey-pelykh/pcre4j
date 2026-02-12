@@ -21,8 +21,6 @@ import java.util.EnumSet;
 
 public class Pcre2CompileContext {
 
-    private static final Cleaner cleaner = Cleaner.create();
-
     /**
      * The compile context handle
      */
@@ -67,7 +65,7 @@ public class Pcre2CompileContext {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Pcre2CompileContext.Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2CompileContext.Clean(api, handle));
     }
 
     /**
