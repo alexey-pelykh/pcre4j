@@ -68,14 +68,14 @@ tasks.test {
         "jna.library.path", listOf(
             providers.systemProperty("pcre2.library.path").orNull,
             providers.systemProperty("jna.library.path").orNull
-        ).joinToString(":")
+        ).joinToString(File.pathSeparator)
     )
 
     systemProperty(
         "java.library.path", listOf(
             providers.systemProperty("pcre2.library.path").orNull,
             providers.systemProperty("java.library.path").orNull
-        ).joinToString(":")
+        ).joinToString(File.pathSeparator)
     )
 
     val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
