@@ -125,17 +125,17 @@ tasks.test {
 
     systemProperty(
         "java.library.path", listOf(
-            System.getProperty("pcre2.library.path"),
-            System.getProperty("java.library.path")
+            providers.systemProperty("pcre2.library.path").orNull,
+            providers.systemProperty("java.library.path").orNull
         ).joinToString(":")
     )
 
-    val pcre2LibraryName = System.getProperty("pcre2.library.name")
+    val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
     if (pcre2LibraryName != null) {
         systemProperty("pcre2.library.name", pcre2LibraryName)
     }
 
-    val pcre2FunctionSuffix = System.getProperty("pcre2.function.suffix")
+    val pcre2FunctionSuffix = providers.systemProperty("pcre2.function.suffix").orNull
     if (pcre2FunctionSuffix != null) {
         systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
     }
@@ -204,17 +204,17 @@ val testJava22 by tasks.registering(Test::class) {
 
     systemProperty(
         "java.library.path", listOf(
-            System.getProperty("pcre2.library.path"),
-            System.getProperty("java.library.path")
+            providers.systemProperty("pcre2.library.path").orNull,
+            providers.systemProperty("java.library.path").orNull
         ).joinToString(":")
     )
 
-    val pcre2LibraryName = System.getProperty("pcre2.library.name")
+    val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
     if (pcre2LibraryName != null) {
         systemProperty("pcre2.library.name", pcre2LibraryName)
     }
 
-    val pcre2FunctionSuffix = System.getProperty("pcre2.function.suffix")
+    val pcre2FunctionSuffix = providers.systemProperty("pcre2.function.suffix").orNull
     if (pcre2FunctionSuffix != null) {
         systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
     }
