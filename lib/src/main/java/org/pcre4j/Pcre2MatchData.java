@@ -24,7 +24,6 @@ import java.nio.ByteBuffer;
  */
 public class Pcre2MatchData {
 
-    private static final Cleaner cleaner = Cleaner.create();
     /**
      * The match data handle
      */
@@ -70,7 +69,7 @@ public class Pcre2MatchData {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Pcre2MatchData.Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2MatchData.Clean(api, handle));
     }
 
     /**
@@ -93,7 +92,7 @@ public class Pcre2MatchData {
 
         this.api = code.api;
         this.handle = handle;
-        this.cleanable = cleaner.register(this, new Pcre2MatchData.Clean(api, handle));
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2MatchData.Clean(api, handle));
     }
 
     /**
