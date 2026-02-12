@@ -15,6 +15,7 @@
 package org.pcre4j.api;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -355,7 +356,7 @@ public final class Pcre2LibraryFinder {
             LOG.log(Level.FINE, "Command interrupted: " + String.join(" ", command), e);
             Thread.currentThread().interrupt();
             return null;
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOG.log(Level.FINE, "Command failed: " + String.join(" ", command), e);
             return null;
         }
