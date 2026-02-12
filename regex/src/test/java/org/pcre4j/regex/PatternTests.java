@@ -951,4 +951,161 @@ public class PatternTests {
         }
     }
 
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesStaticFullMatch(IPcre2 api) {
+        var regex = "\\d+";
+
+        assertEquals(
+                java.util.regex.Pattern.matches(regex, "12345"),
+                Pattern.matches(api, regex, "12345")
+        );
+        assertTrue(Pattern.matches(api, regex, "12345"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesStaticNoMatch(IPcre2 api) {
+        var regex = "\\d+";
+
+        assertEquals(
+                java.util.regex.Pattern.matches(regex, "abc"),
+                Pattern.matches(api, regex, "abc")
+        );
+        assertFalse(Pattern.matches(api, regex, "abc"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesStaticPartialInputDoesNotMatch(IPcre2 api) {
+        var regex = "\\d+";
+
+        assertEquals(
+                java.util.regex.Pattern.matches(regex, "123abc"),
+                Pattern.matches(api, regex, "123abc")
+        );
+        assertFalse(Pattern.matches(api, regex, "123abc"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void matchesStaticEmptyInput(IPcre2 api) {
+        var regex = ".*";
+
+        assertEquals(
+                java.util.regex.Pattern.matches(regex, ""),
+                Pattern.matches(api, regex, "")
+        );
+        assertTrue(Pattern.matches(api, regex, ""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asPredicateFindsPartialMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asPredicate();
+
+        assertEquals(javaPredicate.test("abc123def"), pcre4jPredicate.test("abc123def"));
+        assertTrue(pcre4jPredicate.test("abc123def"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asPredicateFullMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asPredicate();
+
+        assertEquals(javaPredicate.test("12345"), pcre4jPredicate.test("12345"));
+        assertTrue(pcre4jPredicate.test("12345"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asPredicateNoMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asPredicate();
+
+        assertEquals(javaPredicate.test("abc"), pcre4jPredicate.test("abc"));
+        assertFalse(pcre4jPredicate.test("abc"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asPredicateEmptyInput(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asPredicate();
+
+        assertEquals(javaPredicate.test(""), pcre4jPredicate.test(""));
+        assertFalse(pcre4jPredicate.test(""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asMatchPredicateFullMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asMatchPredicate();
+
+        assertEquals(javaPredicate.test("12345"), pcre4jPredicate.test("12345"));
+        assertTrue(pcre4jPredicate.test("12345"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asMatchPredicatePartialInputDoesNotMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asMatchPredicate();
+
+        assertEquals(javaPredicate.test("abc123def"), pcre4jPredicate.test("abc123def"));
+        assertFalse(pcre4jPredicate.test("abc123def"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asMatchPredicateNoMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asMatchPredicate();
+
+        assertEquals(javaPredicate.test("abc"), pcre4jPredicate.test("abc"));
+        assertFalse(pcre4jPredicate.test("abc"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asMatchPredicateEmptyInput(IPcre2 api) {
+        var regex = "\\d+";
+        var javaPredicate = java.util.regex.Pattern.compile(regex).asMatchPredicate();
+        var pcre4jPredicate = Pattern.compile(api, regex).asMatchPredicate();
+
+        assertEquals(javaPredicate.test(""), pcre4jPredicate.test(""));
+        assertFalse(pcre4jPredicate.test(""));
+    }
+
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void asPredicateVsAsMatchPredicate(IPcre2 api) {
+        var regex = "\\d+";
+        var asPredicate = Pattern.compile(api, regex).asPredicate();
+        var asMatchPredicate = Pattern.compile(api, regex).asMatchPredicate();
+
+        // asPredicate uses find() - matches partial input
+        assertTrue(asPredicate.test("abc123def"));
+        // asMatchPredicate uses matches() - requires full match
+        assertFalse(asMatchPredicate.test("abc123def"));
+
+        // Both match when input fully matches the pattern
+        assertTrue(asPredicate.test("12345"));
+        assertTrue(asMatchPredicate.test("12345"));
+
+        // Neither matches when pattern not found at all
+        assertFalse(asPredicate.test("abc"));
+        assertFalse(asMatchPredicate.test("abc"));
+    }
+
 }
