@@ -15,11 +15,8 @@
 package org.pcre4j.regex;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
-
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,18 +25,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class PatternTests {
 
-    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
-    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(JNA_PCRE2),
-                Arguments.of(FFM_PCRE2)
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void namedGroups(IPcre2 api) {
         var regex = "(?<number>42)";
         var javaPattern = java.util.regex.Pattern.compile(regex);
@@ -49,7 +36,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void split(IPcre2 api) {
         var regex = "\\D+";
         var input = "0, 1, 1, 2, 3, 5, 8, ..., 144, ...";
@@ -62,7 +49,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeSplit(IPcre2 api) {
         var regex = "\\D+";
         var input = "0 ⇾ 1 ⇾ 1 ⇾ 2 ⇾ 3 ⇾ 5 ⇾ 8 ⇾ … ⇾ 144 ⇾ …";
@@ -75,7 +62,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void withoutUnicodeCharacterClass(IPcre2 api) {
         var regex = "\\w";
         var input = "Ǎ";
@@ -86,7 +73,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void withUnicodeCharacterClass(IPcre2 api) {
         var regex = "\\w";
         var input = "Ǎ";
@@ -105,7 +92,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void withoutUnixNewline(IPcre2 api) {
         var regex = "^A$";
         var input = "A\u0085B";
@@ -124,7 +111,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void withUnixNewline(IPcre2 api) {
         var regex = "^A$";
         var input = "A\u0085B";
@@ -144,7 +131,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void quote(IPcre2 api) {
         var input = ".*+?^$|()[]\\{}";
         var inputWithSlashE = "abc\\Edef";
@@ -159,7 +146,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void commentsWhitespaceIgnored(IPcre2 api) {
         // Whitespace in pattern should be ignored with COMMENTS flag
         var regex = "a b c";
@@ -179,7 +166,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void commentsHashComments(IPcre2 api) {
         // Comments starting with # should be ignored until end of line
         var regex = "abc # this is a comment\ndef";
@@ -199,7 +186,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void commentsEscapedWhitespace(IPcre2 api) {
         // Escaped whitespace should be matched literally
         var regex = "a\\ b";
@@ -219,7 +206,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void commentsWhitespaceInCharacterClass(IPcre2 api) {
         // Escaped whitespace inside character class should be matched literally
         // Note: In PCRE2's EXTENDED mode, whitespace inside character classes is preserved,
@@ -242,7 +229,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void commentsEmbeddedFlag(IPcre2 api) {
         // Embedded (?x) flag should enable comments mode
         var regex = "(?x)a b c";
@@ -255,7 +242,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseFlagValue(IPcre2 api) {
         // Verify UNICODE_CASE flag has the correct value (0x40)
         assertEquals(java.util.regex.Pattern.UNICODE_CASE, Pattern.UNICODE_CASE);
@@ -263,7 +250,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseKelvinSign(IPcre2 api) {
         // Test Unicode case folding with Kelvin sign (U+212A)
         // In Unicode case folding, Kelvin sign matches k/K
@@ -304,7 +291,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseLongS(IPcre2 api) {
         // Test Unicode case folding with Long S (U+017F)
         // In Unicode case folding, Long S (ſ) matches s/S
@@ -345,7 +332,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseWithEmbeddedCaseInsensitiveFlag(IPcre2 api) {
         // Test that embedded (?i) flag with UTF mode provides Unicode case folding
         // In PCRE4J with UTF mode, Unicode case folding is always enabled
@@ -358,7 +345,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseBasicCaseInsensitive(IPcre2 api) {
         // Test basic case-insensitive matching still works
         var regex = "hello";
@@ -379,7 +366,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseFlagsMethod(IPcre2 api) {
         // Verify flags() method returns UNICODE_CASE when set
         var regex = "test";
@@ -391,7 +378,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unicodeCaseAloneHasNoEffect(IPcre2 api) {
         // UNICODE_CASE without CASE_INSENSITIVE should not enable case-insensitive matching
         var regex = "k";
@@ -413,7 +400,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqFlagValue(IPcre2 api) {
         // Verify CANON_EQ flag has the correct value (0x80)
         assertEquals(java.util.regex.Pattern.CANON_EQ, Pattern.CANON_EQ);
@@ -421,7 +408,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqPrecomposedPatternMatchesDecomposedInput(IPcre2 api) {
         // Test canonical equivalence: precomposed pattern matches decomposed input
         // Pattern: é (U+00E9, precomposed)
@@ -444,7 +431,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqDecomposedPatternMatchesPrecomposedInput(IPcre2 api) {
         // Test canonical equivalence: decomposed pattern matches precomposed input
         // Pattern: a + combining ring above (U+0061 U+030A, decomposed)
@@ -467,7 +454,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithoutFlagNoMatch(IPcre2 api) {
         // Without CANON_EQ, precomposed and decomposed should NOT match
         var precomposedPattern = "\u00E9";  // é
@@ -481,7 +468,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqFindInMiddleOfString(IPcre2 api) {
         // Test find() with canonical equivalence
         var precomposedPattern = "caf\u00E9";  // café with precomposed é
@@ -504,7 +491,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqReplaceAll(IPcre2 api) {
         // Test replaceAll() with canonical equivalence
         var precomposedPattern = "caf\u00E9";
@@ -526,7 +513,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqReplaceFirst(IPcre2 api) {
         // Test replaceFirst() with canonical equivalence
         var precomposedPattern = "caf\u00E9";
@@ -546,7 +533,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqSplit(IPcre2 api) {
         // Test split() with canonical equivalence
         var precomposedPattern = "\u00E9";  // é
@@ -568,7 +555,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithCaseInsensitive(IPcre2 api) {
         // Test CANON_EQ combined with CASE_INSENSITIVE
         var upperPrecomposed = "\u00C9";  // É (uppercase)
@@ -589,7 +576,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqGroupCapture(IPcre2 api) {
         // Test that captured groups return correct text
         var groupPattern = "(caf\u00E9)";  // café in a capture group
@@ -613,7 +600,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqFlagsMethod(IPcre2 api) {
         // Verify flags() method returns CANON_EQ when set
         var regex = "test";
@@ -625,7 +612,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqAlternationPattern(IPcre2 api) {
         // Test CANON_EQ with alternation pattern (instead of character class)
         // Alternation works correctly with NFD normalization
@@ -662,7 +649,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqMultipleCombiningMarks(IPcre2 api) {
         // Test with multiple combining marks
         // ế (U+1EBF) = e with circumflex and acute
@@ -684,7 +671,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithRegion(IPcre2 api) {
         // Test CANON_EQ with region (non-zero regionStart)
         var pattern = "caf\u00E9";  // café with precomposed é
@@ -708,7 +695,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithRegionFind(IPcre2 api) {
         // Test CANON_EQ with region using find()
         var pattern = "\u00E9";  // é precomposed
@@ -734,7 +721,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithTransparentBounds(IPcre2 api) {
         // Test CANON_EQ with transparent bounds
         var pattern = "(?<=a)e\u0301";  // lookbehind for 'a' + decomposed é
@@ -759,7 +746,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqResetWithNewInput(IPcre2 api) {
         // Test that reset(CharSequence) properly reinitializes CANON_EQ support
         var pattern = "\u00E9";  // é precomposed
@@ -784,7 +771,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqMultipleFinds(IPcre2 api) {
         // Test multiple find() calls with CANON_EQ
         var pattern = "\u00E9";  // é
@@ -812,7 +799,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqLookingAt(IPcre2 api) {
         // Test lookingAt() with CANON_EQ
         var pattern = "caf\u00E9";  // café
@@ -834,7 +821,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqAtEndOfString(IPcre2 api) {
         // Test CANON_EQ when match is at end of string
         var pattern = "\u00E9$";  // é at end
@@ -857,7 +844,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqToMatchResult(IPcre2 api) {
         // Test toMatchResult() preserves correct indices with CANON_EQ
         var pattern = "caf\u00E9";
@@ -878,7 +865,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqAppendReplacement(IPcre2 api) {
         // Test appendReplacement with CANON_EQ
         var pattern = "\u00E9";  // é
@@ -900,7 +887,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqWithSurrogatePairs(IPcre2 api) {
         // Test CANON_EQ with surrogate pairs (characters outside BMP)
         // 𝄞 (U+1D11E, Musical Symbol G Clef) - doesn't decompose but tests surrogate handling
@@ -917,7 +904,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void canonEqMixedSurrogatesAndCombining(IPcre2 api) {
         // Test with both surrogate pairs and combining characters
         var pattern = "\uD834\uDD1E\u00E9";  // G clef + é (precomposed)
@@ -938,7 +925,7 @@ public class PatternTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void splitAsStream(IPcre2 api) {
         // Test splitAsStream against Java Pattern for multiple inputs and edge cases
         Object[][] cases = new Object[][]{

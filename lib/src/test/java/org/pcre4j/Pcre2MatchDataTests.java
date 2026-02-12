@@ -15,15 +15,12 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -36,28 +33,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 public class Pcre2MatchDataTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     // --- api() and handle() ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void apiReturnsNonNull(IPcre2 api) {
         var matchData = new Pcre2MatchData(api, 10);
         assertNotNull(matchData.api());
@@ -65,7 +44,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void handleReturnsNonZero(IPcre2 api) {
         var matchData = new Pcre2MatchData(api, 10);
         assertTrue(matchData.handle() != 0);
@@ -74,7 +53,7 @@ public class Pcre2MatchDataTests {
     // --- ovectorCount ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void ovectorCountAfterMatch(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)(c)");
         var matchData = new Pcre2MatchData(code);
@@ -85,7 +64,7 @@ public class Pcre2MatchDataTests {
     // --- size ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void sizePositive(IPcre2 api) {
         var matchData = new Pcre2MatchData(api, 10);
         assertTrue(matchData.size() > 0);
@@ -94,7 +73,7 @@ public class Pcre2MatchDataTests {
     // --- ovector ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void ovectorReturnsByteOffsets(IPcre2 api) {
         var code = new Pcre2Code(api, "(ab)");
         var matchData = new Pcre2MatchData(code);
@@ -110,7 +89,7 @@ public class Pcre2MatchDataTests {
     // --- getSubstring(int) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringByNumber(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello) (world)");
         var matchData = new Pcre2MatchData(code);
@@ -127,7 +106,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringNegativeNumberThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -136,7 +115,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringOutOfBoundsThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -145,7 +124,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringUnsetGroupThrows(IPcre2 api) {
         // (a)|(b) - when "a" matches, group 2 is unset
         var code = new Pcre2Code(api, "(a)|(b)");
@@ -157,7 +136,7 @@ public class Pcre2MatchDataTests {
     // --- getSubstring(String) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringByName(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<greeting>hello) (?<target>world)");
         var matchData = new Pcre2MatchData(code);
@@ -171,7 +150,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringByNameNullThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -180,7 +159,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringByNameNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -191,7 +170,7 @@ public class Pcre2MatchDataTests {
     // --- copySubstring(int, ByteBuffer) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByNumber(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello)");
         var matchData = new Pcre2MatchData(code);
@@ -207,7 +186,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringNegativeNumberThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -217,7 +196,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringNullBufferThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -226,7 +205,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringNonDirectBufferThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -236,7 +215,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringOutOfBoundsThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -248,7 +227,7 @@ public class Pcre2MatchDataTests {
     // --- copySubstring(String, ByteBuffer) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByName(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<word>hello)");
         var matchData = new Pcre2MatchData(code);
@@ -264,7 +243,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByNameNullNameThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -274,7 +253,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByNameNullBufferThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -283,7 +262,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByNameNonDirectBufferThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -293,7 +272,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void copySubstringByNameNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -305,7 +284,7 @@ public class Pcre2MatchDataTests {
     // --- getSubstringLength(int) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthByNumber(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello)");
         var matchData = new Pcre2MatchData(code);
@@ -315,7 +294,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthNegativeThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -324,7 +303,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthOutOfBoundsThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -335,7 +314,7 @@ public class Pcre2MatchDataTests {
     // --- getSubstringLength(String) ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthByName(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<word>hello)");
         var matchData = new Pcre2MatchData(code);
@@ -344,7 +323,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthByNameNullThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -353,7 +332,7 @@ public class Pcre2MatchDataTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void getSubstringLengthByNameNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>test)");
         var matchData = new Pcre2MatchData(code);
@@ -364,7 +343,7 @@ public class Pcre2MatchDataTests {
     // --- MatchData from pattern ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchDataFromPatternWorksCorrectly(IPcre2 api) {
         var code = new Pcre2Code(api, "(a)(b)(c)");
         var matchData = new Pcre2MatchData(code);

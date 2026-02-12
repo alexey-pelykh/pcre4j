@@ -15,12 +15,8 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
-
-import java.lang.reflect.InvocationTargetException;
-import java.util.stream.Stream;
 
 import java.util.EnumSet;
 
@@ -30,32 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Pcre2CodeTests {
 
-    /**
-     * Reflectively instantiates an {@link IPcre2} backend by class name.
-     *
-     * @param className the fully qualified class name of the backend
-     * @return the backend instance
-     */
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void badPattern(IPcre2 api) {
         assertThrows(Pcre2CompileError.class, () -> {
             new Pcre2Code(api, "?");
@@ -63,7 +35,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyStringMatch(IPcre2 api) {
         var code = new Pcre2Code(api, "^$");
         var matchData = new Pcre2MatchData(code);
@@ -72,7 +44,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void emptyStringMatchJit(IPcre2 api) {
         var code = new Pcre2JitCode(api, "^$", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -81,7 +53,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchAtEndOfString(IPcre2 api) {
         // Pattern $ matches at end of string, startOffset at length should work
         var code = new Pcre2Code(api, "$");
@@ -92,7 +64,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchAtEndOfStringJit(IPcre2 api) {
         // Pattern $ matches at end of string, startOffset at length should work with JIT
         var code = new Pcre2JitCode(api, "$", null, null, null);
@@ -103,7 +75,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void startOffsetPastEndThrows(IPcre2 api) {
         var code = new Pcre2Code(api, ".");
         var matchData = new Pcre2MatchData(code);
@@ -113,7 +85,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void startOffsetPastEndThrowsJit(IPcre2 api) {
         var code = new Pcre2JitCode(api, ".", null, null, null);
         var matchData = new Pcre2MatchData(code);
@@ -123,28 +95,28 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchLimitThrowsWhenUnset(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalStateException.class, code::matchLimit);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void depthLimitThrowsWhenUnset(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalStateException.class, code::depthLimit);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void heapLimitThrowsWhenUnset(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalStateException.class, code::heapLimit);
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void firstCodeTypeReturnsValidValue(IPcre2 api) {
         // Test that firstCodeType returns a valid value (0, 1, or 2)
         var code = new Pcre2Code(api, "test");
@@ -154,7 +126,7 @@ public class Pcre2CodeTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void firstCodeTypeForLiteralPattern(IPcre2 api) {
         // Pattern starting with a literal character should return 1 (first code unit is set)
         var code = new Pcre2Code(api, "test");

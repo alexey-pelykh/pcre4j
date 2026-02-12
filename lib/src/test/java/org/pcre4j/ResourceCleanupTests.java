@@ -15,37 +15,16 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.WeakReference;
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class ResourceCleanupTests {
-
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
 
     /**
      * Triggers garbage collection and waits for a weak reference to be cleared.
@@ -70,7 +49,7 @@ public class ResourceCleanupTests {
     // --- Pcre2Code cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CodeIsCollectedAfterRelease(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var ref = new WeakReference<>(code);
@@ -79,7 +58,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CodeCreationWorksAfterPriorCleanup(IPcre2 api) {
         var code = new Pcre2Code(api, "first");
         var ref = new WeakReference<>(code);
@@ -94,7 +73,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CodeBulkCreationAndCleanup(IPcre2 api) {
         var lastRef = new WeakReference<>(new Object());
         for (int i = 0; i < 100; i++) {
@@ -113,7 +92,7 @@ public class ResourceCleanupTests {
     // --- Pcre2MatchData cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchDataIsCollectedAfterRelease(IPcre2 api) {
         var matchData = new Pcre2MatchData(api, 10);
         var ref = new WeakReference<>(matchData);
@@ -122,7 +101,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchDataFromPatternIsCollectedAfterRelease(IPcre2 api) {
         var code = new Pcre2Code(api, "(test)");
         var matchData = new Pcre2MatchData(code);
@@ -132,7 +111,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchDataCreationWorksAfterPriorCleanup(IPcre2 api) {
         var matchData = new Pcre2MatchData(api, 10);
         var ref = new WeakReference<>(matchData);
@@ -147,7 +126,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchDataBulkCreationAndCleanup(IPcre2 api) {
         var lastRef = new WeakReference<>(new Object());
         for (int i = 0; i < 100; i++) {
@@ -166,7 +145,7 @@ public class ResourceCleanupTests {
     // --- Pcre2GeneralContext cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2GeneralContextIsCollectedAfterRelease(IPcre2 api) {
         var ctx = new Pcre2GeneralContext(api);
         var ref = new WeakReference<>(ctx);
@@ -175,7 +154,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2GeneralContextCreationWorksAfterPriorCleanup(IPcre2 api) {
         var ctx = new Pcre2GeneralContext(api);
         var ref = new WeakReference<>(ctx);
@@ -191,7 +170,7 @@ public class ResourceCleanupTests {
     // --- Pcre2CompileContext cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CompileContextIsCollectedAfterRelease(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         var ref = new WeakReference<>(ctx);
@@ -200,7 +179,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CompileContextWithGeneralContextIsCollectedAfterRelease(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         var compileCtx = new Pcre2CompileContext(api, generalCtx);
@@ -210,7 +189,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2CompileContextCreationWorksAfterPriorCleanup(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         ctx.setNewline(Pcre2Newline.LF);
@@ -227,7 +206,7 @@ public class ResourceCleanupTests {
     // --- Pcre2MatchContext cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchContextIsCollectedAfterRelease(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         var ref = new WeakReference<>(ctx);
@@ -236,7 +215,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchContextWithGeneralContextIsCollectedAfterRelease(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         var matchCtx = new Pcre2MatchContext(api, generalCtx);
@@ -246,7 +225,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2MatchContextCreationWorksAfterPriorCleanup(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         ctx.setMatchLimit(1000);
@@ -263,7 +242,7 @@ public class ResourceCleanupTests {
     // --- Pcre2JitStack cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2JitStackIsCollectedAfterRelease(IPcre2 api) {
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
         var ref = new WeakReference<>(stack);
@@ -272,7 +251,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void pcre2JitStackCreationWorksAfterPriorCleanup(IPcre2 api) {
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
         var ref = new WeakReference<>(stack);
@@ -288,7 +267,7 @@ public class ResourceCleanupTests {
     // --- Cross-resource cleanup tests ---
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void allResourceTypesCleanedUpIndependently(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var matchData = new Pcre2MatchData(code);
@@ -325,7 +304,7 @@ public class ResourceCleanupTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchDataCleanupDoesNotAffectCode(IPcre2 api) {
         var code = new Pcre2Code(api, "(hello)");
 

@@ -15,13 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -31,26 +28,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 public class Pcre2CodeSubstituteTests {
 
-    private static IPcre2 loadBackend(String className) {
-        try {
-            return (IPcre2) Class.forName(className).getDeclaredConstructor().newInstance();
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("Backend " + className + " not found on classpath", e);
-        } catch (InvocationTargetException | InstantiationException | IllegalAccessException
-                 | NoSuchMethodException e) {
-            throw new RuntimeException("Failed to instantiate backend " + className, e);
-        }
-    }
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend("org.pcre4j.jna.Pcre2")),
-                Arguments.of(loadBackend("org.pcre4j.ffm.Pcre2"))
-        );
-    }
-
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteSimple(IPcre2 api) {
         var code = new Pcre2Code(api, "world");
         var result = code.substitute("hello world", 0, null, null, null, "earth");
@@ -58,7 +37,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteGlobal(IPcre2 api) {
         var code = new Pcre2Code(api, "o");
         var result = code.substitute("foo boo", 0,
@@ -67,7 +46,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteWithBackreference(IPcre2 api) {
         var code = new Pcre2Code(api, "(\\w+) (\\w+)");
         var result = code.substitute("hello world", 0, null, null, null, "$2 $1");
@@ -75,7 +54,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteWithNamedGroup(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<first>\\w+) (?<second>\\w+)");
         var result = code.substitute("hello world", 0, null, null, null, "${second} ${first}");
@@ -83,7 +62,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteNoMatch(IPcre2 api) {
         var code = new Pcre2Code(api, "xyz");
         var result = code.substitute("hello world", 0, null, null, null, "abc");
@@ -91,7 +70,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteEmptyReplacement(IPcre2 api) {
         var code = new Pcre2Code(api, "world");
         var result = code.substitute("hello world", 0, null, null, null, "");
@@ -99,7 +78,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteWithStartOffset(IPcre2 api) {
         var code = new Pcre2Code(api, "o");
         var result = code.substitute("foo boo", 2, null, null, null, "0");
@@ -108,7 +87,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteUnicode(IPcre2 api) {
         var code = new Pcre2Code(api, "caf\u00e9");
         var result = code.substitute("I love caf\u00e9", 0, null, null, null, "coffee");
@@ -116,7 +95,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteNullOptionsUsesEmpty(IPcre2 api) {
         var code = new Pcre2Code(api, "test");
         var result = code.substitute("test", 0, null, null, null, "replaced");
@@ -125,7 +104,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteLargeReplacementTriggersReallocation(IPcre2 api) {
         // Create a replacement much larger than the subject to exercise buffer reallocation
         var code = new Pcre2Code(api, "a");
@@ -135,7 +114,7 @@ public class Pcre2CodeSubstituteTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void substituteGlobalWithLargeOutput(IPcre2 api) {
         // Many substitutions that expand the output significantly
         var code = new Pcre2Code(api, ".");

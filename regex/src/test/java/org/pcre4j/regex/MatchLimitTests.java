@@ -17,11 +17,8 @@ package org.pcre4j.regex;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
-
-import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,16 +26,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests for ReDoS protection via configurable match limits.
  */
 public class MatchLimitTests {
-
-    private static final IPcre2 JNA_PCRE2 = new org.pcre4j.jna.Pcre2();
-    private static final IPcre2 FFM_PCRE2 = new org.pcre4j.ffm.Pcre2();
-
-    private static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(JNA_PCRE2),
-                Arguments.of(FFM_PCRE2)
-        );
-    }
 
     private String savedJitProperty;
     private String savedMatchLimitProperty;
@@ -73,7 +60,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchLimitThrowsMatchLimitException(IPcre2 api) {
         // Set a very low match limit
         System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100");
@@ -89,7 +76,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void depthLimitThrowsMatchLimitException(IPcre2 api) {
         // Depth limits are only enforced by the interpreter, not the JIT matcher
         System.setProperty("pcre2.regex.jit", "false");
@@ -107,7 +94,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void heapLimitThrowsMatchLimitException(IPcre2 api) {
         // Heap limits are only enforced by the interpreter, not the JIT matcher
         System.setProperty("pcre2.regex.jit", "false");
@@ -126,7 +113,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchLimitAppliesToMatches(IPcre2 api) {
         // Verify that match limit also applies to matches() method
         System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100");
@@ -138,7 +125,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchLimitAppliesToLookingAt(IPcre2 api) {
         // Verify that match limit also applies to lookingAt() method
         System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100");
@@ -150,7 +137,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void noLimitByDefaultAllowsNormalMatching(IPcre2 api) {
         // Without setting system properties, normal matching should work fine
         var pattern = Pattern.compile(api, "\\d+");
@@ -161,7 +148,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void highLimitAllowsNormalMatching(IPcre2 api) {
         // A high match limit should not interfere with normal patterns
         System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "10000000");
@@ -176,7 +163,7 @@ public class MatchLimitTests {
     }
 
     @ParameterizedTest
-    @MethodSource("parameters")
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchLimitAppliesToUsePattern(IPcre2 api) {
         // Verify that match limits are reconfigured when usePattern() is called
         System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100");
