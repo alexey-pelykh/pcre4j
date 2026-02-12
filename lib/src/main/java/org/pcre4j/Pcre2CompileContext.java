@@ -99,7 +99,7 @@ public class Pcre2CompileContext {
         final var result = api.setNewline(handle, newline.value());
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
-            throw new RuntimeException("Failed set the newline convention", new IllegalStateException(errorMessage));
+            throw new IllegalStateException(errorMessage);
         }
     }
 
@@ -115,7 +115,7 @@ public class Pcre2CompileContext {
         final var result = api.setBsr(handle, bsr.value());
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
-            throw new RuntimeException("Failed to set the BSR convention", new IllegalStateException(errorMessage));
+            throw new IllegalStateException(errorMessage);
         }
     }
 
@@ -135,8 +135,7 @@ public class Pcre2CompileContext {
         final var result = api.setParensNestLimit(handle, limit);
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
-            throw new RuntimeException("Failed to set the parentheses nest limit",
-                    new IllegalStateException(errorMessage));
+            throw new IllegalStateException(errorMessage);
         }
     }
 
@@ -156,8 +155,7 @@ public class Pcre2CompileContext {
         final var result = api.setMaxPatternLength(handle, length);
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
-            throw new RuntimeException("Failed to set the maximum pattern length",
-                    new IllegalStateException(errorMessage));
+            throw new IllegalStateException(errorMessage);
         }
     }
 
@@ -186,8 +184,7 @@ public class Pcre2CompileContext {
         final var result = api.setCompileExtraOptions(handle, extraOptionsValue);
         if (result != 0) {
             final var errorMessage = Pcre4jUtils.getErrorMessage(api, result);
-            throw new RuntimeException("Failed to set the extra compile options",
-                    new IllegalStateException(errorMessage));
+            throw new IllegalStateException(errorMessage);
         }
     }
 
