@@ -395,7 +395,7 @@ public class Pcre4jUtilsExtendedTests {
     @Test
     void convertOvectorToStringIndicesNullOvectorThrows() {
         assertThrows(IllegalArgumentException.class, () ->
-                Pcre4jUtils.convertOvectorToStringIndices("test", (long[]) null));
+                Pcre4jUtils.convertOvectorToStringIndices("test", null));
     }
 
     @Test
@@ -408,23 +408,6 @@ public class Pcre4jUtilsExtendedTests {
     void convertOvectorToStringIndicesOddLengthThrows() {
         assertThrows(IllegalArgumentException.class, () ->
                 Pcre4jUtils.convertOvectorToStringIndices("test", new long[]{0, 5, 1}));
-    }
-
-    @Test
-    void convertOvectorToStringIndicesWithUtf8ByteArray() {
-        var subject = "hello";
-        var subjectUtf8 = subject.getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        var ovector = new long[]{0, 5};
-        assertArrayEquals(
-                new int[]{0, 5},
-                Pcre4jUtils.convertOvectorToStringIndices(subject, subjectUtf8, ovector)
-        );
-    }
-
-    @Test
-    void convertOvectorToStringIndicesNullSubjectUtf8Throws() {
-        assertThrows(IllegalArgumentException.class, () ->
-                Pcre4jUtils.convertOvectorToStringIndices("test", (byte[]) null, new long[]{0, 5}));
     }
 
     // === getGroupNames ===
