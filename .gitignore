@@ -186,6 +186,9 @@ replay_pid*
 **/build/
 !src/**/build/
 
+# Stale build output from previously-existing test module (not in settings.gradle.kts)
+/test/
+
 # Ignore Gradle GUI config
 gradle-app.setting
 
