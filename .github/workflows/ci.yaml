@@ -170,6 +170,10 @@ jobs:
     needs:
       - compatibility-all
 
+    env:
+      PCRE2_VERSION: '10.47'
+      PCRE2_SHA256: 'c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16'
+
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -210,20 +214,20 @@ jobs:
         id: cache-pcre2
         with:
           path: /opt/pcre2
-          key: pcre2-10.47-ubuntu-24.04
+          key: pcre2-${{ env.PCRE2_VERSION }}-ubuntu-24.04
 
       - name: Download and verify PCRE2 source
         if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
         run: |
-          curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-10.47/pcre2-10.47.tar.gz"
-          echo "c08ae2388ef333e8403e670ad70c0a11f1eed021fd88308d7e02f596fcd9dc16  pcre2.tar.gz" | sha256sum -c
+          curl -Lo pcre2.tar.gz "https://github.com/PCRE2Project/pcre2/releases/download/pcre2-${PCRE2_VERSION}/pcre2-${PCRE2_VERSION}.tar.gz"
+          echo "${PCRE2_SHA256}  pcre2.tar.gz" | sha256sum -c
           tar xzf pcre2.tar.gz
 
       - name: Build PCRE2 from source
         if: ${{ steps.cache-pcre2.outputs.cache-hit != 'true' }}
         run: |
           sudo apt-get install -y build-essential
-          cd pcre2-10.47
+          cd pcre2-${PCRE2_VERSION}
           ./configure --prefix=/opt/pcre2 --enable-jit --enable-pcre2-16 --enable-pcre2-32
           make -j$(nproc)
           sudo make install
