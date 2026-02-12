@@ -26,6 +26,7 @@ jobs:
     timeout-minutes: 30
 
     strategy:
+      fail-fast: false
       matrix:
         os: [ ubuntu-24.04 ]
         java-distribution: ${{ github.event_name == 'pull_request' && fromJson('["temurin"]') || fromJson('["temurin","zulu","adopt-hotspot","adopt-openj9","liberica","microsoft","corretto","semeru","oracle"]') }}
