@@ -47,10 +47,7 @@ pcre4j/
 
 ## Native Library Requirements
 
-PCRE2 must be installed on the system:
-- **Ubuntu/Debian**: `sudo apt install libpcre2-8-0`
-- **macOS**: `brew install pcre2`
-- **Windows**: Download PCRE2 DLL and add to PATH
+See [CONTRIBUTING.md](CONTRIBUTING.md#prerequisites) for PCRE2 installation instructions per platform.
 
 Library discovery priority:
 1. `pcre2.library.path` system property
@@ -61,15 +58,12 @@ Library discovery priority:
 
 ## Code Conventions
 
-- **Line length**: 120 characters (Checkstyle enforced)
-- **Indentation**: 4 spaces
-- **Charset**: UTF-8 with LF line endings
-- **Copyright header**: Required on all files (LGPL-3.0 notice)
-- **JavaDoc**: Required on all public APIs
-- **Naming**:
-  - Classes: `Pcre2Code`, `Pcre2CompileOption`
-  - Enum values: `CASE_INSENSITIVE`, `DOTALL`
-  - Methods: `compile()`, `match()`, `getErrorMessage()`
+See [CONTRIBUTING.md](CONTRIBUTING.md#code-conventions) for the base code conventions (line length, indentation, charset, copyright header, JavaDoc).
+
+Additional naming conventions:
+- Classes: `Pcre2Code`, `Pcre2CompileOption`
+- Enum values: `CASE_INSENSITIVE`, `DOTALL`
+- Methods: `compile()`, `match()`, `getErrorMessage()`
 
 ## Testing Patterns
 
@@ -97,9 +91,8 @@ The FFM module requires preview features (handled automatically by Gradle):
 
 ## Commit Message Format
 
-Preferred format: `(type) brief description`
-- Types: `chore`, `docs`, `feat`, `fix`
-- Examples: `(chore) gradle 8.12`, `(feat) JIT stack`, `(fix) regex: handle edge case`
+See [CONTRIBUTING.md](CONTRIBUTING.md#commit-message-format) for the commit message format and type prefixes.
+
 - Reverts use Git default: `Revert "(type) original message"`
 
 ## Release Process
