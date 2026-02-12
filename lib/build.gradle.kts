@@ -60,6 +60,11 @@ java {
     withJavadocJar()
 }
 
+// --enable-preview on test tasks only: lib's own code does not use preview
+// features, but tests load the FFM backend (which uses the preview FFM API
+// on Java 21) at runtime. The flag is needed for:
+//   - compileTestJava: test code may reference FFM-backed types
+//   - test JVM args: JVM must enable preview features for FFM backend loading
 tasks.test {
     useJUnitPlatform()
     jvmArgs("--enable-preview")
