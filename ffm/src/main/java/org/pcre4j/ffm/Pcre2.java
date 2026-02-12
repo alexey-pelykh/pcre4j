@@ -803,6 +803,7 @@ public class Pcre2 implements IPcre2 {
                     pWhat
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -828,6 +829,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -849,6 +851,7 @@ public class Pcre2 implements IPcre2 {
                     pWhere
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -868,6 +871,7 @@ public class Pcre2 implements IPcre2 {
 
             return pGContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -883,6 +887,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewGContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -896,6 +901,7 @@ public class Pcre2 implements IPcre2 {
                     pGContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -911,6 +917,7 @@ public class Pcre2 implements IPcre2 {
 
             return pTables.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -926,6 +933,7 @@ public class Pcre2 implements IPcre2 {
                     pTables
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -941,6 +949,7 @@ public class Pcre2 implements IPcre2 {
 
             return pCContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -956,6 +965,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewCContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -969,6 +979,7 @@ public class Pcre2 implements IPcre2 {
                     pCContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1007,6 +1018,7 @@ public class Pcre2 implements IPcre2 {
 
             return pCode.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1022,6 +1034,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewCode.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1037,6 +1050,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewCode.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1050,6 +1064,7 @@ public class Pcre2 implements IPcre2 {
                     pCode
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1067,6 +1082,7 @@ public class Pcre2 implements IPcre2 {
                     pCalloutData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1090,6 +1106,7 @@ public class Pcre2 implements IPcre2 {
                     bufferSize
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1106,6 +1123,7 @@ public class Pcre2 implements IPcre2 {
                     pWhere
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1133,6 +1151,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1160,6 +1179,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1185,6 +1205,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1199,6 +1220,7 @@ public class Pcre2 implements IPcre2 {
                     options
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1227,6 +1249,7 @@ public class Pcre2 implements IPcre2 {
                     pMatchContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1246,6 +1269,7 @@ public class Pcre2 implements IPcre2 {
 
             return pJitStack.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1259,6 +1283,7 @@ public class Pcre2 implements IPcre2 {
                     pJitStack
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1276,6 +1301,7 @@ public class Pcre2 implements IPcre2 {
                     pData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1289,6 +1315,7 @@ public class Pcre2 implements IPcre2 {
                     pGContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1305,6 +1332,7 @@ public class Pcre2 implements IPcre2 {
 
             return pMatchData.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1322,6 +1350,7 @@ public class Pcre2 implements IPcre2 {
 
             return pMatchData.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1335,6 +1364,7 @@ public class Pcre2 implements IPcre2 {
                     pMatchData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1350,6 +1380,7 @@ public class Pcre2 implements IPcre2 {
 
             return pMatchContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1365,6 +1396,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewMatchContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1378,6 +1410,7 @@ public class Pcre2 implements IPcre2 {
                     pMatchContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1393,6 +1426,7 @@ public class Pcre2 implements IPcre2 {
 
             return pCvContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1408,6 +1442,7 @@ public class Pcre2 implements IPcre2 {
 
             return pNewCvContext.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1421,6 +1456,7 @@ public class Pcre2 implements IPcre2 {
                     pCvContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1435,6 +1471,7 @@ public class Pcre2 implements IPcre2 {
                     escapeChar
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1449,6 +1486,7 @@ public class Pcre2 implements IPcre2 {
                     separatorChar
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1488,6 +1526,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1501,6 +1540,7 @@ public class Pcre2 implements IPcre2 {
                     pConvertedPattern
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1529,6 +1569,7 @@ public class Pcre2 implements IPcre2 {
                     pMatchContext
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1579,6 +1620,7 @@ public class Pcre2 implements IPcre2 {
                     wsCount
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1592,6 +1634,7 @@ public class Pcre2 implements IPcre2 {
                     pMatchData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1607,6 +1650,7 @@ public class Pcre2 implements IPcre2 {
 
             return result.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1626,6 +1670,7 @@ public class Pcre2 implements IPcre2 {
 
             MemorySegment.ofArray(ovector).copyFrom(pOvector.reinterpret(ovector.length * 8));
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1641,6 +1686,7 @@ public class Pcre2 implements IPcre2 {
 
             return result.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1656,6 +1702,7 @@ public class Pcre2 implements IPcre2 {
 
             return result.address();
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1670,6 +1717,7 @@ public class Pcre2 implements IPcre2 {
                     newline
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1684,6 +1732,7 @@ public class Pcre2 implements IPcre2 {
                     value
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1698,6 +1747,7 @@ public class Pcre2 implements IPcre2 {
                     limit
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1713,6 +1763,7 @@ public class Pcre2 implements IPcre2 {
                     pLength
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1727,6 +1778,7 @@ public class Pcre2 implements IPcre2 {
                     extraOptions
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1742,6 +1794,7 @@ public class Pcre2 implements IPcre2 {
                     pTables
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1759,6 +1812,7 @@ public class Pcre2 implements IPcre2 {
                     pUserData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1773,6 +1827,7 @@ public class Pcre2 implements IPcre2 {
                     limit
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1787,6 +1842,7 @@ public class Pcre2 implements IPcre2 {
                     limit
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1801,6 +1857,7 @@ public class Pcre2 implements IPcre2 {
                     limit
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1816,6 +1873,7 @@ public class Pcre2 implements IPcre2 {
                     pLimit
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1833,6 +1891,7 @@ public class Pcre2 implements IPcre2 {
                     pCalloutData
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1896,6 +1955,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1926,6 +1986,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1959,6 +2020,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -1993,6 +2055,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2030,6 +2093,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2067,6 +2131,7 @@ public class Pcre2 implements IPcre2 {
             length[0] = pLength.get(ValueLayout.JAVA_LONG, 0);
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2083,6 +2148,7 @@ public class Pcre2 implements IPcre2 {
                         MemorySegment.NULL
                 );
             } catch (Throwable e) {
+                if (e instanceof Error) throw (Error) e;
                 throw new RuntimeException(e);
             }
         }
@@ -2103,6 +2169,7 @@ public class Pcre2 implements IPcre2 {
             length[0] = pLength.get(ValueLayout.JAVA_LONG, 0);
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2116,6 +2183,7 @@ public class Pcre2 implements IPcre2 {
                     pBuffer
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2152,6 +2220,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2165,6 +2234,7 @@ public class Pcre2 implements IPcre2 {
                     pList
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2184,6 +2254,7 @@ public class Pcre2 implements IPcre2 {
                     pszName
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2223,6 +2294,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2285,6 +2357,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2330,6 +2403,7 @@ public class Pcre2 implements IPcre2 {
 
             return result;
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2347,6 +2421,7 @@ public class Pcre2 implements IPcre2 {
                     pBytes
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
@@ -2365,6 +2440,7 @@ public class Pcre2 implements IPcre2 {
                     pBytes
             );
         } catch (Throwable e) {
+            if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
     }
