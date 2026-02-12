@@ -58,7 +58,7 @@ java {
     withJavadocJar()
 }
 
-tasks.withType<Test> {
+tasks.test {
     useJUnitPlatform()
 
     systemProperty(
