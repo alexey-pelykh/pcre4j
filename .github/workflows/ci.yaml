@@ -19,6 +19,50 @@ permissions: {}
 
 jobs:
 
+  dco:
+    if: ${{ github.event_name == 'pull_request' }}
+
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Check DCO sign-off
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          failed=0
+          while IFS= read -r sha; do
+            message=$(git log -1 --format='%B' "$sha")
+            if ! echo "$message" | grep -qP '^Signed-off-by: .+ <.+>'; then
+              echo "::error::Commit $sha is missing a valid 'Signed-off-by' trailer"
+              echo "---"
+              echo "$message"
+              echo "---"
+              failed=1
+            fi
+          done < <(git rev-list "$BASE_SHA".."$HEAD_SHA")
+
+          if [ "$failed" -eq 1 ]; then
+            echo ""
+            echo "All commits must include a 'Signed-off-by' line."
+            echo "Use 'git commit -s' to add it automatically."
+            echo "See CONTRIBUTING.md for details."
+            exit 1
+          fi
+
+          echo "All commits have valid DCO sign-off."
+
   compatibility:
     permissions:
       contents: read
