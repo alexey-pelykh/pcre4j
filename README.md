@@ -6,8 +6,11 @@
 [![codecov](https://codecov.io/gh/alexey-pelykh/pcre4j/graph/badge.svg?token=7UJZ501GWT)](https://codecov.io/gh/alexey-pelykh/pcre4j)
 [![Maven Central Version](https://img.shields.io/maven-central/v/org.pcre4j/lib)](https://mvnrepository.com/artifact/org.pcre4j/lib)
 [![javadoc](https://javadoc.io/badge2/org.pcre4j/lib/javadoc.svg)](https://javadoc.io/doc/org.pcre4j)
+![PCRE2 API](https://img.shields.io/badge/PCRE2_API-100%25-brightgreen)
 
 The PCRE4J project's goal is to bring the power of the [PCRE](https://www.pcre.org) library to Java.
+
+PCRE4J provides **100% coverage of the PCRE2 API**, giving you access to every feature of the PCRE2 library from Java.
 
 This project is brought to you by [Alexey Pelykh](https://github.com/alexey-pelykh) with a great gratitude to the PCRE
 library author [Philip Hazel](https://github.com/PhilipHazel) and its contributors.
@@ -178,7 +181,7 @@ public class Usage {
 }
 ```
 
-See the exposed PCRE2 API functions list [here](./PCRE2_API.md).
+See the complete list of exposed PCRE2 API functions [here](./PCRE2_API.md).
 
 ## `java.util.regex` API Compatibility
 
