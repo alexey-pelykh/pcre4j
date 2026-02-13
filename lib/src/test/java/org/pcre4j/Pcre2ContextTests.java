@@ -113,9 +113,25 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextSetParensNestLimitBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        assertDoesNotThrow(() -> ctx.setParensNestLimit(0));
+        assertDoesNotThrow(() -> ctx.setParensNestLimit(Integer.MAX_VALUE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileContextSetMaxPatternLength(IPcre2 api) {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() -> ctx.setMaxPatternLength(1024));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextSetMaxPatternLengthBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        assertDoesNotThrow(() -> ctx.setMaxPatternLength(0));
+        assertDoesNotThrow(() -> ctx.setMaxPatternLength(Long.MAX_VALUE));
     }
 
     @ParameterizedTest
@@ -124,6 +140,21 @@ public class Pcre2ContextTests {
         var ctx = new Pcre2CompileContext(api, null);
         assertDoesNotThrow(() ->
                 ctx.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextSetCompileExtraOptionsMultiple(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        assertDoesNotThrow(() -> ctx.setCompileExtraOptions(
+                EnumSet.of(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL, Pcre2CompileExtraOption.MATCH_WORD)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextSetCompileExtraOptionsEmpty(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        assertDoesNotThrow(() -> ctx.setCompileExtraOptions(EnumSet.noneOf(Pcre2CompileExtraOption.class)));
     }
 
     @ParameterizedTest
@@ -170,6 +201,29 @@ public class Pcre2ContextTests {
                 new Pcre2Code(api, "test", null, ctx));
     }
 
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextBsrApplied(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        ctx.setBsr(Pcre2Bsr.ANYCRLF);
+
+        var code = new Pcre2Code(api, "test", null, ctx);
+        assertEquals(Pcre2Bsr.ANYCRLF, code.bsr());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileContextExtraOptionsApplied(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        ctx.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL));
+
+        // With BAD_ESCAPE_IS_LITERAL, an unrecognized escape like \j should be treated as literal 'j'
+        var code = new Pcre2Code(api, "\\j", null, ctx);
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("j", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result > 0, "\\j should match 'j' with BAD_ESCAPE_IS_LITERAL");
+    }
+
     // === Pcre2MatchContext ===
 
     @ParameterizedTest
@@ -191,6 +245,14 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextSetMatchLimitBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2MatchContext(api, null);
+        assertDoesNotThrow(() -> ctx.setMatchLimit(0));
+        assertDoesNotThrow(() -> ctx.setMatchLimit(Integer.MAX_VALUE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetMatchLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setMatchLimit(-1));
@@ -201,6 +263,14 @@ public class Pcre2ContextTests {
     void matchContextSetDepthLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setDepthLimit(500));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextSetDepthLimitBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2MatchContext(api, null);
+        assertDoesNotThrow(() -> ctx.setDepthLimit(0));
+        assertDoesNotThrow(() -> ctx.setDepthLimit(Integer.MAX_VALUE));
     }
 
     @ParameterizedTest
@@ -219,6 +289,14 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextSetHeapLimitBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2MatchContext(api, null);
+        assertDoesNotThrow(() -> ctx.setHeapLimit(0));
+        assertDoesNotThrow(() -> ctx.setHeapLimit(Integer.MAX_VALUE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void matchContextSetHeapLimitNegativeThrows(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertThrows(IllegalArgumentException.class, () -> ctx.setHeapLimit(-1));
@@ -229,6 +307,14 @@ public class Pcre2ContextTests {
     void matchContextSetOffsetLimit(IPcre2 api) {
         var ctx = new Pcre2MatchContext(api, null);
         assertDoesNotThrow(() -> ctx.setOffsetLimit(100));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextSetOffsetLimitBoundaryValues(IPcre2 api) {
+        var ctx = new Pcre2MatchContext(api, null);
+        assertDoesNotThrow(() -> ctx.setOffsetLimit(0));
+        assertDoesNotThrow(() -> ctx.setOffsetLimit(Long.MAX_VALUE));
     }
 
     @ParameterizedTest
@@ -265,6 +351,40 @@ public class Pcre2ContextTests {
         // With match limit of 1, a complex backtracking pattern should fail
         var result = code.match("aaaaac", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, ctx);
         assertTrue(result < 0, "Very low match limit should cause match failure");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextLowDepthLimitCausesError(IPcre2 api) {
+        var ctx = new Pcre2MatchContext(api, null);
+        ctx.setDepthLimit(1); // Extremely low depth limit
+
+        var code = new Pcre2Code(api, "(a+)+b");
+        var matchData = new Pcre2MatchData(code);
+
+        // With depth limit of 1, a pattern requiring recursion should fail
+        var result = code.match("aaaaac", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, ctx);
+        assertTrue(result < 0, "Very low depth limit should cause match failure");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchContextOffsetLimitEnforced(IPcre2 api) {
+        // Compile with USE_OFFSET_LIMIT so the offset limit takes effect
+        var code = new Pcre2Code(api, "test", EnumSet.of(Pcre2CompileOption.USE_OFFSET_LIMIT));
+        var matchData = new Pcre2MatchData(code);
+
+        var ctx = new Pcre2MatchContext(api, null);
+        ctx.setOffsetLimit(3);
+
+        // "XXXXtest" - the match for "test" starts at offset 4, which exceeds the limit of 3
+        var result = code.match("XXXXtest", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, ctx);
+        assertTrue(result < 0, "Match starting beyond offset limit should fail");
+
+        // "XXtest" - the match for "test" starts at offset 2, which is within the limit of 3
+        ctx.setOffsetLimit(5);
+        var result2 = code.match("XXtest", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, ctx);
+        assertTrue(result2 > 0, "Match starting within offset limit should succeed");
     }
 
     // === Pcre2JitStack ===
