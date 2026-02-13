@@ -27,6 +27,7 @@ import org.pcre4j.Pcre2SubstituteOption;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
+import java.lang.ref.Reference;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 import java.util.Arrays;
@@ -808,27 +809,34 @@ public class Matcher implements java.util.regex.MatchResult {
 
         final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(lookingAtCode);
-        final var result = lookingAtCode.match(
-                regionSubject.subject(),
-                regionSubject.startOffset(),
-                matchOptions,
-                matchData,
-                matchContext
-        );
-        if (result < 1) {
-            if (result == IPcre2.ERROR_NOMATCH) {
-                updateHitEndRequireEnd(regionSubject, false, matchOptions);
-                return false;
+        try {
+            final var result = lookingAtCode.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    matchOptions,
+                    matchData,
+                    matchContext
+            );
+            if (result < 1) {
+                if (result == IPcre2.ERROR_NOMATCH) {
+                    updateHitEndRequireEnd(regionSubject, false, matchOptions);
+                    return false;
+                }
+
+                checkMatchLimitResult(lookingAtCode.api(), result);
+                final var errorMessage = Pcre4jUtils.getErrorMessage(lookingAtCode.api(), result);
+                throw new RuntimeException(
+                        "Failed to find an anchored match", new IllegalStateException(errorMessage)
+                );
             }
 
-            checkMatchLimitResult(lookingAtCode.api(), result);
-            final var errorMessage = Pcre4jUtils.getErrorMessage(lookingAtCode.api(), result);
-            throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
+            processMatchResult(matchData, regionSubject);
+            updateHitEndRequireEnd(regionSubject, true, matchOptions);
+            return true;
+        } finally {
+            Reference.reachabilityFence(matchData);
+            Reference.reachabilityFence(this);
         }
-
-        processMatchResult(matchData, regionSubject);
-        updateHitEndRequireEnd(regionSubject, true, matchOptions);
-        return true;
     }
 
     /**
@@ -862,64 +870,73 @@ public class Matcher implements java.util.regex.MatchResult {
 
         final var regionSubject = getRegionSubject(regionStart);
         final var matchData = new Pcre2MatchData(matchingCode);
-        final var result = matchingCode.match(
-                regionSubject.subject(),
-                regionSubject.startOffset(),
-                matchOptions,
-                matchData,
-                matchContext
-        );
-        if (result < 1) {
-            if (result == IPcre2.ERROR_NOMATCH) {
-                updateHitEndRequireEnd(regionSubject, false, matchOptions);
-                return false;
-            }
+        try {
+            final var result = matchingCode.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    matchOptions,
+                    matchData,
+                    matchContext
+            );
+            if (result < 1) {
+                if (result == IPcre2.ERROR_NOMATCH) {
+                    updateHitEndRequireEnd(regionSubject, false, matchOptions);
+                    return false;
+                }
 
-            final var errorApi = patternMatchingCode != null ? patternMatchingCode.api() : pattern.code.api();
-            checkMatchLimitResult(errorApi, result);
-            final var errorMessage = Pcre4jUtils.getErrorMessage(errorApi, result);
-            throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
-        }
-
-        processMatchResult(matchData, regionSubject);
-
-        // For transparent bounds, manually verify the match covers exactly the region
-        if (transparentBounds) {
-            if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
-                // Match doesn't span exactly the region, try with constrained subject
-                final var constrainedSubject = getConstrainedRegionSubject(regionStart);
-                final var constrainedMatchData = new Pcre2MatchData(matchingCode);
-                // Use ENDANCHORED for constrained subject since it ends at regionEnd
-                final var constrainedOptions = EnumSet.copyOf(matchOptions);
-                constrainedOptions.add(Pcre2MatchOption.ENDANCHORED);
-                final var constrainedResult = matchingCode.match(
-                        constrainedSubject.subject(),
-                        constrainedSubject.startOffset(),
-                        constrainedOptions,
-                        constrainedMatchData,
-                        matchContext
+                final var errorApi = patternMatchingCode != null
+                        ? patternMatchingCode.api() : pattern.code.api();
+                checkMatchLimitResult(errorApi, result);
+                final var errorMessage = Pcre4jUtils.getErrorMessage(errorApi, result);
+                throw new RuntimeException(
+                        "Failed to find an anchored match", new IllegalStateException(errorMessage)
                 );
-                if (constrainedResult < 1) {
-                    lastMatchData = null;
-                    lastMatchIndices = null;
-                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
-                    return false;
-                }
-                processMatchResult(constrainedMatchData, constrainedSubject);
-                // Verify constrained match spans the region
-                if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
-                    lastMatchData = null;
-                    lastMatchIndices = null;
-                    updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
-                    return false;
-                }
-                updateHitEndRequireEnd(constrainedSubject, true, constrainedOptions);
-                return true;
             }
-        }
 
-        updateHitEndRequireEnd(regionSubject, true, matchOptions);
-        return true;
+            processMatchResult(matchData, regionSubject);
+
+            // For transparent bounds, manually verify the match covers exactly the region
+            if (transparentBounds) {
+                if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                    // Match doesn't span exactly the region, try with constrained subject
+                    final var constrainedSubject = getConstrainedRegionSubject(regionStart);
+                    final var constrainedMatchData = new Pcre2MatchData(matchingCode);
+                    // Use ENDANCHORED for constrained subject since it ends at regionEnd
+                    final var constrainedOptions = EnumSet.copyOf(matchOptions);
+                    constrainedOptions.add(Pcre2MatchOption.ENDANCHORED);
+                    final var constrainedResult = matchingCode.match(
+                            constrainedSubject.subject(),
+                            constrainedSubject.startOffset(),
+                            constrainedOptions,
+                            constrainedMatchData,
+                            matchContext
+                    );
+                    Reference.reachabilityFence(constrainedMatchData);
+                    if (constrainedResult < 1) {
+                        lastMatchData = null;
+                        lastMatchIndices = null;
+                        updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
+                        return false;
+                    }
+                    processMatchResult(constrainedMatchData, constrainedSubject);
+                    // Verify constrained match spans the region
+                    if (lastMatchIndices[0] != regionStart || lastMatchIndices[1] != regionEnd) {
+                        lastMatchData = null;
+                        lastMatchIndices = null;
+                        updateHitEndRequireEnd(constrainedSubject, false, constrainedOptions);
+                        return false;
+                    }
+                    updateHitEndRequireEnd(constrainedSubject, true, constrainedOptions);
+                    return true;
+                }
+            }
+
+            updateHitEndRequireEnd(regionSubject, true, matchOptions);
+            return true;
+        } finally {
+            Reference.reachabilityFence(matchData);
+            Reference.reachabilityFence(this);
+        }
     }
 
     /**
@@ -1034,14 +1051,18 @@ public class Matcher implements java.util.regex.MatchResult {
             return sb.toString();
         }
 
-        return pattern.code.substitute(
-                input.substring(regionStart, regionEnd),
-                0,
-                EnumSet.of(Pcre2SubstituteOption.GLOBAL, Pcre2SubstituteOption.EXTENDED),
-                null,
-                matchContext,
-                replacement
-        );
+        try {
+            return pattern.code.substitute(
+                    input.substring(regionStart, regionEnd),
+                    0,
+                    EnumSet.of(Pcre2SubstituteOption.GLOBAL, Pcre2SubstituteOption.EXTENDED),
+                    null,
+                    matchContext,
+                    replacement
+            );
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     /**
@@ -1097,14 +1118,18 @@ public class Matcher implements java.util.regex.MatchResult {
             return sb.toString();
         }
 
-        return pattern.code.substitute(
-                input.substring(regionStart, regionEnd),
-                0,
-                EnumSet.of(Pcre2SubstituteOption.EXTENDED),
-                null,
-                matchContext,
-                replacement
-        );
+        try {
+            return pattern.code.substitute(
+                    input.substring(regionStart, regionEnd),
+                    0,
+                    EnumSet.of(Pcre2SubstituteOption.EXTENDED),
+                    null,
+                    matchContext,
+                    replacement
+            );
+        } finally {
+            Reference.reachabilityFence(this);
+        }
     }
 
     /**
@@ -1388,133 +1413,144 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return {@code true} if a match is found, otherwise {@code false}
      */
     private boolean search(int start) {
-        int searchStart = start;
-        while (searchStart <= regionEnd) {
-            final var regionSubject = getRegionSubject(searchStart);
-            final var matchOptions = getMatchOptions();
+        try {
+            int searchStart = start;
+            while (searchStart <= regionEnd) {
+                final var regionSubject = getRegionSubject(searchStart);
+                final var matchOptions = getMatchOptions();
 
-            // PATH 1: Transparent + Anchoring bounds special handling
-            //
-            // Problem: PCRE2's ^ always matches at position 0, but Java's ^ with anchoring bounds
-            // should match at regionStart. With transparent bounds we pass the full input, so ^
-            // would incorrectly match at position 0 instead of regionStart.
-            //
-            // Solution: Transform pattern (^ -> \G, remove $) and verify $ constraint post-hoc.
-            // \G matches at startOffset which is regionStart, achieving the correct behavior.
-            //
-            // Note: MULTILINE patterns are excluded because ^ should also match after newlines,
-            // which \G cannot replicate.
-            if (transparentBounds && anchoringBounds && searchStart == regionStart) {
-                final var abCode = getOrCreateAnchoringBoundsCode();
-                if (abCode != null) {
-                    // Use the transformed pattern (^ replaced with \G, $ removed)
-                    final var matchData = new Pcre2MatchData(abCode);
-                    final var result = abCode.match(
-                            input,
-                            searchStart,
-                            matchOptions,
-                            matchData,
-                            matchContext
-                    );
-                    if (result < 1) {
-                        if (result != IPcre2.ERROR_NOMATCH) {
-                            checkMatchLimitResult(abCode.api(), result);
-                            final var errorMessage = Pcre4jUtils.getErrorMessage(abCode.api(), result);
-                            throw new RuntimeException(
-                                    "Failed to find a match", new IllegalStateException(errorMessage)
-                            );
-                        }
-                        // If no match with transformed pattern, fall through to normal matching.
-                        // This allows patterns without ^ to still find matches.
-                    } else {
-                        // Process to get match indices
-                        processMatchResult(matchData, new RegionSubject(input, searchStart, 0));
-
-                        // Check if the original pattern contained $ anchor (outside character classes)
-                        // If so, we must verify the match ends at regionEnd (simulates $ at regionEnd)
-                        final boolean originalHadDollar = patternContainsDollarAnchor(pattern.pattern());
-                        if (!originalHadDollar) {
-                            // No $ in original pattern - the match is valid as long as it ends within region
-                            if (lastMatchIndices[1] <= regionEnd) {
-                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
-                                return true;
+                // PATH 1: Transparent + Anchoring bounds special handling
+                //
+                // Problem: PCRE2's ^ always matches at position 0, but Java's ^ with anchoring bounds
+                // should match at regionStart. With transparent bounds we pass the full input, so ^
+                // would incorrectly match at position 0 instead of regionStart.
+                //
+                // Solution: Transform pattern (^ -> \G, remove $) and verify $ constraint post-hoc.
+                // \G matches at startOffset which is regionStart, achieving the correct behavior.
+                //
+                // Note: MULTILINE patterns are excluded because ^ should also match after newlines,
+                // which \G cannot replicate.
+                if (transparentBounds && anchoringBounds && searchStart == regionStart) {
+                    final var abCode = getOrCreateAnchoringBoundsCode();
+                    if (abCode != null) {
+                        // Use the transformed pattern (^ replaced with \G, $ removed)
+                        final var matchData = new Pcre2MatchData(abCode);
+                        final var result = abCode.match(
+                                input,
+                                searchStart,
+                                matchOptions,
+                                matchData,
+                                matchContext
+                        );
+                        if (result < 1) {
+                            if (result != IPcre2.ERROR_NOMATCH) {
+                                checkMatchLimitResult(abCode.api(), result);
+                                final var errorMessage = Pcre4jUtils.getErrorMessage(abCode.api(), result);
+                                throw new RuntimeException(
+                                        "Failed to find a match", new IllegalStateException(errorMessage)
+                                );
                             }
+                            // If no match with transformed pattern, fall through to normal matching.
+                            // This allows patterns without ^ to still find matches.
                         } else {
-                            // Original had $ which was removed, so verify match ends at regionEnd
-                            if (lastMatchIndices[1] == regionEnd) {
-                                updateHitEndRequireEnd(new RegionSubject(input, searchStart, 0), true, matchOptions);
-                                return true;
-                            }
-                        }
+                            // Process to get match indices
+                            processMatchResult(matchData, new RegionSubject(input, searchStart, 0));
 
-                        // Match doesn't satisfy anchor constraints. Reset and fall through to
-                        // normal matching which may find a match without anchor constraints.
-                        lastMatchData = null;
-                        lastMatchIndices = null;
+                            // Check if the original pattern contained $ anchor (outside character classes)
+                            // If so, we must verify the match ends at regionEnd (simulates $ at regionEnd)
+                            final boolean originalHadDollar =
+                                    patternContainsDollarAnchor(pattern.pattern());
+                            if (!originalHadDollar) {
+                                // No $ in original - match is valid as long as it ends within region
+                                if (lastMatchIndices[1] <= regionEnd) {
+                                    updateHitEndRequireEnd(
+                                            new RegionSubject(input, searchStart, 0), true, matchOptions
+                                    );
+                                    return true;
+                                }
+                            } else {
+                                // Original had $ which was removed, so verify match ends at regionEnd
+                                if (lastMatchIndices[1] == regionEnd) {
+                                    updateHitEndRequireEnd(
+                                            new RegionSubject(input, searchStart, 0), true, matchOptions
+                                    );
+                                    return true;
+                                }
+                            }
+
+                            // Match doesn't satisfy anchor constraints. Reset and fall through to
+                            // normal matching which may find a match without anchor constraints.
+                            lastMatchData = null;
+                            lastMatchIndices = null;
+                        }
                     }
                 }
-            }
 
-            // PATH 2: Normal matching with original pattern
-            final var matchData = new Pcre2MatchData(pattern.code);
-            final var result = pattern.code.match(
-                    regionSubject.subject(),
-                    regionSubject.startOffset(),
-                    matchOptions,
-                    matchData,
-                    matchContext
-            );
-            if (result < 1) {
-                if (result == IPcre2.ERROR_NOMATCH) {
-                    updateHitEndRequireEnd(regionSubject, false, matchOptions);
-                    return false;
-                }
-
-                checkMatchLimitResult(pattern.code.api(), result);
-                final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
-                throw new RuntimeException("Failed to find a match", new IllegalStateException(errorMessage));
-            }
-
-            processMatchResult(matchData, regionSubject);
-
-            // PATH 3: Region boundary enforcement for transparent bounds
-            //
-            // When transparent bounds are enabled, the full input is passed to PCRE2,
-            // so we need to verify the match doesn't extend beyond regionEnd.
-            if (transparentBounds && lastMatchIndices[1] > regionEnd) {
-                // Match extends beyond region end. Try matching with constrained subject
-                // to see if there's a valid shorter match (e.g., for greedy quantifiers).
-                // This preserves lookbehind (which sees before regionStart) while constraining
-                // the actual match to end within the region.
-                final var constrainedSubject = getConstrainedRegionSubject(searchStart);
-                final var constrainedMatchData = new Pcre2MatchData(pattern.code);
-                final var constrainedResult = pattern.code.match(
-                        constrainedSubject.subject(),
-                        constrainedSubject.startOffset(),
+                // PATH 2: Normal matching with original pattern
+                final var matchData = new Pcre2MatchData(pattern.code);
+                final var result = pattern.code.match(
+                        regionSubject.subject(),
+                        regionSubject.startOffset(),
                         matchOptions,
-                        constrainedMatchData,
+                        matchData,
                         matchContext
                 );
+                if (result < 1) {
+                    if (result == IPcre2.ERROR_NOMATCH) {
+                        updateHitEndRequireEnd(regionSubject, false, matchOptions);
+                        return false;
+                    }
 
-                if (constrainedResult >= 1) {
-                    // Found a valid match within the constrained region
-                    processMatchResult(constrainedMatchData, constrainedSubject);
-                    updateHitEndRequireEnd(constrainedSubject, true, matchOptions);
-                    return true;
+                    checkMatchLimitResult(pattern.code.api(), result);
+                    final var errorMessage = Pcre4jUtils.getErrorMessage(pattern.code.api(), result);
+                    throw new RuntimeException(
+                            "Failed to find a match", new IllegalStateException(errorMessage)
+                    );
                 }
 
-                // No valid match at this position, try next position
-                lastMatchData = null;
-                lastMatchIndices = null;
-                searchStart = searchStart + 1;
-                continue;
-            }
+                processMatchResult(matchData, regionSubject);
 
-            updateHitEndRequireEnd(regionSubject, true, matchOptions);
-            return true;
+                // PATH 3: Region boundary enforcement for transparent bounds
+                //
+                // When transparent bounds are enabled, the full input is passed to PCRE2,
+                // so we need to verify the match doesn't extend beyond regionEnd.
+                if (transparentBounds && lastMatchIndices[1] > regionEnd) {
+                    // Match extends beyond region end. Try matching with constrained subject
+                    // to see if there's a valid shorter match (e.g., for greedy quantifiers).
+                    // This preserves lookbehind (which sees before regionStart) while constraining
+                    // the actual match to end within the region.
+                    final var constrainedSubject = getConstrainedRegionSubject(searchStart);
+                    final var constrainedMatchData = new Pcre2MatchData(pattern.code);
+                    final var constrainedResult = pattern.code.match(
+                            constrainedSubject.subject(),
+                            constrainedSubject.startOffset(),
+                            matchOptions,
+                            constrainedMatchData,
+                            matchContext
+                    );
+
+                    if (constrainedResult >= 1) {
+                        // Found a valid match within the constrained region
+                        processMatchResult(constrainedMatchData, constrainedSubject);
+                        updateHitEndRequireEnd(constrainedSubject, true, matchOptions);
+                        return true;
+                    }
+
+                    // No valid match at this position, try next position
+                    lastMatchData = null;
+                    lastMatchIndices = null;
+                    searchStart = searchStart + 1;
+                    continue;
+                }
+
+                updateHitEndRequireEnd(regionSubject, true, matchOptions);
+                return true;
+            }
+            updateHitEndRequireEnd(getRegionSubject(start), false, getMatchOptions());
+            return false;
+        } finally {
+            Reference.reachabilityFence(this);
         }
-        updateHitEndRequireEnd(getRegionSubject(start), false, getMatchOptions());
-        return false;
     }
 
     /**
