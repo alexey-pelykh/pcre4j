@@ -3769,4 +3769,505 @@ public class MatcherTests {
         assertTrue(result.contains("region=3,6"));
     }
 
+    // ========================================================================
+    // Complex replacement pattern tests
+    // ========================================================================
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void replaceAllWithFullMatchReference(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello world";
+        var replacement = "[$0]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void replaceAllWithNamedGroupReferenceYearMonth(IPcre2 api) {
+        var regex = "(?<year>\\d{4})-(?<month>\\d{2})";
+        var input = "date: 2024-01, also 2025-12";
+        var replacement = "${month}/${year}";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceAll(replacement), pcre4jMatcher.replaceAll(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithEscapedDollarSign(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "price: 100";
+        var replacement = "\\$5";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementDollarAtEndThrows(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "cost$"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementDollarFollowedByInvalidCharThrows(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "$x"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementBackslashAtEndThrows(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "test\\"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementBackslashEscapesNextChar(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var replacement = "\\a\\b\\c";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithUnicodeReplacement(IPcre2 api) {
+        var regex = "(\\w+)";
+        var input = "hello world";
+        var replacement = "\u00e9$1\u00e9";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithSurrogatePairReplacement(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello world";
+        var replacement = "\uD83D\uDE00";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementUnclosedGroupReferenceThrows(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "${name"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementEmptyGroupReferenceThrows(IPcre2 api) {
+        var regex = "x";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "${}"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithNumberedGroupInBraces(IPcre2 api) {
+        var regex = "(\\w+) (\\w+)";
+        var input = "hello world";
+        var replacement = "${2} ${1}";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var pcre4jSb = new StringBuilder();
+
+        while (pcre4jMatcher.find()) {
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        // PCRE4J supports numbered groups in braces as an extension
+        assertEquals("world hello", pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementInvalidGroupNumberThrows(IPcre2 api) {
+        var regex = "(x)";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IndexOutOfBoundsException.class, () -> pcre4jMatcher.appendReplacement(sb, "$5"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementInvalidGroupNumberInBracesThrows(IPcre2 api) {
+        var regex = "(x)";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IndexOutOfBoundsException.class, () -> pcre4jMatcher.appendReplacement(sb, "${5}"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementInvalidNamedGroupThrows(IPcre2 api) {
+        var regex = "(x)";
+        var input = "x";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+        assertTrue(pcre4jMatcher.find());
+
+        var sb = new StringBuilder();
+        assertThrows(IllegalArgumentException.class, () -> pcre4jMatcher.appendReplacement(sb, "${nonexistent}"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithMixedGroupReferences(IPcre2 api) {
+        var regex = "(?<first>\\w+) (\\w+) (?<third>\\w+)";
+        var input = "one two three";
+        var replacement = "${first}-$2-${third}";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void replaceFirstWithFullMatchReference(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello world";
+        var replacement = "($0)";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertEquals(javaMatcher.replaceFirst(replacement), pcre4jMatcher.replaceFirst(replacement));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementWithNullGroup(IPcre2 api) {
+        var regex = "(a)|(b)";
+        var input = "ab";
+        var replacement = "[$1$2]";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void appendReplacementMultiDigitGroupNumber(IPcre2 api) {
+        var regex = "(a)(b)(c)(d)(e)(f)(g)(h)(i)(j)(k)(l)";
+        var input = "abcdefghijkl";
+        var replacement = "$12$1";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
+    }
+
+    // ========================================================================
+    // MatchResult snapshot tests
+    // ========================================================================
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultSnapshotDoesNotChangeWhenMatcherAdvances(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        var javaSnapshot = javaMatcher.toMatchResult();
+        var pcre4jSnapshot = pcre4jMatcher.toMatchResult();
+
+        assertEquals(javaSnapshot.group(), pcre4jSnapshot.group());
+        assertEquals(javaSnapshot.start(), pcre4jSnapshot.start());
+        assertEquals(javaSnapshot.end(), pcre4jSnapshot.end());
+
+        // Advance the matcher to next match
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        // Snapshot should still reflect the first match
+        assertEquals(javaSnapshot.group(), pcre4jSnapshot.group());
+        assertEquals(javaSnapshot.start(), pcre4jSnapshot.start());
+        assertEquals(javaSnapshot.end(), pcre4jSnapshot.end());
+
+        // But the matcher itself has moved forward
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals("world", pcre4jMatcher.group());
+        assertEquals("hello", pcre4jSnapshot.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultNamedGroupAccessors(IPcre2 api) {
+        var regex = "(?<year>\\d{4})-(?<month>\\d{2})-(?<day>\\d{2})";
+        var input = "date: 2024-01-15";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        var javaResult = javaMatcher.toMatchResult();
+        var pcre4jResult = pcre4jMatcher.toMatchResult();
+
+        // Test group(String)
+        assertEquals(javaResult.group("year"), pcre4jResult.group("year"));
+        assertEquals(javaResult.group("month"), pcre4jResult.group("month"));
+        assertEquals(javaResult.group("day"), pcre4jResult.group("day"));
+
+        // Test start(String)
+        assertEquals(javaResult.start("year"), pcre4jResult.start("year"));
+        assertEquals(javaResult.start("month"), pcre4jResult.start("month"));
+        assertEquals(javaResult.start("day"), pcre4jResult.start("day"));
+
+        // Test end(String)
+        assertEquals(javaResult.end("year"), pcre4jResult.end("year"));
+        assertEquals(javaResult.end("month"), pcre4jResult.end("month"));
+        assertEquals(javaResult.end("day"), pcre4jResult.end("day"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultByGroupNumber(IPcre2 api) {
+        var regex = "(\\w+)\\s+(\\w+)\\s+(\\w+)";
+        var input = "one two three";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        var javaResult = javaMatcher.toMatchResult();
+        var pcre4jResult = pcre4jMatcher.toMatchResult();
+
+        // Test group(int)
+        for (int i = 0; i <= javaResult.groupCount(); i++) {
+            assertEquals(javaResult.group(i), pcre4jResult.group(i));
+            assertEquals(javaResult.start(i), pcre4jResult.start(i));
+            assertEquals(javaResult.end(i), pcre4jResult.end(i));
+        }
+
+        assertEquals(javaResult.groupCount(), pcre4jResult.groupCount());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultThrowsIllegalStateExceptionWhenNoMatch(IPcre2 api) {
+        var regex = "\\d+";
+        var input = "hello";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // No find() call, so no match has occurred
+        var result = pcre4jMatcher.toMatchResult();
+
+        assertThrows(IllegalStateException.class, () -> result.start());
+        assertThrows(IllegalStateException.class, () -> result.end());
+        assertThrows(IllegalStateException.class, () -> result.group());
+        assertThrows(IllegalStateException.class, () -> result.start(0));
+        assertThrows(IllegalStateException.class, () -> result.end(0));
+        assertThrows(IllegalStateException.class, () -> result.group(0));
+        assertThrows(IllegalStateException.class, () -> result.start("name"));
+        assertThrows(IllegalStateException.class, () -> result.end("name"));
+        assertThrows(IllegalStateException.class, () -> result.group("name"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultThrowsIndexOutOfBoundsForInvalidGroup(IPcre2 api) {
+        var regex = "(\\w+)";
+        var input = "hello";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(pcre4jMatcher.find());
+        var result = pcre4jMatcher.toMatchResult();
+
+        // Group count is 1, so group 2 should throw
+        assertThrows(IndexOutOfBoundsException.class, () -> result.start(5));
+        assertThrows(IndexOutOfBoundsException.class, () -> result.end(5));
+        assertThrows(IndexOutOfBoundsException.class, () -> result.group(5));
+
+        // Negative group
+        assertThrows(IndexOutOfBoundsException.class, () -> result.start(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> result.end(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> result.group(-1));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultThrowsForInvalidNamedGroup(IPcre2 api) {
+        var regex = "(?<word>\\w+)";
+        var input = "hello";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(pcre4jMatcher.find());
+        var result = pcre4jMatcher.toMatchResult();
+
+        assertThrows(IllegalArgumentException.class, () -> result.start("nonexistent"));
+        assertThrows(IllegalArgumentException.class, () -> result.end("nonexistent"));
+        assertThrows(IllegalArgumentException.class, () -> result.group("nonexistent"));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultNamedGroups(IPcre2 api) {
+        var regex = "(?<first>\\w+) (?<second>\\w+)";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(javaMatcher.find());
+        assertTrue(pcre4jMatcher.find());
+
+        var javaResult = javaMatcher.toMatchResult();
+        var pcre4jResult = pcre4jMatcher.toMatchResult();
+
+        assertEquals(javaResult.namedGroups(), pcre4jResult.namedGroups());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultHasMatchFalseWhenNoMatch(IPcre2 api) {
+        var regex = "xyz";
+        var input = "hello";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertFalse(pcre4jMatcher.find());
+        var result = pcre4jMatcher.toMatchResult();
+
+        assertFalse(result.hasMatch());
+        assertEquals(0, result.groupCount());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchResultHasMatchTrueAfterMatch(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "hello";
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        assertTrue(pcre4jMatcher.find());
+        var result = pcre4jMatcher.toMatchResult();
+
+        assertTrue(result.hasMatch());
+    }
+
 }
