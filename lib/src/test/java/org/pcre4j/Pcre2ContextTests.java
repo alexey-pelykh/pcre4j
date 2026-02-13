@@ -14,6 +14,7 @@
  */
 package org.pcre4j;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
@@ -46,6 +47,12 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void generalContextNullApiThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () -> new Pcre2GeneralContext(null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void generalContextUsableForCompileContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         assertDoesNotThrow(() -> new Pcre2CompileContext(api, generalCtx));
@@ -56,6 +63,15 @@ public class Pcre2ContextTests {
     void generalContextUsableForMatchContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         assertDoesNotThrow(() -> new Pcre2MatchContext(api, generalCtx));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void generalContextUsableForJitStack(IPcre2 api) {
+        var generalCtx = new Pcre2GeneralContext(api);
+        var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, generalCtx);
+        assertNotNull(stack);
+        assertTrue(stack.handle() != 0);
     }
 
     // === Pcre2CompileContext ===
@@ -401,6 +417,13 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void jitStackNullApiThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class,
+                () -> new Pcre2JitStack(null, 32 * 1024, 512 * 1024, null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackWithGeneralContext(IPcre2 api) {
         var generalCtx = new Pcre2GeneralContext(api);
         var stack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, generalCtx);
@@ -410,7 +433,25 @@ public class Pcre2ContextTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void jitStackWithSmallSizes(IPcre2 api) {
+        var stack = new Pcre2JitStack(api, 1024, 8 * 1024, null);
+        assertNotNull(stack);
+        assertTrue(stack.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void jitStackWithLargeSizes(IPcre2 api) {
+        var stack = new Pcre2JitStack(api, 64 * 1024, 1024 * 1024, null);
+        assertNotNull(stack);
+        assertTrue(stack.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitStackUsedInMatch(IPcre2 api) {
+        Assumptions.assumeTrue(Pcre4jUtils.isJitSupported(api), "JIT is not supported on this platform");
+
         var matchCtx = new Pcre2MatchContext(api, null);
         var jitStack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, null);
         matchCtx.assignJitStack(jitStack);
@@ -419,5 +460,21 @@ public class Pcre2ContextTests {
         var matchData = new Pcre2MatchData(code);
         var result = code.match("hello", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, matchCtx);
         assertTrue(result > 0, "JIT match with custom stack should succeed");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void jitStackWithGeneralContextUsedInMatch(IPcre2 api) {
+        Assumptions.assumeTrue(Pcre4jUtils.isJitSupported(api), "JIT is not supported on this platform");
+
+        var generalCtx = new Pcre2GeneralContext(api);
+        var matchCtx = new Pcre2MatchContext(api, generalCtx);
+        var jitStack = new Pcre2JitStack(api, 32 * 1024, 512 * 1024, generalCtx);
+        matchCtx.assignJitStack(jitStack);
+
+        var code = new Pcre2JitCode(api, "(world)", null, null, null);
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("world", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, matchCtx);
+        assertTrue(result > 0, "JIT match with custom stack and general context should succeed");
     }
 }
