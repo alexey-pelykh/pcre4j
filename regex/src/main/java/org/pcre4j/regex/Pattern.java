@@ -136,12 +136,16 @@ public class Pattern {
      */
     public static final int CANON_EQ = java.util.regex.Pattern.CANON_EQ;
     /* package-private */ final Pcre2Code code;
-    /* package-private */ final Pcre2Code matchingCode;
-    /* package-private */ final Pcre2Code lookingAtCode;
     private final IPcre2 api;
     private final String regex;
     private final int flags;
     private final Map<String, Integer> namedGroups;
+    private final String compiledRegex;
+    private final EnumSet<Pcre2CompileOption> compileOptions;
+    private final Pcre2CompileContext compileContext;
+    private final boolean jitEnabled;
+    private volatile Pcre2Code matchingCode;
+    private volatile Pcre2Code lookingAtCode;
 
     /**
      * Create a new {@link Pattern} using the given regular expression and flags.
@@ -164,14 +168,13 @@ public class Pattern {
 
         // When CANON_EQ is set, normalize the pattern to NFD form for compilation
         // The original regex is preserved in this.regex for pattern() method
-        final String compiledRegex;
         if ((flags & CANON_EQ) != 0) {
-            compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
+            this.compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
         } else {
-            compiledRegex = regex;
+            this.compiledRegex = regex;
         }
 
-        final var compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
+        this.compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
         if ((flags & CASE_INSENSITIVE) != 0) {
             compileOptions.add(Pcre2CompileOption.CASELESS);
         }
@@ -194,7 +197,7 @@ public class Pattern {
         // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
         // Note: CANON_EQ flag is handled above by normalizing the pattern to NFD form.
 
-        final var compileContext = new Pcre2CompileContext(api, null);
+        this.compileContext = new Pcre2CompileContext(api, null);
         if ((flags & UNIX_LINES) != 0) {
             compileContext.setNewline(Pcre2Newline.LF);
         } else {
@@ -203,32 +206,12 @@ public class Pattern {
 
         try {
             final var isJitAllowed = Boolean.parseBoolean(System.getProperty("pcre2.regex.jit", "true"));
-            if (Pcre4jUtils.isJitSupported(api) && isJitAllowed) {
+            this.jitEnabled = Pcre4jUtils.isJitSupported(api) && isJitAllowed;
+            if (jitEnabled) {
                 this.code = new Pcre2JitCode(
                         api,
                         compiledRegex,
                         compileOptions,
-                        EnumSet.of(Pcre2JitOption.COMPLETE),
-                        compileContext
-                );
-
-                final var matchingCompileOptions = EnumSet.copyOf(compileOptions);
-                matchingCompileOptions.add(Pcre2CompileOption.ANCHORED);
-                matchingCompileOptions.add(Pcre2CompileOption.ENDANCHORED);
-                this.matchingCode = new Pcre2JitCode(
-                        api,
-                        compiledRegex,
-                        matchingCompileOptions,
-                        EnumSet.of(Pcre2JitOption.COMPLETE),
-                        compileContext
-                );
-
-                final var lookingAtCompileOptions = EnumSet.copyOf(compileOptions);
-                lookingAtCompileOptions.add(Pcre2CompileOption.ANCHORED);
-                this.lookingAtCode = new Pcre2JitCode(
-                        api,
-                        compiledRegex,
-                        lookingAtCompileOptions,
                         EnumSet.of(Pcre2JitOption.COMPLETE),
                         compileContext
                 );
@@ -239,8 +222,6 @@ public class Pattern {
                         compileOptions,
                         compileContext
                 );
-                this.matchingCode = null;
-                this.lookingAtCode = null;
             }
         } catch (Pcre2CompileError e) {
             throw new PatternSyntaxException(e.message(), e.pattern(), (int) e.offset());
@@ -494,5 +475,74 @@ public class Pattern {
      */
     public Stream<String> splitAsStream(CharSequence input) {
         return Arrays.stream(split(input, 0));
+    }
+
+    /**
+     * Returns the pre-compiled JIT code with {@link Pcre2CompileOption#ANCHORED} and
+     * {@link Pcre2CompileOption#ENDANCHORED} baked in, or {@code null} if JIT is not enabled.
+     * <p>
+     * The code is compiled lazily on first access to avoid memory overhead for patterns that
+     * are never used with {@link Matcher#matches()}.
+     *
+     * @return the matching code, or {@code null} if JIT is not enabled
+     */
+    /* package-private */ Pcre2Code matchingCode() {
+        if (!jitEnabled) {
+            return null;
+        }
+        var result = matchingCode;
+        if (result == null) {
+            synchronized (this) {
+                result = matchingCode;
+                if (result == null) {
+                    final var options = EnumSet.copyOf(compileOptions);
+                    options.add(Pcre2CompileOption.ANCHORED);
+                    options.add(Pcre2CompileOption.ENDANCHORED);
+                    result = new Pcre2JitCode(
+                            api,
+                            compiledRegex,
+                            options,
+                            EnumSet.of(Pcre2JitOption.COMPLETE),
+                            compileContext
+                    );
+                    matchingCode = result;
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Returns the pre-compiled JIT code with {@link Pcre2CompileOption#ANCHORED} baked in,
+     * or {@code null} if JIT is not enabled.
+     * <p>
+     * The code is compiled lazily on first access to avoid memory overhead for patterns that
+     * are never used with {@link Matcher#lookingAt()}.
+     *
+     * @return the looking-at code, or {@code null} if JIT is not enabled
+     */
+    /* package-private */ Pcre2Code lookingAtCode() {
+        if (!jitEnabled) {
+            return null;
+        }
+        var result = lookingAtCode;
+        if (result == null) {
+            synchronized (this) {
+                result = lookingAtCode;
+                if (result == null) {
+                    final var options = EnumSet.copyOf(compileOptions);
+                    options.add(Pcre2CompileOption.ANCHORED);
+                    result = new Pcre2JitCode(
+                            api,
+                            compiledRegex,
+                            options,
+                            EnumSet.of(Pcre2JitOption.COMPLETE),
+                            compileContext
+                    );
+                    lookingAtCode = result;
+                }
+            }
+        }
+        return result;
     }
 }

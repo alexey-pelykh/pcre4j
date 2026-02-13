@@ -759,8 +759,9 @@ public class Matcher implements java.util.regex.MatchResult {
     public boolean lookingAt() {
         final EnumSet<Pcre2MatchOption> matchOptions;
         final Pcre2Code lookingAtCode;
-        if (pattern.lookingAtCode != null) {
-            lookingAtCode = pattern.lookingAtCode;
+        final var patternLookingAtCode = pattern.lookingAtCode();
+        if (patternLookingAtCode != null) {
+            lookingAtCode = patternLookingAtCode;
             matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
         } else {
             lookingAtCode = pattern.code;
@@ -803,11 +804,12 @@ public class Matcher implements java.util.regex.MatchResult {
     public boolean matches() {
         final Pcre2Code matchingCode;
         final EnumSet<Pcre2MatchOption> matchOptions;
-        if (pattern.matchingCode != null && !transparentBounds) {
+        final var patternMatchingCode = pattern.matchingCode();
+        if (patternMatchingCode != null && !transparentBounds) {
             // Use the pre-compiled JIT code with ANCHORED and ENDANCHORED baked in
             // but only when transparent bounds is disabled, because ENDANCHORED
             // would anchor to end of full input rather than regionEnd
-            matchingCode = pattern.matchingCode;
+            matchingCode = patternMatchingCode;
             matchOptions = EnumSet.noneOf(Pcre2MatchOption.class);
         } else {
             matchingCode = pattern.code;
@@ -838,7 +840,7 @@ public class Matcher implements java.util.regex.MatchResult {
                 return false;
             }
 
-            final var errorApi = pattern.matchingCode != null ? pattern.matchingCode.api() : pattern.code.api();
+            final var errorApi = patternMatchingCode != null ? patternMatchingCode.api() : pattern.code.api();
             checkMatchLimitResult(errorApi, result);
             final var errorMessage = Pcre4jUtils.getErrorMessage(errorApi, result);
             throw new RuntimeException("Failed to find an anchored match", new IllegalStateException(errorMessage));
