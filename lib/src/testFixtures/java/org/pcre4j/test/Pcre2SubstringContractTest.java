@@ -29,7 +29,9 @@ import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Contract tests for PCRE2 substring and capture group operations.
@@ -1043,5 +1045,378 @@ public interface Pcre2SubstringContractTest<T extends IPcre2> {
         );
 
         assertThrows(IllegalArgumentException.class, () -> code.scanNametable(null));
+    }
+
+    @Test
+    default void getSubstringLengthByNumberEntireMatch() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        final var length = matchData.getSubstringLength(0);
+        assertEquals(5, length);
+    }
+
+    @Test
+    default void getSubstringLengthByNumberCapturingGroups() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        assertEquals(11, matchData.getSubstringLength(0));
+        assertEquals(5, matchData.getSubstringLength(1));
+        assertEquals(5, matchData.getSubstringLength(2));
+    }
+
+    @Test
+    default void getSubstringLengthByNumberNegative() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.getSubstringLength(-1));
+    }
+
+    @Test
+    default void getSubstringLengthByNumberOutOfRange() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "hello",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(1, result);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstringLength(99));
+    }
+
+    @Test
+    default void getSubstringLengthByNumberUnsetGroup() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(a)|(b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Group 1 matched
+        assertEquals(1, matchData.getSubstringLength(1));
+
+        // Group 2 did not participate in the match
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstringLength(2));
+    }
+
+    @Test
+    default void getSubstringLengthByNameSimple() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        final var length = matchData.getSubstringLength("word");
+        assertEquals(5, length);
+    }
+
+    @Test
+    default void getSubstringLengthByNameMultipleGroups() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(?<first>\\w+) (?<second>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        assertEquals(5, matchData.getSubstringLength("first"));
+        assertEquals(5, matchData.getSubstringLength("second"));
+    }
+
+    @Test
+    default void getSubstringLengthByNameNull() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        assertThrows(IllegalArgumentException.class, () -> matchData.getSubstringLength((String) null));
+    }
+
+    @Test
+    default void getSubstringLengthByNameNonexistent() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(?<word>\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstringLength("nonexistent"));
+    }
+
+    @Test
+    default void getSubstringLengthByNameUnsetGroup() {
+        final var code = new Pcre2Code(
+                getApi(),
+                "(?<first>a)|(?<second>b)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "a",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Group "first" matched
+        assertEquals(1, matchData.getSubstringLength("first"));
+
+        // Group "second" did not participate in the match
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstringLength("second"));
+    }
+
+    @Test
+    default void substringListGetMultipleGroups() {
+        final var api = getApi();
+
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+) (\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello world",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(3, result);
+
+        final var listptr = new long[1];
+        final var lengthsptr = new long[1];
+        final var listResult = api.substringListGet(matchData.handle(), listptr, lengthsptr);
+        assertEquals(0, listResult);
+
+        assertNotEquals(0, listptr[0]);
+        assertNotEquals(0, lengthsptr[0]);
+
+        try {
+            // Verify the lengths match the expected substring lengths
+            assertTrue(api instanceof org.pcre4j.api.INativeMemoryAccess);
+            final var memAccess = (org.pcre4j.api.INativeMemoryAccess) api;
+
+            // Read the lengths array: 3 substrings (group 0, 1, 2), each is a long (size_t)
+            // size_t is platform-dependent but typically 8 bytes on 64-bit
+            final var pointerSize = Long.BYTES;
+            final var lengthsBytes = memAccess.readBytes(lengthsptr[0], 3 * pointerSize);
+            final var lengthsBuf = java.nio.ByteBuffer.wrap(lengthsBytes)
+                    .order(java.nio.ByteOrder.nativeOrder());
+
+            final var length0 = lengthsBuf.getLong(0);
+            final var length1 = lengthsBuf.getLong(pointerSize);
+            final var length2 = lengthsBuf.getLong(2 * pointerSize);
+
+            // "hello world" = 11, "hello" = 5, "world" = 5
+            assertEquals(11, length0);
+            assertEquals(5, length1);
+            assertEquals(5, length2);
+        } finally {
+            api.substringListFree(listptr[0]);
+        }
+    }
+
+    @Test
+    default void substringListGetWithUnmatchedOptionalGroups() {
+        final var api = getApi();
+
+        final var code = new Pcre2Code(
+                api,
+                "(a)(b)?(c)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "ac",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(4, result);
+
+        final var listptr = new long[1];
+        final var lengthsptr = new long[1];
+        final var listResult = api.substringListGet(matchData.handle(), listptr, lengthsptr);
+        assertEquals(0, listResult);
+
+        assertNotEquals(0, listptr[0]);
+        assertNotEquals(0, lengthsptr[0]);
+
+        try {
+            assertTrue(api instanceof org.pcre4j.api.INativeMemoryAccess);
+            final var memAccess = (org.pcre4j.api.INativeMemoryAccess) api;
+
+            final var pointerSize = Long.BYTES;
+            final var lengthsBytes = memAccess.readBytes(lengthsptr[0], 4 * pointerSize);
+            final var lengthsBuf = java.nio.ByteBuffer.wrap(lengthsBytes)
+                    .order(java.nio.ByteOrder.nativeOrder());
+
+            // Group 0: "ac" = 2, Group 1: "a" = 1, Group 2: unmatched, Group 3: "c" = 1
+            assertEquals(2, lengthsBuf.getLong(0));
+            assertEquals(1, lengthsBuf.getLong(pointerSize));
+            // Group 2 (optional, unmatched) - PCRE2 sets length to PCRE2_UNSET which is ~0 (max value)
+            // We just verify the matched groups are correct; the unmatched length is implementation-defined
+            assertEquals(1, lengthsBuf.getLong(3 * pointerSize));
+        } finally {
+            api.substringListFree(listptr[0]);
+        }
+    }
+
+    @Test
+    default void substringListGetWithoutLengths() {
+        final var api = getApi();
+
+        final var code = new Pcre2Code(
+                api,
+                "(\\w+)",
+                EnumSet.noneOf(Pcre2CompileOption.class),
+                null
+        );
+        final var matchData = new Pcre2MatchData(code);
+
+        final var result = code.match(
+                "hello",
+                0,
+                EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT),
+                matchData,
+                null
+        );
+        assertEquals(2, result);
+
+        // Pass null for lengthsptr - should still work
+        final var listptr = new long[1];
+        final var listResult = api.substringListGet(matchData.handle(), listptr, null);
+        assertEquals(0, listResult);
+
+        assertNotEquals(0, listptr[0]);
+
+        api.substringListFree(listptr[0]);
+    }
+
+    @Test
+    default void substringListFreeZero() {
+        // substringListFree with 0 should be a no-op (not crash)
+        getApi().substringListFree(0);
     }
 }
