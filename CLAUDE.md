@@ -94,6 +94,7 @@ The FFM module is a Multi-Release JAR (MRJAR):
 See [CONTRIBUTING.md](CONTRIBUTING.md#commit-message-format) for the commit message format and type prefixes.
 
 - Reverts use Git default: `Revert "(type) original message"`
+- All commits **must** include a `Signed-off-by` trailer (DCO). Use `git commit -s` to add it automatically.
 
 ## Release Process
 
