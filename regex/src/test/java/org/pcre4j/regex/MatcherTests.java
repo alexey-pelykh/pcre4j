@@ -18,6 +18,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
+import java.util.regex.MatchResult;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -37,17 +39,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -59,17 +53,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -81,17 +67,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -103,17 +81,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -125,17 +95,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -150,17 +112,9 @@ public class MatcherTests {
         pcre4jMatcher.region(3, 5);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -172,17 +126,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -194,23 +140,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -225,17 +157,9 @@ public class MatcherTests {
         pcre4jMatcher.region(1, 3);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -250,23 +174,9 @@ public class MatcherTests {
         pcre4jMatcher.region(1, 4);
 
         assertEquals(javaMatcher.matches(), pcre4jMatcher.matches());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -278,17 +188,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -300,23 +202,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -331,17 +219,9 @@ public class MatcherTests {
         pcre4jMatcher.region(1, 4);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -356,23 +236,9 @@ public class MatcherTests {
         pcre4jMatcher.region(1, 4);
 
         assertEquals(javaMatcher.lookingAt(), pcre4jMatcher.lookingAt());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -384,17 +250,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -406,23 +264,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -436,17 +280,9 @@ public class MatcherTests {
         javaMatcher.region(1, 3);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -460,23 +296,9 @@ public class MatcherTests {
         javaMatcher.region(1, 3);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -488,17 +310,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
-        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
-        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -510,23 +324,9 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(2), pcre4jMatcher.find(2));
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -538,30 +338,14 @@ public class MatcherTests {
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult0 = javaMatcher.toMatchResult();
-        var pcre4jMatchResult0 = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult0.start(), pcre4jMatchResult0.start());
-        assertEquals(javaMatchResult0.end(), pcre4jMatchResult0.end());
-        assertEquals(javaMatchResult0.group(), pcre4jMatchResult0.group());
-        assertEquals(javaMatchResult0.groupCount(), pcre4jMatchResult0.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult1 = javaMatcher.toMatchResult();
-        var pcre4jMatchResult1 = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult1.start(), pcre4jMatchResult1.start());
-        assertEquals(javaMatchResult1.end(), pcre4jMatchResult1.end());
-        assertEquals(javaMatchResult1.group(), pcre4jMatchResult1.group());
-        assertEquals(javaMatchResult1.groupCount(), pcre4jMatchResult1.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -576,30 +360,14 @@ public class MatcherTests {
         pcre4jMatcher.region(2, 8);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult0 = javaMatcher.toMatchResult();
-        var pcre4jMatchResult0 = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult0.start(), pcre4jMatchResult0.start());
-        assertEquals(javaMatchResult0.end(), pcre4jMatchResult0.end());
-        assertEquals(javaMatchResult0.group(), pcre4jMatchResult0.group());
-        assertEquals(javaMatchResult0.groupCount(), pcre4jMatchResult0.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
-        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
-        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertMatcherState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult1 = javaMatcher.toMatchResult();
-        var pcre4jMatchResult1 = pcre4jMatcher.toMatchResult();
-        assertEquals(javaMatchResult1.start(), pcre4jMatchResult1.start());
-        assertEquals(javaMatchResult1.end(), pcre4jMatchResult1.end());
-        assertEquals(javaMatchResult1.group(), pcre4jMatchResult1.group());
-        assertEquals(javaMatchResult1.groupCount(), pcre4jMatchResult1.groupCount());
+        assertMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -614,23 +382,9 @@ public class MatcherTests {
         pcre4jMatcher.region(2, 8);
 
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
-        assertThrows(IllegalStateException.class, javaMatcher::start);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
-        assertThrows(IllegalStateException.class, javaMatcher::end);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
-        assertThrows(IllegalStateException.class, javaMatcher::group);
-        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
-        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+        assertNoMatchState(javaMatcher, pcre4jMatcher);
 
-        var javaMatchResult = javaMatcher.toMatchResult();
-        var pcre4jMatchResult = pcre4jMatcher.toMatchResult();
-        assertThrows(IllegalStateException.class, javaMatchResult::start);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
-        assertThrows(IllegalStateException.class, javaMatchResult::end);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
-        assertThrows(IllegalStateException.class, javaMatchResult::group);
-        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
-        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+        assertNoMatchResultState(javaMatcher.toMatchResult(), pcre4jMatcher.toMatchResult());
     }
 
     @ParameterizedTest
@@ -650,11 +404,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
         assertEquals(javaMatcher.start("four"), pcre4jMatcher.start("four"));
         assertEquals(javaMatcher.start("two"), pcre4jMatcher.start("two"));
         assertEquals(javaMatcher.end("four"), pcre4jMatcher.end("four"));
@@ -678,11 +428,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
     }
 
     @ParameterizedTest
@@ -702,11 +448,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
     }
 
     @ParameterizedTest
@@ -726,11 +468,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
         assertEquals(javaMatcher.start("exclamation"), pcre4jMatcher.start("exclamation"));
         assertEquals(javaMatcher.start("question"), pcre4jMatcher.start("question"));
         assertEquals(javaMatcher.end("exclamation"), pcre4jMatcher.end("exclamation"));
@@ -754,11 +492,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
         assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
         assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
         assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
@@ -782,11 +516,7 @@ public class MatcherTests {
         assertEquals(javaMatcher.end(), pcre4jMatcher.end());
         assertEquals(javaMatcher.end(0), pcre4jMatcher.end(0));
         assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
-        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
-            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
-            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
-            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
-        }
+        assertGroups(javaMatcher, pcre4jMatcher);
         assertEquals(javaMatcher.start("lWrapper"), pcre4jMatcher.start("lWrapper"));
         assertEquals(javaMatcher.start("rWrapper"), pcre4jMatcher.start("rWrapper"));
         assertEquals(javaMatcher.end("lWrapper"), pcre4jMatcher.end("lWrapper"));
@@ -1123,17 +853,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "[$1]");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "[$1]");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "[$1]");
     }
 
     @ParameterizedTest
@@ -1144,17 +864,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "${word}!");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "${word}!");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "${word}!");
     }
 
     @ParameterizedTest
@@ -1165,18 +875,8 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            // Test escaping $ and \ in replacement
-            javaMatcher.appendReplacement(javaSb, "\\$\\\\");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "\\$\\\\");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        // Test escaping $ and \ in replacement
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "\\$\\\\");
     }
 
     @ParameterizedTest
@@ -1187,17 +887,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "universe");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "universe");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "universe");
     }
 
     @ParameterizedTest
@@ -1239,17 +929,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "$3$2$1");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "$3$2$1");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "$3$2$1");
     }
 
     @ParameterizedTest
@@ -1260,17 +940,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "[$0]");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "[$0]");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "[$0]");
     }
 
     @ParameterizedTest
@@ -1281,17 +951,7 @@ public class MatcherTests {
         var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
         var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
 
-        var javaSb = new StringBuilder();
-        var pcre4jSb = new StringBuilder();
-
-        while (javaMatcher.find() && pcre4jMatcher.find()) {
-            javaMatcher.appendReplacement(javaSb, "🌍");
-            pcre4jMatcher.appendReplacement(pcre4jSb, "🌍");
-        }
-        javaMatcher.appendTail(javaSb);
-        pcre4jMatcher.appendTail(pcre4jSb);
-
-        assertEquals(javaSb.toString(), pcre4jSb.toString());
+        assertAppendReplacement(javaMatcher, pcre4jMatcher, "🌍");
     }
 
     // ========================================================================
@@ -4644,6 +4304,66 @@ public class MatcherTests {
         // Should not find a second match within the region
         assertEquals(javaMatcher.find(), pcre4jMatcher.find());
         assertFalse(pcre4jMatcher.find());
+    }
+
+    private static void assertMatcherState(java.util.regex.Matcher javaMatcher, Matcher pcre4jMatcher) {
+        assertEquals(javaMatcher.start(), pcre4jMatcher.start());
+        assertEquals(javaMatcher.end(), pcre4jMatcher.end());
+        assertEquals(javaMatcher.group(), pcre4jMatcher.group());
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+    }
+
+    private static void assertMatchResultState(MatchResult javaMatchResult, MatchResult pcre4jMatchResult) {
+        assertEquals(javaMatchResult.start(), pcre4jMatchResult.start());
+        assertEquals(javaMatchResult.end(), pcre4jMatchResult.end());
+        assertEquals(javaMatchResult.group(), pcre4jMatchResult.group());
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    private static void assertNoMatchState(java.util.regex.Matcher javaMatcher, Matcher pcre4jMatcher) {
+        assertThrows(IllegalStateException.class, javaMatcher::start);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::start);
+        assertThrows(IllegalStateException.class, javaMatcher::end);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::end);
+        assertThrows(IllegalStateException.class, javaMatcher::group);
+        assertThrows(IllegalStateException.class, pcre4jMatcher::group);
+        assertEquals(javaMatcher.groupCount(), pcre4jMatcher.groupCount());
+    }
+
+    private static void assertNoMatchResultState(MatchResult javaMatchResult, MatchResult pcre4jMatchResult) {
+        assertThrows(IllegalStateException.class, javaMatchResult::start);
+        assertThrows(IllegalStateException.class, pcre4jMatchResult::start);
+        assertThrows(IllegalStateException.class, javaMatchResult::end);
+        assertThrows(IllegalStateException.class, pcre4jMatchResult::end);
+        assertThrows(IllegalStateException.class, javaMatchResult::group);
+        assertThrows(IllegalStateException.class, pcre4jMatchResult::group);
+        assertEquals(javaMatchResult.groupCount(), pcre4jMatchResult.groupCount());
+    }
+
+    private static void assertGroups(java.util.regex.Matcher javaMatcher, Matcher pcre4jMatcher) {
+        for (var group = 1; group <= javaMatcher.groupCount(); group++) {
+            assertEquals(javaMatcher.group(group), pcre4jMatcher.group(group));
+            assertEquals(javaMatcher.start(group), pcre4jMatcher.start(group));
+            assertEquals(javaMatcher.end(group), pcre4jMatcher.end(group));
+        }
+    }
+
+    private static void assertAppendReplacement(
+            java.util.regex.Matcher javaMatcher,
+            Matcher pcre4jMatcher,
+            String replacement
+    ) {
+        var javaSb = new StringBuilder();
+        var pcre4jSb = new StringBuilder();
+
+        while (javaMatcher.find() && pcre4jMatcher.find()) {
+            javaMatcher.appendReplacement(javaSb, replacement);
+            pcre4jMatcher.appendReplacement(pcre4jSb, replacement);
+        }
+        javaMatcher.appendTail(javaSb);
+        pcre4jMatcher.appendTail(pcre4jSb);
+
+        assertEquals(javaSb.toString(), pcre4jSb.toString());
     }
 
 }
