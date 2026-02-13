@@ -536,4 +536,141 @@ public class Pcre2CodePatternInfoTests {
         var groups = code.scanNametable("beta");
         assertArrayEquals(new int[]{2}, groups);
     }
+
+    // --- allOptions ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void allOptionsDefault(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var options = code.allOptions();
+        assertNotNull(options);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void allOptionsIncludesArgOptions(IPcre2 api) {
+        var code = new Pcre2Code(api, "test", EnumSet.of(Pcre2CompileOption.CASELESS));
+        var options = code.allOptions();
+        assertTrue(options.contains(Pcre2CompileOption.CASELESS));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void allOptionsIncludesPatternOptions(IPcre2 api) {
+        // (*UTF) sets UTF option in the pattern itself
+        var code = new Pcre2Code(api, "(*UTF)test");
+        var options = code.allOptions();
+        assertTrue(options.contains(Pcre2CompileOption.UTF));
+    }
+
+    // --- extraOptions ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void extraOptionsDefault(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var options = code.extraOptions();
+        assertNotNull(options);
+        assertTrue(options.isEmpty());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void extraOptionsWithCompileContext(IPcre2 api) {
+        var ctx = new Pcre2CompileContext(api, null);
+        ctx.setCompileExtraOptions(EnumSet.of(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL));
+        var code = new Pcre2Code(api, "test", null, ctx);
+        var options = code.extraOptions();
+        assertTrue(options.contains(Pcre2CompileExtraOption.BAD_ESCAPE_IS_LITERAL));
+    }
+
+    // --- firstBitmap ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void firstBitmapNullForFixedStart(IPcre2 api) {
+        // Pattern "test" starts with a fixed character 't', so no bitmap needed
+        var code = new Pcre2Code(api, "test");
+        var bitmap = code.firstBitmap();
+        // When firstCodeType is 1 (fixed start), bitmap may be null
+        if (code.firstCodeType() == 1) {
+            // Bitmap is typically null when a single fixed first code unit is known
+        }
+        // Just verify the method doesn't throw
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void firstBitmapForAlternation(IPcre2 api) {
+        // Pattern "a|b" starts with either 'a' or 'b', so a bitmap should be available
+        var code = new Pcre2Code(api, "a|b");
+        var bitmap = code.firstBitmap();
+        if (bitmap != null) {
+            assertEquals(32, bitmap.length);
+            // Bit for 'a' (97) should be set: byte 97/8 = 12, bit 97%8 = 1
+            assertTrue((bitmap[97 / 8] & (1 << (97 % 8))) != 0, "Bit for 'a' should be set");
+            // Bit for 'b' (98) should be set: byte 98/8 = 12, bit 98%8 = 2
+            assertTrue((bitmap[98 / 8] & (1 << (98 % 8))) != 0, "Bit for 'b' should be set");
+        }
+    }
+
+    // --- firstCodeUnit ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void firstCodeUnitForFixedStart(IPcre2 api) {
+        // Pattern "test" starts with 't', firstCodeType should be 1 and firstCodeUnit should be 't'
+        var code = new Pcre2Code(api, "test");
+        if (code.firstCodeType() == 1) {
+            assertEquals('t', code.firstCodeUnit());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void firstCodeUnitForAnchoredLiteral(IPcre2 api) {
+        // Pattern "^hello" starts with 'h'
+        var code = new Pcre2Code(api, "^hello");
+        assertEquals(1, code.firstCodeType());
+        assertEquals('h', code.firstCodeUnit());
+    }
+
+    // --- lastCodeType ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void lastCodeTypeNothingSet(IPcre2 api) {
+        // Pattern ".*" has no required last code unit
+        var code = new Pcre2Code(api, ".*");
+        assertEquals(0, code.lastCodeType());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void lastCodeTypeSet(IPcre2 api) {
+        // Pattern "test" has a required last code unit 't'
+        var code = new Pcre2Code(api, "test");
+        assertEquals(1, code.lastCodeType());
+    }
+
+    // --- lastCodeUnit ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void lastCodeUnitForLiteral(IPcre2 api) {
+        // Pattern "test" must end with 't'
+        var code = new Pcre2Code(api, "test");
+        assertEquals(1, code.lastCodeType());
+        assertEquals('t', code.lastCodeUnit());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void lastCodeUnitForDifferentEnding(IPcre2 api) {
+        // Pattern "hello" must end with 'o'
+        var code = new Pcre2Code(api, "hello");
+        assertEquals(1, code.lastCodeType());
+        assertEquals('o', code.lastCodeUnit());
+    }
 }

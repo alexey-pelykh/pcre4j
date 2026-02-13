@@ -235,7 +235,22 @@ public class Pcre2Code {
         return getPatternIntInfo(IPcre2.INFO_BACKREFMAX);
     }
 
-//   TODO: PCRE2_INFO_ALLOPTIONS      Final options after compiling
+    /**
+     * Get the final options after compiling.
+     * <p>
+     * This returns the compile options as modified by any top-level option settings such as {@code (*UTF)}
+     * at the start of the pattern. In other words, it reflects the options that were actually in effect
+     * during compilation, which may differ from the original options passed to
+     * {@link #Pcre2Code(IPcre2, String, EnumSet, Pcre2CompileContext)}.
+     *
+     * @return the final compile options
+     */
+    public EnumSet<Pcre2CompileOption> allOptions() {
+        final var allOptions = getPatternIntInfo(IPcre2.INFO_ALLOPTIONS);
+        return Arrays.stream(Pcre2CompileOption.values())
+                .filter(flag -> (allOptions & flag.value()) != 0)
+                .collect(() -> EnumSet.noneOf(Pcre2CompileOption.class), EnumSet::add, EnumSet::addAll);
+    }
 
     /**
      * Get the compile options
@@ -288,8 +303,46 @@ public class Pcre2Code {
         return getPatternSizeInfo(IPcre2.INFO_FRAMESIZE);
     }
 
-//   TODO: PCRE2_INFO_EXTRAOPTIONS    Extra options that were passed in the compile context
-//   TODO: PCRE2_INFO_FIRSTBITMAP     Bitmap of first code units, or NULL
+    /**
+     * Get the extra options that were passed in the compile context.
+     *
+     * @return the extra compile options
+     */
+    public EnumSet<Pcre2CompileExtraOption> extraOptions() {
+        final var extraOptions = getPatternIntInfo(IPcre2.INFO_EXTRAOPTIONS);
+        return Arrays.stream(Pcre2CompileExtraOption.values())
+                .filter(flag -> (extraOptions & flag.value()) != 0)
+                .collect(
+                        () -> EnumSet.noneOf(Pcre2CompileExtraOption.class), EnumSet::add, EnumSet::addAll
+                );
+    }
+
+    /**
+     * Get the bitmap of first code units, or {@code null} if no bitmap is available.
+     * <p>
+     * When a pattern does not start with a specific character but PCRE2 can determine a set of possible
+     * first code units, this method returns a 256-bit (32-byte) bitmap where each set bit indicates
+     * that the corresponding code unit value may start a match.
+     * <p>
+     * A bitmap is typically available when {@link #firstCodeType()} returns 0 (no single fixed start
+     * character) and the pattern has a class or alternation at the start.
+     *
+     * @return a 32-byte array representing the 256-bit bitmap of possible first code units,
+     *         or {@code null} if no bitmap is available
+     */
+    public byte[] firstBitmap() {
+        final var where = new long[1];
+        final var error = api.patternInfo(handle, IPcre2.INFO_FIRSTBITMAP, where);
+        if (error != 0) {
+            throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, error));
+        }
+
+        if (where[0] == 0) {
+            return null;
+        }
+
+        return ((INativeMemoryAccess) api).readBytes(where[0], 32);
+    }
 
     /**
      * Get the type of start-of-match information.
@@ -307,7 +360,17 @@ public class Pcre2Code {
         return getPatternIntInfo(IPcre2.INFO_FIRSTCODETYPE);
     }
 
-//   TODO: PCRE2_INFO_FIRSTCODEUNIT   First code unit when type is 1
+    /**
+     * Get the first code unit of the compiled pattern.
+     * <p>
+     * This is meaningful only when {@link #firstCodeType()} returns 1, indicating that the pattern
+     * always starts with a specific code unit value.
+     *
+     * @return the value of the first code unit
+     */
+    public int firstCodeUnit() {
+        return getPatternIntInfo(IPcre2.INFO_FIRSTCODEUNIT);
+    }
 
     /**
      * Check if the pattern contains \C
@@ -367,10 +430,32 @@ public class Pcre2Code {
         return matchEmpty == 1;
     }
 
-//   TODO:PCRE2_INFO_LASTCODETYPE    Type of must-be-present information
-//                                0 nothing set
-//                                1 code unit is set
-//   TODO:PCRE2_INFO_LASTCODEUNIT    Last code unit when type is 1
+    /**
+     * Get the type of must-be-present information for the last code unit.
+     * <p>
+     * This indicates whether PCRE2 has determined a required last code unit for the pattern:
+     * <ul>
+     *   <li>0 - nothing set (no required last code unit)</li>
+     *   <li>1 - a last code unit is set (retrieve it with {@link #lastCodeUnit()})</li>
+     * </ul>
+     *
+     * @return the last code type (0 or 1)
+     */
+    public int lastCodeType() {
+        return getPatternIntInfo(IPcre2.INFO_LASTCODETYPE);
+    }
+
+    /**
+     * Get the last code unit of the compiled pattern.
+     * <p>
+     * This is meaningful only when {@link #lastCodeType()} returns 1, indicating that the pattern
+     * has a required last code unit value that must be present in any matching string.
+     *
+     * @return the value of the last code unit
+     */
+    public int lastCodeUnit() {
+        return getPatternIntInfo(IPcre2.INFO_LASTCODEUNIT);
+    }
 
     /**
      * Get the match limit
