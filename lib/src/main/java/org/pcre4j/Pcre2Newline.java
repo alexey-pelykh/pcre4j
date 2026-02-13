@@ -19,6 +19,9 @@ import org.pcre4j.api.IPcre2;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * The newline convention.
+ */
 public enum Pcre2Newline {
     /**
      * Carriage return only (\r)

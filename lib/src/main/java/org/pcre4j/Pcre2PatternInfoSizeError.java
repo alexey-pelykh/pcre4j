@@ -14,6 +14,9 @@
  */
 package org.pcre4j;
 
+/**
+ * An error indicating an unexpected data size for a {@link Pcre2PatternInfo} query.
+ */
 public class Pcre2PatternInfoSizeError extends RuntimeException {
 
     public Pcre2PatternInfoSizeError(Pcre2PatternInfo info, long size) {

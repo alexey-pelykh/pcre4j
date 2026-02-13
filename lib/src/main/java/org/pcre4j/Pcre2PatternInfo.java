@@ -19,6 +19,9 @@ import org.pcre4j.api.IPcre2;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * Pattern information codes for {@link Pcre2Code} introspection.
+ */
 public enum Pcre2PatternInfo {
     /**
      * Final options after compiling

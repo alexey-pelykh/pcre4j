@@ -18,6 +18,9 @@ import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
 
+/**
+ * A custom stack for JIT-compiled pattern matching.
+ */
 public class Pcre2JitStack {
 
     /**

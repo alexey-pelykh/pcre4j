@@ -24,6 +24,9 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Static utility methods for PCRE2 configuration queries, error message retrieval, and match result processing.
+ */
 public final class Pcre4jUtils {
 
     /**
