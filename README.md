@@ -70,8 +70,10 @@ The PCRE4J library provides several APIs to interact with the PCRE library:
 
 ### Quick Start with `java.util.regex`-compatible API
 
-Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
 [latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
+
+**Maven** (`pom.xml`):
 
 ```xml
 <properties>
@@ -92,6 +94,19 @@ Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version
         <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
+```
+
+**Gradle** (`build.gradle.kts`):
+
+```kotlin
+val pcre4jVersion = "..." // latest version
+
+dependencies {
+    implementation("org.pcre4j:regex:$pcre4jVersion")
+    // TODO: Select one of the following artifacts corresponding to the backend you want to use
+    implementation("org.pcre4j:jna:$pcre4jVersion")
+    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+}
 ```
 
 Proceed using the PCRE4J library in your Java code similarly like if you were using the `java.util.regex` package:
@@ -127,8 +142,10 @@ can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
 
 ### Advanced Usage via PCRE4J API
 
-Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
 [latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
+
+**Maven** (`pom.xml`):
 
 ```xml
 <properties>
@@ -149,6 +166,19 @@ Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version
         <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
+```
+
+**Gradle** (`build.gradle.kts`):
+
+```kotlin
+val pcre4jVersion = "..." // latest version
+
+dependencies {
+    implementation("org.pcre4j:lib:$pcre4jVersion")
+    // TODO: Select one of the following artifacts corresponding to the backend you want to use
+    implementation("org.pcre4j:jna:$pcre4jVersion")
+    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+}
 ```
 
 Proceed using the PCRE4J library in your Java code:
@@ -195,8 +225,10 @@ public class Usage {
 
 ### Low-Level Usage
 
-Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version}` with the
+Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
 [latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
+
+**Maven** (`pom.xml`):
 
 ```xml
 <properties>
@@ -212,6 +244,18 @@ Add the following dependencies to your `pom.xml` file (replace `${pcre4j.version
         <version>${pcre4j.version}</version>
     </dependency>
 </dependencies>
+```
+
+**Gradle** (`build.gradle.kts`):
+
+```kotlin
+val pcre4jVersion = "..." // latest version
+
+dependencies {
+    // TODO: Select one of the following artifacts corresponding to the backend you want to use
+    implementation("org.pcre4j:jna:$pcre4jVersion")
+    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+}
 ```
 
 Proceed using the `libpcre2` API in your Java code:
