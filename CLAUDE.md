@@ -14,15 +14,14 @@ PCRE4J is a Java binding for the PCRE2 (Perl Compatible Regular Expressions 2) l
 
 ```
 pcre4j/
-├── api/    → IPcre2 interface (backend contract, ~180 PCRE2 constants)
-├── lib/    → Core wrapper (Pcre2Code, contexts, enums, utilities)
+├── api/    → IPcre2 interface (backend contract, ~290 PCRE2 constants)
+├── lib/    → Core wrapper (Pcre2Code, contexts, enums, utilities, shared test fixtures)
 ├── jna/    → JNA backend (Java Native Access implementation)
-├── ffm/    → FFM backend (Foreign Functions & Memory API, Java 21+)
+├── ffm/    → FFM backend (Multi-Release JAR: Java 21 preview + Java 22+ GA)
 ├── regex/  → java.util.regex compatibility layer (Pattern, Matcher)
-└── test/   → Shared test infrastructure (abstract base tests)
 ```
 
-**Dependencies**: `api` ← `lib` ← (`jna` | `ffm`) ← `regex`
+**Dependencies**: `api` ← (`lib` | `jna` | `ffm`), (`api` + `lib`) ← `regex`
 
 ## Build Commands
 
@@ -73,9 +72,10 @@ Additional naming conventions:
 
 ## FFM Backend Notes
 
-The FFM module requires preview features (handled automatically by Gradle):
-- Compiler: `--enable-preview`
-- JVM: `--enable-preview`
+The FFM module is a Multi-Release JAR (MRJAR):
+- **Java 21 (base)**: Uses FFM as a preview feature, requires `--enable-preview` for compiler, JVM, and Javadoc
+- **Java 22+ (MRJAR overlay)**: Uses finalized FFM API, no preview flags needed
+- Gradle handles `--enable-preview` flags automatically for the Java 21 base compilation and tests
 
 ## Key Classes
 
