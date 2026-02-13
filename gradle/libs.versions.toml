@@ -1,6 +1,6 @@
 [versions]
 jna = "5.18.1"
-junit = "5.14.2"
+junit = "6.0.2"
 jreleaser = "1.22.0"
 
 [libraries]
