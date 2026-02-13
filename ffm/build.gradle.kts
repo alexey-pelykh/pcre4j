@@ -13,31 +13,14 @@
  * <https://www.gnu.org/licenses/>.
  */
 plugins {
-    `java-library`
-    checkstyle
-    `maven-publish`
-    jacoco
-}
-
-version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
+    id("pcre4j-module")
+    id("pcre4j-native-test")
 }
 
 dependencies {
     api(project(":api"))
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
     testImplementation(project(":lib"))
     testImplementation(testFixtures(project(":lib")))
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-configurations {
-    implementation {
-        resolutionStrategy.failOnVersionConflict()
-    }
 }
 
 // ============================================================
@@ -70,17 +53,6 @@ dependencies {
 //   - javadoc: must recognize preview API references
 // The java22 source set targets Java 22+ where FFM is GA, so no preview
 // flag is needed there.
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-
-    withSourcesJar()
-    withJavadocJar()
-}
 
 // Compile main (Java 21) with preview features
 tasks.compileJava {
@@ -123,27 +95,7 @@ tasks.jar {
 
 // Test with Java 21 (preview features)
 tasks.test {
-    useJUnitPlatform()
     jvmArgs("--enable-preview")
-
-    systemProperty(
-        "java.library.path", listOf(
-            providers.systemProperty("pcre2.library.path").orNull,
-            providers.systemProperty("java.library.path").orNull
-        ).joinToString(File.pathSeparator)
-    )
-
-    val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
-    if (pcre2LibraryName != null) {
-        systemProperty("pcre2.library.name", pcre2LibraryName)
-    }
-
-    val pcre2FunctionSuffix = providers.systemProperty("pcre2.function.suffix").orNull
-    if (pcre2FunctionSuffix != null) {
-        systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
-    }
-
-    finalizedBy(tasks.jacocoTestReport)
 }
 
 // ============================================================
@@ -205,23 +157,6 @@ val testJava22 by tasks.registering(Test::class) {
     classpath = files(tasks.jar.get().archiveFile) +
             testJava22Classes.output +
             configurations["testJava22ClassesRuntimeClasspath"]
-
-    systemProperty(
-        "java.library.path", listOf(
-            providers.systemProperty("pcre2.library.path").orNull,
-            providers.systemProperty("java.library.path").orNull
-        ).joinToString(File.pathSeparator)
-    )
-
-    val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
-    if (pcre2LibraryName != null) {
-        systemProperty("pcre2.library.name", pcre2LibraryName)
-    }
-
-    val pcre2FunctionSuffix = providers.systemProperty("pcre2.function.suffix").orNull
-    if (pcre2FunctionSuffix != null) {
-        systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
-    }
 }
 
 // Run both test suites during check
@@ -257,14 +192,9 @@ testJava22 {
 
 // Report for Java 21 tests (includes testJava22 execution data for aggregation)
 tasks.jacocoTestReport {
-    dependsOn(tasks.test, testJava22)
+    dependsOn(testJava22)
 
     executionData(testJava22.get())
-
-    reports {
-        xml.required = true
-        html.required = true
-    }
 }
 
 // ============================================================
@@ -297,15 +227,10 @@ tasks.withType<Javadoc> {
 // Publishing
 // ============================================================
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = project.name
-
-            pom {
-                name = "PCRE4J FFM Backend"
-                description = "PCRE4J FFM Backend"
-            }
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            name = "PCRE4J FFM Backend"
+            description = "PCRE4J FFM Backend"
         }
     }
 }
