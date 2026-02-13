@@ -340,6 +340,106 @@ public class Pcre2MatchDataTests {
         assertThrows(IndexOutOfBoundsException.class, () -> matchData.getSubstringLength("nonexistent"));
     }
 
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getSubstringByNameUnsetGroupThrows(IPcre2 api) {
+        // (?<first>a)|(?<second>b) - when "a" matches, named group "second" is unset
+        var code = new Pcre2Code(api, "(?<first>a)|(?<second>b)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("a", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstring("second"));
+    }
+
+    // --- copySubstring(int, ByteBuffer) error paths ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void copySubstringByNumberUnsetGroupThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(a)|(b)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("a", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        assertThrows(IllegalStateException.class, () ->
+                matchData.copySubstring(2, ByteBuffer.allocateDirect(10)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void copySubstringByNumberUndersizedBufferThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(hello)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("hello", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        // "hello" is 5 bytes + null terminator = 6 bytes needed, provide only 2
+        assertThrows(IllegalStateException.class, () ->
+                matchData.copySubstring(1, ByteBuffer.allocateDirect(2)));
+    }
+
+    // --- copySubstring(String, ByteBuffer) error paths ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void copySubstringByNameUnsetGroupThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<first>a)|(?<second>b)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("a", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        assertThrows(IllegalStateException.class, () ->
+                matchData.copySubstring("second", ByteBuffer.allocateDirect(10)));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void copySubstringByNameUndersizedBufferThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<word>hello)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("hello", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        // "hello" is 5 bytes + null terminator = 6 bytes needed, provide only 2
+        assertThrows(IllegalStateException.class, () ->
+                matchData.copySubstring("word", ByteBuffer.allocateDirect(2)));
+    }
+
+    // --- getSubstringLength error paths ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getSubstringLengthByNumberUnsetGroupThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(a)|(b)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("a", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstringLength(2));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getSubstringLengthByNameUnsetGroupThrows(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<first>a)|(?<second>b)");
+        var matchData = new Pcre2MatchData(code);
+        code.match("a", 0, EnumSet.of(Pcre2MatchOption.COPY_MATCHED_SUBJECT), matchData, null);
+        assertThrows(IllegalStateException.class, () -> matchData.getSubstringLength("second"));
+    }
+
+    // --- Constructor variants ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithExplicitOvecsize(IPcre2 api) {
+        var matchData = new Pcre2MatchData(api, 5);
+        assertNotNull(matchData);
+        assertTrue(matchData.handle() != 0);
+        assertTrue(matchData.size() > 0);
+        assertEquals(api, matchData.api());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorNullApiThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () -> new Pcre2MatchData(null, 10));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorNullCodeThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () -> new Pcre2MatchData((Pcre2Code) null));
+    }
+
     // --- MatchData from pattern ---
 
     @ParameterizedTest
