@@ -222,6 +222,52 @@ public class MatcherResultsTests {
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void resultsAfterReset(IPcre2 api) {
+        var regex = "\\w+";
+        var input = "one two three";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        // Consume some matches
+        javaMatcher.find();
+        pcre4jMatcher.find();
+
+        // Reset and verify results() starts from beginning
+        javaMatcher.reset();
+        pcre4jMatcher.reset();
+
+        var javaResults = javaMatcher.results().toList();
+        var pcre4jResults = pcre4jMatcher.results().toList();
+
+        assertEquals(javaResults.size(), pcre4jResults.size());
+        assertEquals(3, pcre4jResults.size());
+        for (int i = 0; i < javaResults.size(); i++) {
+            assertEquals(javaResults.get(i).group(), pcre4jResults.get(i).group());
+            assertEquals(javaResults.get(i).start(), pcre4jResults.get(i).start());
+            assertEquals(javaResults.get(i).end(), pcre4jResults.get(i).end());
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void resultsWithNamedGroups(IPcre2 api) {
+        var regex = "(?<word>\\w+)";
+        var input = "hello world";
+        var javaMatcher = java.util.regex.Pattern.compile(regex).matcher(input);
+        var pcre4jMatcher = Pattern.compile(api, regex).matcher(input);
+
+        var javaResults = javaMatcher.results().toList();
+        var pcre4jResults = pcre4jMatcher.results().toList();
+
+        assertEquals(javaResults.size(), pcre4jResults.size());
+        for (int i = 0; i < javaResults.size(); i++) {
+            assertEquals(javaResults.get(i).group(), pcre4jResults.get(i).group());
+            assertEquals(javaResults.get(i).group(1), pcre4jResults.get(i).group(1));
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void resultsCount(IPcre2 api) {
         var regex = "a";
         var input = "abracadabra";
