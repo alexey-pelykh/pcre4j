@@ -17,6 +17,26 @@ library author [Philip Hazel](https://github.com/PhilipHazel) and its contributo
 
 The source code is hosted on [GitHub](https://github.com/alexey-pelykh/pcre4j).
 
+## Why PCRE4J?
+
+Java's built-in `java.util.regex` covers many use cases, but PCRE2 offers capabilities that go
+beyond what the standard library provides:
+
+- **Richer regex syntax** — PCRE2 supports features absent from `java.util.regex`, including
+  atomic groups, `\K` (match reset), recursive patterns, callouts, and the DFA matching
+  algorithm.
+- **JIT compilation** — PCRE2's JIT compiler translates patterns into native machine code,
+  delivering significant speedups for pattern-heavy workloads.
+- **Built-in ReDoS protection** — configurable match, depth, and heap limits let you cap
+  resource usage per match, guarding against catastrophic backtracking on untrusted input.
+- **Cross-system consistency** — when your regex behavior must match other PCRE-based systems
+  (Nginx, PHP, R, grep -P, and many more), using the same engine eliminates subtle
+  dialect differences.
+- **Drop-in `java.util.regex` API** — the `regex` module mirrors `Pattern` and `Matcher`, so
+  you can switch engines without rewriting application code.
+- **Full PCRE2 API access** — 100% of the PCRE2 C API is exposed, so advanced users are never
+  limited by the binding layer.
+
 ## Module Architecture
 
 PCRE4J is organized into layered modules published as separate Maven artifacts under `org.pcre4j`:
