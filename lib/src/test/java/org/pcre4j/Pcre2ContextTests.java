@@ -202,7 +202,7 @@ public class Pcre2ContextTests {
         ctx.setParensNestLimit(2);
 
         // A pattern with deeply nested parentheses should fail with strict limit
-        assertThrows(Pcre2CompileError.class, () ->
+        assertThrows(Pcre2CompileException.class, () ->
                 new Pcre2Code(api, "((((a))))", null, ctx));
     }
 
@@ -213,7 +213,7 @@ public class Pcre2ContextTests {
         ctx.setMaxPatternLength(3);
 
         // A pattern longer than 3 characters should fail
-        assertThrows(Pcre2CompileError.class, () ->
+        assertThrows(Pcre2CompileException.class, () ->
                 new Pcre2Code(api, "test", null, ctx));
     }
 

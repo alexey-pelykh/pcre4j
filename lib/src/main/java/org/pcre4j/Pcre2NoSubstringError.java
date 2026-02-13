@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -15,15 +15,20 @@
 package org.pcre4j;
 
 /**
- * An error indicating that a named substring does not exist
+ * An error indicating that a named substring does not exist.
+ *
+ * @deprecated Use {@link Pcre2NoSubstringException} instead. This class will be removed in a future release.
  */
-public class Pcre2NoSubstringError extends RuntimeException {
+@Deprecated(forRemoval = true)
+public class Pcre2NoSubstringError extends Pcre2NoSubstringException {
 
     /**
      * Create a new no substring error.
      *
      * @param message the error message
+     * @deprecated Use {@link Pcre2NoSubstringException#Pcre2NoSubstringException(String, int)} instead.
      */
+    @Deprecated(forRemoval = true)
     public Pcre2NoSubstringError(String message) {
         this(message, null);
     }
@@ -33,9 +38,10 @@ public class Pcre2NoSubstringError extends RuntimeException {
      *
      * @param message the error message
      * @param cause   the cause of the error
+     * @deprecated Use {@link Pcre2NoSubstringException#Pcre2NoSubstringException(String, int, Throwable)} instead.
      */
+    @Deprecated(forRemoval = true)
     public Pcre2NoSubstringError(String message, Throwable cause) {
-        super(message, cause);
+        super(message, 0, cause);
     }
-
 }

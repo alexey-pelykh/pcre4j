@@ -19,8 +19,8 @@ import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2MatchData;
 import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre2NoSubstringError;
-import org.pcre4j.Pcre2NoUniqueSubstringError;
+import org.pcre4j.Pcre2NoSubstringException;
+import org.pcre4j.Pcre2NoUniqueSubstringException;
 import org.pcre4j.api.IPcre2;
 
 import java.nio.ByteBuffer;
@@ -914,7 +914,7 @@ public interface Pcre2SubstringContractTest<T extends IPcre2> {
                 null
         );
 
-        assertThrows(Pcre2NoSubstringError.class, () -> code.groupNumberFromName("nonexistent"));
+        assertThrows(Pcre2NoSubstringException.class, () -> code.groupNumberFromName("nonexistent"));
     }
 
     @Test
@@ -939,7 +939,7 @@ public interface Pcre2SubstringContractTest<T extends IPcre2> {
                 null
         );
 
-        assertThrows(Pcre2NoUniqueSubstringError.class, () -> code.groupNumberFromName("num"));
+        assertThrows(Pcre2NoUniqueSubstringException.class, () -> code.groupNumberFromName("num"));
     }
 
     @Test
@@ -1032,7 +1032,7 @@ public interface Pcre2SubstringContractTest<T extends IPcre2> {
                 null
         );
 
-        assertThrows(Pcre2NoSubstringError.class, () -> code.scanNametable("nonexistent"));
+        assertThrows(Pcre2NoSubstringException.class, () -> code.scanNametable("nonexistent"));
     }
 
     @Test

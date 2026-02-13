@@ -16,7 +16,7 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileContext;
-import org.pcre4j.Pcre2CompileError;
+import org.pcre4j.Pcre2CompileException;
 import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2JitCode;
 import org.pcre4j.Pcre2JitOption;
@@ -246,7 +246,7 @@ public class Pattern {
                         compileContext
                 );
             }
-        } catch (Pcre2CompileError e) {
+        } catch (Pcre2CompileException e) {
             throw new PatternSyntaxException(e.message(), e.pattern(), (int) e.offset());
         }
 

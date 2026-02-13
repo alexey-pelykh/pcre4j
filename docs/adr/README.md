@@ -16,3 +16,4 @@ format: Status, Context, Decision, Consequences.
 | [0005](0005-contract-testing-via-shared-test-fixtures.md) | Contract Testing via Shared Test Fixtures | Accepted |
 | [0006](0006-three-pattern-compilation-in-regex-module.md) | Three-Pattern Compilation in Regex Module | Accepted |
 | [0007](0007-redos-protection-via-match-limits.md) | ReDoS Protection via Match Limits | Accepted |
+| [0008](0008-unified-exception-hierarchy.md) | Unified Exception Hierarchy | Accepted |

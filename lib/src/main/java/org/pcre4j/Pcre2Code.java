@@ -149,7 +149,9 @@ public class Pcre2Code {
                 compileContext != null ? compileContext.handle : 0
         );
         if (handle == 0) {
-            throw new Pcre2CompileError(pattern, erroroffset[0], Pcre4jUtils.getErrorMessage(api, errorcode[0]));
+            throw new Pcre2CompileException(
+                    pattern, erroroffset[0], Pcre4jUtils.getErrorMessage(api, errorcode[0]), errorcode[0]
+            );
         }
 
         this.api = api;
@@ -166,7 +168,7 @@ public class Pcre2Code {
     private int getPatternIntInfo(int info) {
         final var size = api.patternInfo(handle, info);
         if (size != 4) {
-            throw new Pcre2PatternInfoSizeError(Pcre2PatternInfo.valueOf(info).orElseThrow(), size);
+            throw new Pcre2PatternInfoSizeException(Pcre2PatternInfo.valueOf(info).orElseThrow(), size);
         }
 
         final var where = new int[1];
@@ -205,7 +207,7 @@ public class Pcre2Code {
             return where[0];
         }
 
-        throw new Pcre2PatternInfoSizeError(Pcre2PatternInfo.valueOf(info).orElseThrow(), infoSize);
+        throw new Pcre2PatternInfoSizeException(Pcre2PatternInfo.valueOf(info).orElseThrow(), infoSize);
     }
 
     /**
@@ -562,9 +564,9 @@ public class Pcre2Code {
      * @param name the name of the capturing group
      * @return the group number (1-based index)
      * @throws IllegalArgumentException if name is null
-     * @throws Pcre2NoSubstringError if the name does not correspond to any capturing group
-     * @throws Pcre2NoUniqueSubstringError if the name is not unique (when using the {@code (?J)} option
-     *                                     for duplicate names)
+     * @throws Pcre2NoSubstringException if the name does not correspond to any capturing group
+     * @throws Pcre2NoUniqueSubstringException if the name is not unique (when using the {@code (?J)} option
+     *                                         for duplicate names)
      */
     public int groupNumberFromName(String name) {
         if (name == null) {
@@ -573,10 +575,14 @@ public class Pcre2Code {
 
         final var result = api.substringNumberFromName(handle, name);
         if (result == IPcre2.ERROR_NOSUBSTRING) {
-            throw new Pcre2NoSubstringError("Named group '" + name + "' does not exist");
+            throw new Pcre2NoSubstringException(
+                    "Named group '" + name + "' does not exist", IPcre2.ERROR_NOSUBSTRING
+            );
         }
         if (result == IPcre2.ERROR_NOUNIQUESUBSTRING) {
-            throw new Pcre2NoUniqueSubstringError("Named group '" + name + "' is not unique");
+            throw new Pcre2NoUniqueSubstringException(
+                    "Named group '" + name + "' is not unique", IPcre2.ERROR_NOUNIQUESUBSTRING
+            );
         }
         if (result < 0) {
             throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, result));
@@ -595,7 +601,7 @@ public class Pcre2Code {
      * @param name the name of the capturing group to look up
      * @return an array of group numbers (1-based indices) associated with the name
      * @throws IllegalArgumentException if name is null
-     * @throws Pcre2NoSubstringError    if the name does not correspond to any capturing group
+     * @throws Pcre2NoSubstringException if the name does not correspond to any capturing group
      */
     public int[] scanNametable(String name) {
         if (name == null) {
@@ -606,7 +612,9 @@ public class Pcre2Code {
         final long[] last = new long[1];
         final var entrySize = api.substringNametableScan(handle, name, first, last);
         if (entrySize == IPcre2.ERROR_NOSUBSTRING) {
-            throw new Pcre2NoSubstringError("Named group '" + name + "' does not exist");
+            throw new Pcre2NoSubstringException(
+                    "Named group '" + name + "' does not exist", IPcre2.ERROR_NOSUBSTRING
+            );
         }
         if (entrySize < 0) {
             throw new IllegalStateException(Pcre4jUtils.getErrorMessage(api, entrySize));
@@ -750,7 +758,7 @@ public class Pcre2Code {
         }
 
         if (result < 0) {
-            throw new Pcre2SubstituteError(Pcre4jUtils.getErrorMessage(api, result));
+            throw new Pcre2SubstituteException(Pcre4jUtils.getErrorMessage(api, result), result);
         }
 
         // Extract the result string from the buffer

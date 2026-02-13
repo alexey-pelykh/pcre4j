@@ -382,7 +382,7 @@ public class Pcre2CodePatternInfoTests {
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void groupNumberFromNameNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
-        assertThrows(Pcre2NoSubstringError.class, () -> code.groupNumberFromName("nonexistent"));
+        assertThrows(Pcre2NoSubstringException.class, () -> code.groupNumberFromName("nonexistent"));
     }
 
     @ParameterizedTest
@@ -390,7 +390,7 @@ public class Pcre2CodePatternInfoTests {
     void groupNumberFromNameDuplicateThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)|(?<name>b)",
                 EnumSet.of(Pcre2CompileOption.DUPNAMES));
-        assertThrows(Pcre2NoUniqueSubstringError.class, () -> code.groupNumberFromName("name"));
+        assertThrows(Pcre2NoUniqueSubstringException.class, () -> code.groupNumberFromName("name"));
     }
 
     // --- scanNametable ---
@@ -425,7 +425,7 @@ public class Pcre2CodePatternInfoTests {
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void scanNametableNonexistentThrows(IPcre2 api) {
         var code = new Pcre2Code(api, "(?<name>a)");
-        assertThrows(Pcre2NoSubstringError.class, () -> code.scanNametable("nonexistent"));
+        assertThrows(Pcre2NoSubstringException.class, () -> code.scanNametable("nonexistent"));
     }
 
     // --- nameTable with multi-byte (Unicode) group names ---

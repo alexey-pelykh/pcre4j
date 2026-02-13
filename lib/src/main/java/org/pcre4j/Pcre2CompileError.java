@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -16,28 +16,11 @@ package org.pcre4j;
 
 /**
  * An error that occurs when a pattern fails to compile.
+ *
+ * @deprecated Use {@link Pcre2CompileException} instead. This class will be removed in a future release.
  */
-public class Pcre2CompileError extends IllegalArgumentException {
-
-    /**
-     * The size of the region around the error to show
-     */
-    private static final int PATTERN_REGION_SIZE = 3;
-
-    /**
-     * The pattern that caused the error
-     */
-    private final String pattern;
-
-    /**
-     * The offset of the error in the pattern
-     */
-    private final long offset;
-
-    /**
-     * The error message
-     */
-    private final String message;
+@Deprecated(forRemoval = true)
+public class Pcre2CompileError extends Pcre2CompileException {
 
     /**
      * Create a new pattern compilation error.
@@ -45,7 +28,9 @@ public class Pcre2CompileError extends IllegalArgumentException {
      * @param pattern the pattern
      * @param offset  the offset of the error in the pattern
      * @param message the error message
+     * @deprecated Use {@link Pcre2CompileException#Pcre2CompileException(String, long, String, int)} instead.
      */
+    @Deprecated(forRemoval = true)
     public Pcre2CompileError(String pattern, long offset, String message) {
         this(pattern, offset, message, null);
     }
@@ -57,61 +42,11 @@ public class Pcre2CompileError extends IllegalArgumentException {
      * @param offset  the offset of the error in the pattern
      * @param message the error message
      * @param cause   the cause of the error
+     * @deprecated Use {@link Pcre2CompileException#Pcre2CompileException(String, long, String, int, Throwable)}
+     *     instead.
      */
+    @Deprecated(forRemoval = true)
     public Pcre2CompileError(String pattern, long offset, String message, Throwable cause) {
-        super("Error in pattern at %d \"%s\": %s".formatted(offset, getPatternRegion(pattern, offset), message), cause);
-        this.pattern = pattern;
-        this.offset = offset;
-        this.message = message;
+        super(pattern, offset, message, 0, cause);
     }
-
-    /**
-     * Get the region around the error in the pattern.
-     *
-     * @param pattern the pattern
-     * @param offset  the offset of the error in the pattern
-     * @return the region around the error
-     */
-    private static String getPatternRegion(String pattern, long offset) {
-        final var since = Math.max(0, offset - PATTERN_REGION_SIZE);
-        final var until = Math.min(pattern.length(), offset + PATTERN_REGION_SIZE);
-
-        var region = pattern.substring((int) since, (int) until);
-        if (since > 0) {
-            region = "…" + region;
-        }
-        if (until < pattern.length()) {
-            region = region + "…";
-        }
-
-        return region;
-    }
-
-    /**
-     * Get the pattern that caused the error.
-     *
-     * @return the pattern
-     */
-    public String pattern() {
-        return pattern;
-    }
-
-    /**
-     * Get the offset of the error in the pattern.
-     *
-     * @return the offset
-     */
-    public long offset() {
-        return offset;
-    }
-
-    /**
-     * Get the error message.
-     *
-     * @return the error message
-     */
-    public String message() {
-        return message;
-    }
-
 }
