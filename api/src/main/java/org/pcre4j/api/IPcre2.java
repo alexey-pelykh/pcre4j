@@ -1776,6 +1776,11 @@ public interface IPcre2 {
      * The memory for the decoded patterns is obtained using the general context's memory management
      * functions (or {@code malloc()} if no context is provided). Each decoded pattern must be freed
      * separately using {@link #codeFree}.
+     * <p>
+     * <b>Security warning:</b> The serialized data is only subject to simple consistency checking, not complete
+     * validation. This function is intended for use with trusted data from within the same application. Do not
+     * deserialize data from untrusted or external sources, as corrupted or malicious input may cause undefined
+     * behavior, including reading beyond the end of the provided byte stream.
      *
      * @param codes          an array to receive the decoded compiled pattern handles
      * @param numberOfCodes  the number of slots available in the codes array (must be positive)
