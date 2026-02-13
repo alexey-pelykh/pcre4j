@@ -17,7 +17,11 @@ package org.pcre4j.test;
 import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -405,6 +409,268 @@ public interface Pcre2MiscContractTest<T extends IPcre2> {
 
         // Test 2: Create and free with null tables pointer (should be no-op)
         api.maketablesFree(0, 0);
+    }
+
+    @Test
+    default void testPatternInfoWithLongOutput() {
+        var api = getApi();
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Compile a pattern to query info from
+        final var code = api.compile("(a)(b)(c)", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        // Test INFO_FRAMESIZE with long[] output
+        final var frameSize = new long[1];
+        final var frameSizeResult = api.patternInfo(code, IPcre2.INFO_FRAMESIZE, frameSize);
+        assertEquals(0, frameSizeResult, "patternInfo(INFO_FRAMESIZE) should return 0 on success");
+        assertTrue(frameSize[0] > 0, "Frame size should be positive");
+
+        // Test INFO_SIZE with long[] output
+        final var size = new long[1];
+        final var sizeResult = api.patternInfo(code, IPcre2.INFO_SIZE, size);
+        assertEquals(0, sizeResult, "patternInfo(INFO_SIZE) should return 0 on success");
+        assertTrue(size[0] > 0, "Compiled pattern size should be positive");
+
+        api.codeFree(code);
+    }
+
+    @Test
+    default void testPatternInfoWithByteBufferOutput() {
+        var api = getApi();
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        // Compile a pattern with named capturing groups to produce a nametable
+        final var code = api.compile("(?<first>a)(?<second>b)", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern with named groups");
+
+        // Query the name count
+        final var nameCount = new int[1];
+        final var nameCountResult = api.patternInfo(code, IPcre2.INFO_NAMECOUNT, nameCount);
+        assertEquals(0, nameCountResult, "patternInfo(INFO_NAMECOUNT) should return 0 on success");
+        assertEquals(2, nameCount[0], "Pattern should have 2 named groups");
+
+        // Query the name entry size (in code units)
+        final var nameEntrySize = new int[1];
+        final var nameEntrySizeResult = api.patternInfo(code, IPcre2.INFO_NAMEENTRYSIZE, nameEntrySize);
+        assertEquals(0, nameEntrySizeResult, "patternInfo(INFO_NAMEENTRYSIZE) should return 0 on success");
+        assertTrue(nameEntrySize[0] > 0, "Name entry size should be positive");
+
+        // Calculate the nametable byte size: nameCount * nameEntrySize * codeUnitWidth
+        // Use a generous buffer to accommodate any code unit width (1, 2, or 4 bytes)
+        final var bufferSize = nameCount[0] * nameEntrySize[0] * 4;
+
+        // Query the nametable with ByteBuffer output
+        final var buffer = ByteBuffer.allocateDirect(bufferSize);
+        buffer.order(ByteOrder.nativeOrder());
+        final var nametableResult = api.patternInfo(code, IPcre2.INFO_NAMETABLE, buffer);
+        assertEquals(0, nametableResult, "patternInfo(INFO_NAMETABLE) should return 0 on success");
+
+        // The nametable contains binary data with embedded group names.
+        // Verify we can find both group names by scanning the raw bytes for ASCII sequences.
+        final var nameBytes = new byte[bufferSize];
+        buffer.rewind();
+        buffer.get(nameBytes);
+
+        boolean foundFirst = false;
+        boolean foundSecond = false;
+        for (int i = 0; i < nameBytes.length; i++) {
+            if (nameBytes[i] == 'f' && i + 4 < nameBytes.length
+                    && nameBytes[i + 1] == 'i' && nameBytes[i + 2] == 'r'
+                    && nameBytes[i + 3] == 's' && nameBytes[i + 4] == 't') {
+                foundFirst = true;
+            }
+            if (nameBytes[i] == 's' && i + 5 < nameBytes.length
+                    && nameBytes[i + 1] == 'e' && nameBytes[i + 2] == 'c'
+                    && nameBytes[i + 3] == 'o' && nameBytes[i + 4] == 'n'
+                    && nameBytes[i + 5] == 'd') {
+                foundSecond = true;
+            }
+        }
+        assertTrue(foundFirst, "Nametable should contain 'first'");
+        assertTrue(foundSecond, "Nametable should contain 'second'");
+
+        api.codeFree(code);
+    }
+
+    @Test
+    default void testPatternInfoConsistencyAcrossOverloads() {
+        var api = getApi();
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        final var code = api.compile("(a)(b)(c)", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Failed to compile pattern");
+
+        // Query capture count via int[] overload
+        final var captureCountInt = new int[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_CAPTURECOUNT, captureCountInt),
+                "patternInfo with int[] should succeed");
+        assertEquals(3, captureCountInt[0], "Capture count should be 3");
+
+        // Query INFO_SIZE via long[] overload (returns the compiled pattern size)
+        final var sizeFromLong = new long[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_SIZE, sizeFromLong),
+                "patternInfo with long[] should succeed");
+        assertTrue(sizeFromLong[0] > 0, "Compiled pattern size from long[] should be positive");
+
+        // Query INFO_SIZE via int[] overload (also returns the compiled pattern size, truncated to int)
+        final var sizeFromInt = new int[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_SIZE, sizeFromInt),
+                "patternInfo with int[] should succeed");
+        assertTrue(sizeFromInt[0] > 0, "Compiled pattern size from int[] should be positive");
+
+        // Both typed overloads should report the same value
+        assertEquals(sizeFromInt[0], (int) sizeFromLong[0],
+                "Compiled pattern size from int[] and long[] overloads should match");
+
+        // Query INFO_FRAMESIZE via long[] overload
+        final var frameSizeFromLong = new long[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_FRAMESIZE, frameSizeFromLong),
+                "patternInfo(INFO_FRAMESIZE) with long[] should succeed");
+        assertTrue(frameSizeFromLong[0] > 0, "Frame size from long[] should be positive");
+
+        // Query INFO_FRAMESIZE via int[] overload
+        final var frameSizeFromInt = new int[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_FRAMESIZE, frameSizeFromInt),
+                "patternInfo(INFO_FRAMESIZE) with int[] should succeed");
+        assertTrue(frameSizeFromInt[0] > 0, "Frame size from int[] should be positive");
+
+        // Both overloads should agree
+        assertEquals(frameSizeFromInt[0], (int) frameSizeFromLong[0],
+                "Frame size from int[] and long[] overloads should match");
+
+        api.codeFree(code);
+    }
+
+    @Test
+    default void testGeneralContextCopy() {
+        var api = getApi();
+
+        // Create a general context
+        final var gcontext = api.generalContextCreate(0, 0, 0);
+        assertTrue(gcontext != 0, "General context creation should succeed");
+
+        // Copy the general context
+        final var gcontextCopy = api.generalContextCopy(gcontext);
+        assertTrue(gcontextCopy != 0, "General context copy should succeed");
+        assertNotEquals(gcontext, gcontextCopy, "Copy should be a different handle");
+
+        // Verify the copy works by using it to create a compile context
+        final var ccontext = api.compileContextCreate(gcontextCopy);
+        assertTrue(ccontext != 0, "Should be able to create compile context from copied general context");
+
+        api.compileContextFree(ccontext);
+        api.generalContextFree(gcontextCopy);
+        api.generalContextFree(gcontext);
+    }
+
+    @Test
+    default void testCompileContextCopy() {
+        var api = getApi();
+
+        // Create a compile context and set newline to CRLF
+        final var ccontext = api.compileContextCreate(0);
+        assertTrue(ccontext != 0, "Compile context creation should succeed");
+
+        assertEquals(0, api.setNewline(ccontext, IPcre2.NEWLINE_CRLF),
+                "setNewline should return 0 on success");
+
+        // Copy the compile context
+        final var ccontextCopy = api.compileContextCopy(ccontext);
+        assertTrue(ccontextCopy != 0, "Compile context copy should succeed");
+        assertNotEquals(ccontext, ccontextCopy, "Copy should be a different handle");
+
+        // Verify the copy has the same newline setting by compiling a pattern and checking INFO_NEWLINE
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        final var code = api.compile("a.b", 0, errorcode, erroroffset, ccontextCopy);
+        assertTrue(code != 0, "Pattern compilation with copied compile context should succeed");
+
+        final var newline = new int[1];
+        assertEquals(0, api.patternInfo(code, IPcre2.INFO_NEWLINE, newline),
+                "patternInfo(INFO_NEWLINE) should succeed");
+        assertEquals(IPcre2.NEWLINE_CRLF, newline[0],
+                "Copied compile context should preserve CRLF newline setting");
+
+        api.codeFree(code);
+        api.compileContextFree(ccontextCopy);
+        api.compileContextFree(ccontext);
+    }
+
+    @Test
+    default void testMatchContextCopy() {
+        var api = getApi();
+
+        // Create a match context and set a match limit
+        final var mcontext = api.matchContextCreate(0);
+        assertTrue(mcontext != 0, "Match context creation should succeed");
+
+        assertEquals(0, api.setMatchLimit(mcontext, 5000),
+                "setMatchLimit should return 0 on success");
+
+        // Copy the match context
+        final var mcontextCopy = api.matchContextCopy(mcontext);
+        assertTrue(mcontextCopy != 0, "Match context copy should succeed");
+        assertNotEquals(mcontext, mcontextCopy, "Copy should be a different handle");
+
+        // Verify the copied context works for matching
+        final var errorcode = new int[1];
+        final var erroroffset = new long[1];
+
+        final var code = api.compile("hello", 0, errorcode, erroroffset, 0);
+        assertTrue(code != 0, "Pattern compilation should succeed");
+
+        final var matchData = api.matchDataCreateFromPattern(code, 0);
+        assertTrue(matchData != 0, "Match data creation should succeed");
+
+        final var result = api.match(code, "hello world", 0, 0, matchData, mcontextCopy);
+        assertTrue(result > 0, "Match should succeed with copied match context");
+
+        api.matchDataFree(matchData);
+        api.codeFree(code);
+        api.matchContextFree(mcontextCopy);
+        api.matchContextFree(mcontext);
+    }
+
+    @Test
+    default void testConvertContextCopy() {
+        var api = getApi();
+
+        // Create a convert context
+        final var cvcontext = api.convertContextCreate(0);
+        assertTrue(cvcontext != 0, "Convert context creation should succeed");
+
+        // Set a glob escape character
+        assertEquals(0, api.setGlobEscape(cvcontext, '\\'),
+                "setGlobEscape should return 0 on success");
+
+        // Copy the convert context
+        final var cvcontextCopy = api.convertContextCopy(cvcontext);
+        assertTrue(cvcontextCopy != 0, "Convert context copy should succeed");
+        assertNotEquals(cvcontext, cvcontextCopy, "Copy should be a different handle");
+
+        // Verify the copy works by using it for pattern conversion
+        final var buffer = new long[]{0};
+        final var blength = new long[]{0};
+
+        final var convertResult = api.patternConvert(
+                "*.txt",
+                IPcre2.CONVERT_GLOB,
+                buffer,
+                blength,
+                cvcontextCopy
+        );
+        assertEquals(0, convertResult, "Pattern conversion should succeed with copied convert context");
+        assertTrue(buffer[0] != 0, "Buffer should contain a pointer");
+        assertTrue(blength[0] > 0, "Pattern length should be positive");
+
+        api.convertedPatternFree(buffer[0]);
+        api.convertContextFree(cvcontextCopy);
+        api.convertContextFree(cvcontext);
     }
 
     @Test
