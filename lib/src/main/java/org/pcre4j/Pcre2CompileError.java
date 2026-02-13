@@ -14,6 +14,9 @@
  */
 package org.pcre4j;
 
+/**
+ * An error that occurs when a pattern fails to compile.
+ */
 public class Pcre2CompileError extends IllegalArgumentException {
 
     /**

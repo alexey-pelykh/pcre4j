@@ -18,6 +18,9 @@ import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
 
+/**
+ * A match context for controlling pattern matching settings.
+ */
 public class Pcre2MatchContext {
 
     /**

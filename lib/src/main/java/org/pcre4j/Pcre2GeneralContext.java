@@ -18,6 +18,9 @@ import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
 
+/**
+ * A general context for custom memory management functions.
+ */
 public class Pcre2GeneralContext {
 
     /**

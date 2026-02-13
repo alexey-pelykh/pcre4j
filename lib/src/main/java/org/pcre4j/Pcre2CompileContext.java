@@ -19,6 +19,9 @@ import org.pcre4j.api.IPcre2;
 import java.lang.ref.Cleaner;
 import java.util.EnumSet;
 
+/**
+ * A compile context for controlling pattern compilation settings.
+ */
 public class Pcre2CompileContext {
 
     /**

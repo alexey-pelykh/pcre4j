@@ -19,6 +19,9 @@ import org.pcre4j.api.IPcre2;
 import java.util.Arrays;
 import java.util.Optional;
 
+/**
+ * JIT compilation options for {@link Pcre2JitCode}
+ */
 public enum Pcre2JitOption {
     /**
      * Compile code for full matching
