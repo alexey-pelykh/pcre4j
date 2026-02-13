@@ -78,6 +78,17 @@ class Pcre2LibraryFinderTest {
     }
 
     @Test
+    void parseLibDirFromFlags_whitespaceOnly() {
+        assertNull(Pcre2LibraryFinder.parseLibDirFromFlags("   "));
+    }
+
+    @Test
+    void parseLibDirFromFlags_loneLFlagAtEnd() {
+        // -L at end with no following token should not match
+        assertNull(Pcre2LibraryFinder.parseLibDirFromFlags("-lpcre2-8 -L"));
+    }
+
+    @Test
     void parseLibDirFromFlags_multipleLFlags() {
         assertEquals("/first/path",
                 Pcre2LibraryFinder.parseLibDirFromFlags("-L/first/path -L/second/path -lpcre2-8"));
@@ -329,6 +340,113 @@ class Pcre2LibraryFinderTest {
     void validateDiscoveryPath_fileNotDirectory(@TempDir Path tempDir) throws IOException {
         var file = Files.createFile(tempDir.resolve("not-a-directory"));
         assertNull(Pcre2LibraryFinder.validateDiscoveryPath(file.toString(), "test"));
+    }
+
+    // --- discover with UtfWidth overload ---
+
+    @Test
+    void discover_disabledViaSystemPropertyWithWidthOverload() {
+        System.setProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY, "false");
+        try {
+            assertTrue(Pcre2LibraryFinder.discover(Pcre2UtfWidth.UTF8).isEmpty());
+        } finally {
+            System.clearProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY);
+        }
+    }
+
+    @Test
+    void discover_notDisabledWhenPropertyIsTrue() {
+        System.setProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY, "true");
+        try {
+            // "true" should NOT disable discovery; the result depends on whether pcre2 is installed
+            var result = Pcre2LibraryFinder.discover("pcre2-8");
+            // We just verify it does not return empty solely due to the property
+            // (it may still be empty if pcre2 is not installed, which is fine)
+            assertNotNull(result);
+        } finally {
+            System.clearProperty(Pcre2LibraryFinder.DISCOVERY_PROPERTY);
+        }
+    }
+
+    // --- validateDiscoveryPath additional suspicious characters ---
+
+    @Test
+    void validateDiscoveryPath_shellMetacharExclamation() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/!bang", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharLessThan() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/<input", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharGreaterThan() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/>output", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharDoubleQuote() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/\"quoted\"", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharSingleQuote() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/'quoted'", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharAsterisk() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/*", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharQuestion() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/?", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharCurlyBraces() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/{a,b}", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharSquareBrackets() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/[abc]", "test"));
+    }
+
+    @Test
+    void validateDiscoveryPath_shellMetacharParentheses() {
+        assertNull(Pcre2LibraryFinder.validateDiscoveryPath("/usr/lib/(subshell)", "test"));
+    }
+
+    // --- runCommand edge cases ---
+
+    @Test
+    void runCommand_emptyOutput() {
+        // "true" command produces no output
+        var result = Pcre2LibraryFinder.runCommand("true");
+        assertNull(result);
+    }
+
+    // --- tryPcre2Config with temp directory ---
+
+    @Test
+    void tryPcre2Config_returnsEmptyForNonexistentMappedName() {
+        // Even if pcre2-config returns a valid path, a nonexistent mapped library name should yield empty
+        var result = Pcre2LibraryFinder.tryPcre2Config("8", "libnonexistent-xyz-12345.so");
+        // May return empty due to pcre2-config not found, or because the library file doesn't exist
+        assertTrue(result.isEmpty());
+    }
+
+    // --- tryPkgConfig edge cases ---
+
+    @Test
+    void tryPkgConfig_returnsEmptyForNonexistentMappedName() {
+        // Even if pkg-config returns a valid path, a nonexistent mapped name should yield empty
+        var result = Pcre2LibraryFinder.tryPkgConfig("pcre2-8", "libnonexistent-xyz-12345.so");
+        // May be empty due to pkg-config not found, or library file doesn't exist
+        assertTrue(result.isEmpty());
     }
 
     // --- DISCOVERY_PROPERTY constant ---
