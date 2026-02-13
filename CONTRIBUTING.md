@@ -99,6 +99,14 @@ Ensure the following pass:
 
 If your changes add new PCRE2 API bindings, update `PCRE2_API.md` to mark the API as implemented.
 
+If your changes update dependencies, regenerate the verification metadata:
+
+```bash
+./gradlew --write-verification-metadata sha256,pgp --export-keys help
+```
+
+This updates `gradle/verification-metadata.xml` and `gradle/verification-keyring.keys` with checksums and PGP signatures for the new dependencies. Commit both files with your dependency change.
+
 ## Testing Guide
 
 PCRE4J supports two native backends — JNA and FFM — and tests must verify behavior across both. The test infrastructure provides several patterns for backend instantiation depending on the test's scope.
