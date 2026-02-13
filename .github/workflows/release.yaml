@@ -20,6 +20,9 @@ jobs:
 
     timeout-minutes: 30
 
+    env:
+      PCRE2_VERSION: '10.47'
+
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -52,11 +55,13 @@ jobs:
       - name: Checkstyle
         run: ./gradlew checkstyleMain checkstyleTest
 
-      - name: Install PCRE
-        run: sudo apt-get install -y libpcre2-8-0
+      - name: Build PCRE2
+        uses: ./.github/actions/build-pcre2
+        with:
+          version: ${{ env.PCRE2_VERSION }}
 
       - name: Build artifacts
-        run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/usr/lib/x86_64-linux-gnu
+        run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/opt/pcre2/lib
 
       - name: Stage artifacts
         run: ./gradlew publishAllPublicationsToStagingDeployRepository -Ppcre4j.version=${{ github.ref_name }}
