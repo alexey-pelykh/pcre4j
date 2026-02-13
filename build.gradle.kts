@@ -82,6 +82,12 @@ tasks.named("check") {
 // Shared POM metadata for all published modules
 // ==========================================================================
 subprojects {
+    tasks.withType<Jar>().configureEach {
+        if (name == "sourcesJar") {
+            duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        }
+    }
+
     pluginManager.withPlugin("maven-publish") {
         configure<PublishingExtension> {
             publications.withType<MavenPublication> {

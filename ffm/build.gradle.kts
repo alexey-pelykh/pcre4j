@@ -245,7 +245,6 @@ tasks.jacocoTestReport {
 // Sources JAR includes both source sets
 // ============================================================
 tasks.named<Jar>("sourcesJar") {
-    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     // Include Java 22-specific ArenaHelper.java
     from(java22.allSource) {
         into("META-INF/versions/22")
