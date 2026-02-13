@@ -228,6 +228,7 @@ gradle-app.setting
 
 # Gradle user-specific properties (may contain credentials)
 gradle.properties
+!/gradle.properties
 local.properties
 
 # Maven settings (may contain repository credentials)
