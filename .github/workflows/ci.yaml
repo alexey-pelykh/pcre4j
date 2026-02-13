@@ -167,8 +167,13 @@ jobs:
           version: ${{ matrix.pcre2-version }}
 
       - name: Test (Java 21 with preview)
-        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 }}
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 && matrix.java-distribution != 'adopt-openj9' && matrix.java-distribution != 'semeru' }}
         run: ./gradlew lib:test regex:test ffm:test jna:test -Dpcre2.library.path=/opt/pcre2/lib
+
+      # OpenJ9/Semeru Java 21 crashes in FFM preview due to a JVM bug (memory corruption assertion)
+      - name: Test (Java 21 without FFM)
+        if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version == 21 && (matrix.java-distribution == 'adopt-openj9' || matrix.java-distribution == 'semeru') }}
+        run: ./gradlew lib:test regex:test jna:test -Dpcre2.library.path=/opt/pcre2/lib
 
       - name: Test (Java 22+ with MRJAR)
         if: ${{ matrix.os == 'ubuntu-24.04' && matrix.java-version >= 22 }}
