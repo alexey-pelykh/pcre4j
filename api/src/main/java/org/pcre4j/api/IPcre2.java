@@ -163,6 +163,9 @@ public interface IPcre2 {
      */
     static final int USE_OFFSET_LIMIT = 0x00800000;
 
+    /**
+     * Like {@link #EXTENDED}, but also ignore unescaped space and horizontal tab in character classes
+     */
     static final int EXTENDED_MORE = 0x01000000;
 
     /**
@@ -177,18 +180,69 @@ public interface IPcre2 {
 
     // Extra compile options available via pcre2_set_compile_extra_options()
 
+    /**
+     * Allow surrogate escape sequences in UTF-8 and UTF-32 modes
+     */
     static final int EXTRA_ALLOW_SURROGATE_ESCAPES = 0x00000001;
+
+    /**
+     * Treat unrecognized escape sequences as literals
+     */
     static final int EXTRA_BAD_ESCAPE_IS_LITERAL = 0x00000002;
+
+    /**
+     * Pattern matches whole words only (automatic word boundary assertions)
+     */
     static final int EXTRA_MATCH_WORD = 0x00000004;
+
+    /**
+     * Pattern matches whole lines only (automatic line anchoring)
+     */
     static final int EXTRA_MATCH_LINE = 0x00000008;
+
+    /**
+     * Interpret ⧵r as ⧵n in patterns
+     */
     static final int EXTRA_ESCAPED_CR_IS_LF = 0x00000010;
+
+    /**
+     * Extend {@link #ALT_BSUX} to support ⧵u{hhh..} (ECMAScript 6)
+     */
     static final int EXTRA_ALT_BSUX = 0x00000020;
+
+    /**
+     * Allow ⧵K in lookaround assertions
+     */
     static final int EXTRA_ALLOW_LOOKAROUND_BSK = 0x00000040;
+
+    /**
+     * Restrict caseless matching to not cross ASCII/non-ASCII boundary
+     */
     static final int EXTRA_CASELESS_RESTRICT = 0x00000080;
+
+    /**
+     * Force ⧵d to match ASCII digits only, overriding UCP
+     */
     static final int EXTRA_ASCII_BSD = 0x00000100;
+
+    /**
+     * Force ⧵s to match ASCII space characters only, overriding UCP
+     */
     static final int EXTRA_ASCII_BSS = 0x00000200;
+
+    /**
+     * Force ⧵w to match ASCII word characters only, overriding UCP
+     */
     static final int EXTRA_ASCII_BSW = 0x00000400;
+
+    /**
+     * Force POSIX character classes to match ASCII characters only, overriding UCP
+     */
     static final int EXTRA_ASCII_POSIX = 0x00000800;
+
+    /**
+     * Force POSIX digit classes to match ASCII digits only, overriding UCP
+     */
     static final int EXTRA_ASCII_DIGIT = 0x00001000;
 
     // Option bits for pcre2_jit_compile()
@@ -245,12 +299,39 @@ public interface IPcre2 {
      * Return {@link IPcre2#ERROR_PARTIAL} for a partial match if no full matches are found
      */
     static final int PARTIAL_HARD = 0x00000020;
+    /**
+     * Restart DFA matching after a partial match
+     */
     static final int DFA_RESTART = 0x00000040;
+
+    /**
+     * Return only the shortest match in DFA matching
+     */
     static final int DFA_SHORTEST = 0x00000080;
+
+    /**
+     * Replace all occurrences, not just the first
+     */
     static final int SUBSTITUTE_GLOBAL = 0x00000100;
+
+    /**
+     * Enable extended replacement string processing
+     */
     static final int SUBSTITUTE_EXTENDED = 0x00000200;
+
+    /**
+     * Treat unset capture groups as empty strings in substitutions
+     */
     static final int SUBSTITUTE_UNSET_EMPTY = 0x00000400;
+
+    /**
+     * Treat unknown capture groups as unset in substitutions
+     */
     static final int SUBSTITUTE_UNKNOWN_UNSET = 0x00000800;
+
+    /**
+     * If output buffer overflows, compute the needed length
+     */
     static final int SUBSTITUTE_OVERFLOW_LENGTH = 0x00001000;
 
     /**
@@ -263,19 +344,61 @@ public interface IPcre2 {
      */
     static final int COPY_MATCHED_SUBJECT = 0x00004000;
 
+    /**
+     * Treat the replacement string as literal text
+     */
     static final int SUBSTITUTE_LITERAL = 0x00008000;
+
+    /**
+     * Use pre-existing match data for the first substitution match
+     */
     static final int SUBSTITUTE_MATCHED = 0x00010000;
+
+    /**
+     * Return only the replacement string(s), not the whole subject
+     */
     static final int SUBSTITUTE_REPLACEMENT_ONLY = 0x00020000;
+
+    /**
+     * Disable the recursion loop check during matching
+     */
     static final int DISABLE_RECURSELOOP_CHECK = 0x00040000;
 
     // Option bits for pcre2_pattern_convert()
 
+    /**
+     * Treat the input pattern as a UTF string for pattern conversion
+     */
     static final int CONVERT_UTF = 0x00000001;
+
+    /**
+     * Skip UTF validity check on the input pattern for pattern conversion
+     */
     static final int CONVERT_NO_UTF_CHECK = 0x00000002;
+
+    /**
+     * Convert a POSIX basic regular expression
+     */
     static final int CONVERT_POSIX_BASIC = 0x00000004;
+
+    /**
+     * Convert a POSIX extended regular expression
+     */
     static final int CONVERT_POSIX_EXTENDED = 0x00000008;
+
+    /**
+     * Convert a glob pattern (wildcards do not match separator)
+     */
     static final int CONVERT_GLOB = 0x00000010;
+
+    /**
+     * Convert a glob pattern (wildcards may match separator)
+     */
     static final int CONVERT_GLOB_NO_WILD_SEPARATOR = 0x00000030;
+
+    /**
+     * Convert a glob pattern (double-star feature disabled)
+     */
     static final int CONVERT_GLOB_NO_STARSTAR = 0x00000050;
 
     // Newline and \R settings, for use in compile contexts
@@ -322,185 +445,851 @@ public interface IPcre2 {
 
     // Error codes: compile-time errors (positive values)
 
+    /**
+     * Compile error: ⧵ at end of pattern
+     */
     static final int ERROR_END_BACKSLASH = 101;
+
+    /**
+     * Compile error: ⧵c at end of pattern
+     */
     static final int ERROR_END_BACKSLASH_C = 102;
+
+    /**
+     * Compile error: unrecognized character follows ⧵
+     */
     static final int ERROR_UNKNOWN_ESCAPE = 103;
+
+    /**
+     * Compile error: numbers out of order in {} quantifier
+     */
     static final int ERROR_QUANTIFIER_OUT_OF_ORDER = 104;
+
+    /**
+     * Compile error: number too big in {} quantifier
+     */
     static final int ERROR_QUANTIFIER_TOO_BIG = 105;
+
+    /**
+     * Compile error: missing terminating ] for character class
+     */
     static final int ERROR_MISSING_SQUARE_BRACKET = 106;
+
+    /**
+     * Compile error: escape sequence is invalid in character class
+     */
     static final int ERROR_ESCAPE_INVALID_IN_CLASS = 107;
+
+    /**
+     * Compile error: range out of order in character class
+     */
     static final int ERROR_CLASS_RANGE_ORDER = 108;
+
+    /**
+     * Compile error: quantifier does not follow a repeatable item
+     */
     static final int ERROR_QUANTIFIER_INVALID = 109;
+
+    /**
+     * Compile error: internal error: unexpected repeat
+     */
     static final int ERROR_INTERNAL_UNEXPECTED_REPEAT = 110;
+
+    /**
+     * Compile error: unrecognized character after (? or (?-
+     */
     static final int ERROR_INVALID_AFTER_PARENS_QUERY = 111;
+
+    /**
+     * Compile error: POSIX named classes are supported only within a class
+     */
     static final int ERROR_POSIX_CLASS_NOT_IN_CLASS = 112;
+
+    /**
+     * Compile error: POSIX collating elements are not supported
+     */
     static final int ERROR_POSIX_NO_SUPPORT_COLLATING = 113;
+
+    /**
+     * Compile error: missing closing parenthesis
+     */
     static final int ERROR_MISSING_CLOSING_PARENTHESIS = 114;
+
+    /**
+     * Compile error: reference to non-existent subpattern
+     */
     static final int ERROR_BAD_SUBPATTERN_REFERENCE = 115;
+
+    /**
+     * Compile error: pattern passed as NULL with non-zero length
+     */
     static final int ERROR_NULL_PATTERN = 116;
+
+    /**
+     * Compile error: unrecognised compile-time option bit(s)
+     */
     static final int ERROR_BAD_OPTIONS = 117;
+
+    /**
+     * Compile error: missing ) after (?# comment
+     */
     static final int ERROR_MISSING_COMMENT_CLOSING = 118;
+
+    /**
+     * Compile error: parentheses are too deeply nested
+     */
     static final int ERROR_PARENTHESES_NEST_TOO_DEEP = 119;
+
+    /**
+     * Compile error: regular expression is too large
+     */
     static final int ERROR_PATTERN_TOO_LARGE = 120;
+
+    /**
+     * Compile error: failed to allocate heap memory
+     */
     static final int ERROR_HEAP_FAILED = 121;
+
+    /**
+     * Compile error: unmatched closing parenthesis
+     */
     static final int ERROR_UNMATCHED_CLOSING_PARENTHESIS = 122;
+
+    /**
+     * Compile error: internal error: code overflow
+     */
     static final int ERROR_INTERNAL_CODE_OVERFLOW = 123;
+
+    /**
+     * Compile error: missing closing parenthesis for condition
+     */
     static final int ERROR_MISSING_CONDITION_CLOSING = 124;
+
+    /**
+     * Compile error: length of lookbehind assertion is not limited
+     */
     static final int ERROR_LOOKBEHIND_NOT_FIXED_LENGTH = 125;
+
+    /**
+     * Compile error: a relative value of zero is not allowed
+     */
     static final int ERROR_ZERO_RELATIVE_REFERENCE = 126;
+
+    /**
+     * Compile error: conditional subpattern contains more than two branches
+     */
     static final int ERROR_TOO_MANY_CONDITION_BRANCHES = 127;
+
+    /**
+     * Compile error: atomic assertion expected after (?( or (?(?C)
+     */
     static final int ERROR_CONDITION_ASSERTION_EXPECTED = 128;
+
+    /**
+     * Compile error: digit expected after (?+
+     */
     static final int ERROR_BAD_RELATIVE_REFERENCE = 129;
+
+    /**
+     * Compile error: unknown POSIX class name
+     */
     static final int ERROR_UNKNOWN_POSIX_CLASS = 130;
+
+    /**
+     * Compile error: internal error in pcre2_study(): should not occur
+     */
     static final int ERROR_INTERNAL_STUDY_ERROR = 131;
+
+    /**
+     * Compile error: this version of PCRE2 does not have Unicode support
+     */
     static final int ERROR_UNICODE_NOT_SUPPORTED = 132;
+
+    /**
+     * Compile error: parentheses are too deeply nested (stack check)
+     */
     static final int ERROR_PARENTHESES_STACK_CHECK = 133;
+
+    /**
+     * Compile error: character code point value in ⧵x{} or ⧵o{} is too large
+     */
     static final int ERROR_CODE_POINT_TOO_BIG = 134;
+
+    /**
+     * Compile error: lookbehind is too complicated
+     */
     static final int ERROR_LOOKBEHIND_TOO_COMPLICATED = 135;
+
+    /**
+     * Compile error: ⧵C is not allowed in a lookbehind assertion in UTF mode
+     */
     static final int ERROR_LOOKBEHIND_INVALID_BACKSLASH_C = 136;
+
+    /**
+     * Compile error: PCRE2 does not support ⧵F, ⧵L, ⧵l, ⧵N{name}, ⧵U, or ⧵u
+     */
     static final int ERROR_UNSUPPORTED_ESCAPE_SEQUENCE = 137;
+
+    /**
+     * Compile error: number after (?C is greater than 255
+     */
     static final int ERROR_CALLOUT_NUMBER_TOO_BIG = 138;
+
+    /**
+     * Compile error: closing parenthesis for (?C expected
+     */
     static final int ERROR_MISSING_CALLOUT_CLOSING = 139;
+
+    /**
+     * Compile error: invalid escape sequence in (*VERB) name
+     */
     static final int ERROR_ESCAPE_INVALID_IN_VERB = 140;
+
+    /**
+     * Compile error: unrecognized character after (?P
+     */
     static final int ERROR_UNRECOGNIZED_AFTER_QUERY_P = 141;
+
+    /**
+     * Compile error: syntax error in subpattern name (missing terminator?)
+     */
     static final int ERROR_MISSING_NAME_TERMINATOR = 142;
+
+    /**
+     * Compile error: two named subpatterns have the same name
+     */
     static final int ERROR_DUPLICATE_SUBPATTERN_NAME = 143;
+
+    /**
+     * Compile error: subpattern name must start with a non-digit
+     */
     static final int ERROR_INVALID_SUBPATTERN_NAME = 144;
+
+    /**
+     * Compile error: this version of PCRE2 does not have support for ⧵P, ⧵p, or ⧵X
+     */
     static final int ERROR_UNICODE_PROPERTIES_UNAVAILABLE = 145;
+
+    /**
+     * Compile error: malformed ⧵P or ⧵p sequence
+     */
     static final int ERROR_MALFORMED_UNICODE_PROPERTY = 146;
+
+    /**
+     * Compile error: unknown property after ⧵P or ⧵p
+     */
     static final int ERROR_UNKNOWN_UNICODE_PROPERTY = 147;
+
+    /**
+     * Compile error: subpattern name is too long
+     */
     static final int ERROR_SUBPATTERN_NAME_TOO_LONG = 148;
+
+    /**
+     * Compile error: too many named subpatterns
+     */
     static final int ERROR_TOO_MANY_NAMED_SUBPATTERNS = 149;
+
+    /**
+     * Compile error: invalid range in character class
+     */
     static final int ERROR_CLASS_INVALID_RANGE = 150;
+
+    /**
+     * Compile error: octal value is greater than ⧵377 in 8-bit non-UTF-8 mode
+     */
     static final int ERROR_OCTAL_BYTE_TOO_BIG = 151;
+
+    /**
+     * Compile error: internal error: overran compiling workspace
+     */
     static final int ERROR_INTERNAL_OVERRAN_WORKSPACE = 152;
+
+    /**
+     * Compile error: internal error: previously-checked referenced subpattern not found
+     */
     static final int ERROR_INTERNAL_MISSING_SUBPATTERN = 153;
+
+    /**
+     * Compile error: DEFINE subpattern contains more than one branch
+     */
     static final int ERROR_DEFINE_TOO_MANY_BRANCHES = 154;
+
+    /**
+     * Compile error: missing opening brace after ⧵o
+     */
     static final int ERROR_BACKSLASH_O_MISSING_BRACE = 155;
+
+    /**
+     * Compile error: internal error: unknown newline setting
+     */
     static final int ERROR_INTERNAL_UNKNOWN_NEWLINE = 156;
+
+    /**
+     * Compile error: ⧵g is not followed by a braced, angle-bracketed, or quoted name/number
+     */
     static final int ERROR_BACKSLASH_G_SYNTAX = 157;
+
+    /**
+     * Compile error: (?R (recursive pattern call) must be followed by a closing parenthesis
+     */
     static final int ERROR_PARENS_QUERY_R_MISSING_CLOSING = 158;
+
+    /**
+     * @deprecated Obsolete error (should not occur)
+     */
     @Deprecated
     static final int ERROR_VERB_ARGUMENT_NOT_ALLOWED = 159;
+
+    /**
+     * Compile error: (*VERB) not recognized or malformed
+     */
     static final int ERROR_VERB_UNKNOWN = 160;
+
+    /**
+     * Compile error: subpattern number is too big
+     */
     static final int ERROR_SUBPATTERN_NUMBER_TOO_BIG = 161;
+
+    /**
+     * Compile error: subpattern name expected
+     */
     static final int ERROR_SUBPATTERN_NAME_EXPECTED = 162;
+
+    /**
+     * Compile error: internal error: parsed pattern overflow
+     */
     static final int ERROR_INTERNAL_PARSED_OVERFLOW = 163;
+
+    /**
+     * Compile error: non-octal character in ⧵o{} (closing brace missing?)
+     */
     static final int ERROR_INVALID_OCTAL = 164;
+
+    /**
+     * Compile error: different names for subpatterns of the same number are not allowed
+     */
     static final int ERROR_SUBPATTERN_NAMES_MISMATCH = 165;
+
+    /**
+     * Compile error: (*MARK) must have an argument
+     */
     static final int ERROR_MARK_MISSING_ARGUMENT = 166;
+
+    /**
+     * Compile error: non-hex character in ⧵x{} (closing brace missing?)
+     */
     static final int ERROR_INVALID_HEXADECIMAL = 167;
+
+    /**
+     * Compile error: ⧵c must be followed by a printable ASCII character
+     */
     static final int ERROR_BACKSLASH_C_SYNTAX = 168;
+
+    /**
+     * Compile error: ⧵k is not followed by a braced, angle-bracketed, or quoted name
+     */
     static final int ERROR_BACKSLASH_K_SYNTAX = 169;
+
+    /**
+     * Compile error: internal error: unknown meta code in check_lookbehinds()
+     */
     static final int ERROR_INTERNAL_BAD_CODE_LOOKBEHINDS = 170;
+
+    /**
+     * Compile error: ⧵N is not supported in a class
+     */
     static final int ERROR_BACKSLASH_N_IN_CLASS = 171;
+
+    /**
+     * Compile error: callout string is too long
+     */
     static final int ERROR_CALLOUT_STRING_TOO_LONG = 172;
+
+    /**
+     * Compile error: disallowed Unicode code point (&gt;= 0xd800 and &lt;= 0xdfff)
+     */
     static final int ERROR_UNICODE_DISALLOWED_CODE_POINT = 173;
+
+    /**
+     * Compile error: using UTF is disabled by the application
+     */
     static final int ERROR_UTF_IS_DISABLED = 174;
+
+    /**
+     * Compile error: using UCP is disabled by the application
+     */
     static final int ERROR_UCP_IS_DISABLED = 175;
+
+    /**
+     * Compile error: name is too long in (*MARK), (*PRUNE), (*SKIP), or (*THEN)
+     */
     static final int ERROR_VERB_NAME_TOO_LONG = 176;
+
+    /**
+     * Compile error: character code point value in ⧵u.... sequence is too large
+     */
     static final int ERROR_BACKSLASH_U_CODE_POINT_TOO_BIG = 177;
+
+    /**
+     * Compile error: digits missing in ⧵x{}, ⧵o{}, or ⧵N{U+}
+     */
     static final int ERROR_MISSING_OCTAL_OR_HEX_DIGITS = 178;
+
+    /**
+     * Compile error: syntax error or number too big in (?(VERSION condition
+     */
     static final int ERROR_VERSION_CONDITION_SYNTAX = 179;
+
+    /**
+     * Compile error: internal error: unknown opcode in auto_possessify()
+     */
     static final int ERROR_INTERNAL_BAD_CODE_AUTO_POSSESS = 180;
+
+    /**
+     * Compile error: missing terminating delimiter for callout with string argument
+     */
     static final int ERROR_CALLOUT_NO_STRING_DELIMITER = 181;
+
+    /**
+     * Compile error: unrecognized string delimiter follows (?C
+     */
     static final int ERROR_CALLOUT_BAD_STRING_DELIMITER = 182;
+
+    /**
+     * Compile error: using ⧵C is disabled by the application
+     */
     static final int ERROR_BACKSLASH_C_CALLER_DISABLED = 183;
+
+    /**
+     * Compile error: (?| and/or (?J: or (?x: parentheses are too deeply nested
+     */
     static final int ERROR_QUERY_BARJX_NEST_TOO_DEEP = 184;
+
+    /**
+     * Compile error: using ⧵C is disabled in this PCRE2 library
+     */
     static final int ERROR_BACKSLASH_C_LIBRARY_DISABLED = 185;
+
+    /**
+     * Compile error: regular expression is too complicated
+     */
     static final int ERROR_PATTERN_TOO_COMPLICATED = 186;
+
+    /**
+     * Compile error: lookbehind assertion is too long
+     */
     static final int ERROR_LOOKBEHIND_TOO_LONG = 187;
+
+    /**
+     * Compile error: pattern string is longer than the limit set by the application
+     */
     static final int ERROR_PATTERN_STRING_TOO_LONG = 188;
+
+    /**
+     * Compile error: internal error: unknown code in parsed pattern
+     */
     static final int ERROR_INTERNAL_BAD_CODE = 189;
+
+    /**
+     * Compile error: internal error: bad code value in parsed_skip()
+     */
     static final int ERROR_INTERNAL_BAD_CODE_IN_SKIP = 190;
+
+    /**
+     * Compile error: PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES is not allowed in UTF-16 mode
+     */
     static final int ERROR_NO_SURROGATES_IN_UTF16 = 191;
+
+    /**
+     * Compile error: invalid option bits with PCRE2_LITERAL
+     */
     static final int ERROR_BAD_LITERAL_OPTIONS = 192;
+
+    /**
+     * Compile error: ⧵N{U+dddd} is supported only in Unicode (UTF) mode
+     */
     static final int ERROR_SUPPORTED_ONLY_IN_UNICODE = 193;
+
+    /**
+     * Compile error: invalid hyphen in option setting
+     */
     static final int ERROR_INVALID_HYPHEN_IN_OPTIONS = 194;
+
+    /**
+     * Compile error: (*alpha_assertion) not recognized
+     */
     static final int ERROR_ALPHA_ASSERTION_UNKNOWN = 195;
+
+    /**
+     * Compile error: script runs require Unicode support
+     */
     static final int ERROR_SCRIPT_RUN_NOT_AVAILABLE = 196;
+
+    /**
+     * Compile error: too many capturing groups (maximum 65535)
+     */
     static final int ERROR_TOO_MANY_CAPTURES = 197;
+
+    /**
+     * Compile error: assertion expected after (?( or (?(?C)
+     */
     static final int ERROR_CONDITION_ATOMIC_ASSERTION_EXPECTED = 198;
+
+    /**
+     * Compile error: ⧵K is not allowed in lookarounds
+     */
     static final int ERROR_BACKSLASH_K_IN_LOOKAROUND = 199;
 
     // Error codes: "expected" matching errors
 
+    /**
+     * Match error: no match was found
+     */
     static final int ERROR_NOMATCH = -1;
+
+    /**
+     * Match error: partial match
+     */
     static final int ERROR_PARTIAL = -2;
+
     // Error codes: UTF-8 validity check errors
 
+    /**
+     * UTF-8 error: 1 byte missing at end
+     */
     static final int ERROR_UTF8_ERR1 = -3;
+
+    /**
+     * UTF-8 error: 2 bytes missing at end
+     */
     static final int ERROR_UTF8_ERR2 = -4;
+
+    /**
+     * UTF-8 error: 3 bytes missing at end
+     */
     static final int ERROR_UTF8_ERR3 = -5;
+
+    /**
+     * UTF-8 error: 4 bytes missing at end
+     */
     static final int ERROR_UTF8_ERR4 = -6;
+
+    /**
+     * UTF-8 error: 5 bytes missing at end
+     */
     static final int ERROR_UTF8_ERR5 = -7;
+
+    /**
+     * UTF-8 error: byte 2 top bits not 0x80
+     */
     static final int ERROR_UTF8_ERR6 = -8;
+
+    /**
+     * UTF-8 error: byte 3 top bits not 0x80
+     */
     static final int ERROR_UTF8_ERR7 = -9;
+
+    /**
+     * UTF-8 error: byte 4 top bits not 0x80
+     */
     static final int ERROR_UTF8_ERR8 = -10;
+
+    /**
+     * UTF-8 error: byte 5 top bits not 0x80
+     */
     static final int ERROR_UTF8_ERR9 = -11;
+
+    /**
+     * UTF-8 error: byte 6 top bits not 0x80
+     */
     static final int ERROR_UTF8_ERR10 = -12;
+
+    /**
+     * UTF-8 error: 5-byte character is not allowed (RFC 3629)
+     */
     static final int ERROR_UTF8_ERR11 = -13;
+
+    /**
+     * UTF-8 error: 6-byte character is not allowed (RFC 3629)
+     */
     static final int ERROR_UTF8_ERR12 = -14;
+
+    /**
+     * UTF-8 error: code point greater than 0x10ffff
+     */
     static final int ERROR_UTF8_ERR13 = -15;
+
+    /**
+     * UTF-8 error: code point in surrogate range (0xd800-0xdfff)
+     */
     static final int ERROR_UTF8_ERR14 = -16;
+
+    /**
+     * UTF-8 error: overlong 2-byte sequence
+     */
     static final int ERROR_UTF8_ERR15 = -17;
+
+    /**
+     * UTF-8 error: overlong 3-byte sequence
+     */
     static final int ERROR_UTF8_ERR16 = -18;
+
+    /**
+     * UTF-8 error: overlong 4-byte sequence
+     */
     static final int ERROR_UTF8_ERR17 = -19;
+
+    /**
+     * UTF-8 error: overlong 5-byte sequence
+     */
     static final int ERROR_UTF8_ERR18 = -20;
+
+    /**
+     * UTF-8 error: overlong 6-byte sequence
+     */
     static final int ERROR_UTF8_ERR19 = -21;
+
+    /**
+     * UTF-8 error: isolated byte with 0x80 bit set
+     */
     static final int ERROR_UTF8_ERR20 = -22;
+
+    /**
+     * UTF-8 error: illegal byte (0xfe or 0xff)
+     */
     static final int ERROR_UTF8_ERR21 = -23;
+
     // Error codes: UTF-16 validity check errors
 
+    /**
+     * UTF-16 error: missing low surrogate at end of string
+     */
     static final int ERROR_UTF16_ERR1 = -24;
+
+    /**
+     * UTF-16 error: invalid low surrogate follows high surrogate
+     */
     static final int ERROR_UTF16_ERR2 = -25;
+
+    /**
+     * UTF-16 error: isolated low surrogate
+     */
     static final int ERROR_UTF16_ERR3 = -26;
+
     // Error codes: UTF-32 validity check errors
 
+    /**
+     * UTF-32 error: code point in surrogate range (0xd800-0xdfff)
+     */
     static final int ERROR_UTF32_ERR1 = -27;
+
+    /**
+     * UTF-32 error: code point greater than 0x10ffff
+     */
     static final int ERROR_UTF32_ERR2 = -28;
+
     // Error codes: miscellaneous errors for pcre2[_dfa]_match(), pcre2_substitute(), and serialization
 
+    /**
+     * Match error: bad data value
+     */
     static final int ERROR_BADDATA = -29;
+
+    /**
+     * Match error: patterns do not all use the same character tables
+     */
     static final int ERROR_MIXEDTABLES = -30;
+
+    /**
+     * Match error: magic number missing (pattern may be corrupt)
+     */
     static final int ERROR_BADMAGIC = -31;
+
+    /**
+     * Match error: pattern compiled in wrong mode (8/16/32-bit error)
+     */
     static final int ERROR_BADMODE = -32;
+
+    /**
+     * Match error: bad offset value
+     */
     static final int ERROR_BADOFFSET = -33;
+
+    /**
+     * Match error: bad option value
+     */
     static final int ERROR_BADOPTION = -34;
+
+    /**
+     * Match error: invalid replacement string
+     */
     static final int ERROR_BADREPLACEMENT = -35;
+
+    /**
+     * Match error: bad offset into UTF string
+     */
     static final int ERROR_BADUTFOFFSET = -36;
+
+    /**
+     * Match error: callout error code
+     */
     static final int ERROR_CALLOUT = -37;
+
+    /**
+     * Match error: invalid data in workspace for DFA restart
+     */
     static final int ERROR_DFA_BADRESTART = -38;
+
+    /**
+     * Match error: too much recursion for DFA matching
+     */
     static final int ERROR_DFA_RECURSE = -39;
+
+    /**
+     * Match error: backreference condition or recursion test not supported for DFA
+     */
     static final int ERROR_DFA_UCOND = -40;
+
+    /**
+     * Match error: function is not supported for DFA matching
+     */
     static final int ERROR_DFA_UFUNC = -41;
+
+    /**
+     * Match error: pattern contains an item not supported for DFA matching
+     */
     static final int ERROR_DFA_UITEM = -42;
+
+    /**
+     * Match error: workspace size exceeded in DFA matching
+     */
     static final int ERROR_DFA_WSSIZE = -43;
+
+    /**
+     * Match error: internal error (pattern overwritten?)
+     */
     static final int ERROR_INTERNAL = -44;
+
+    /**
+     * Match error: bad JIT option
+     */
     static final int ERROR_JIT_BADOPTION = -45;
+
+    /**
+     * Match error: JIT stack limit reached
+     */
     static final int ERROR_JIT_STACKLIMIT = -46;
+
+    /**
+     * Match error: match limit exceeded
+     */
     static final int ERROR_MATCHLIMIT = -47;
+
+    /**
+     * Match error: no more memory available
+     */
     static final int ERROR_NOMEMORY = -48;
+
+    /**
+     * Match error: unknown substring
+     */
     static final int ERROR_NOSUBSTRING = -49;
+
+    /**
+     * Match error: non-unique substring name
+     */
     static final int ERROR_NOUNIQUESUBSTRING = -50;
+
+    /**
+     * Match error: NULL argument passed with non-zero length
+     */
     static final int ERROR_NULL = -51;
+
+    /**
+     * Match error: nested recursion at the same subject position
+     */
     static final int ERROR_RECURSELOOP = -52;
+
+    /**
+     * Match error: matching depth limit exceeded
+     */
     static final int ERROR_DEPTHLIMIT = -53;
+
+    /**
+     * @deprecated Use {@link #ERROR_DEPTHLIMIT}
+     */
     @Deprecated
     static final int ERROR_RECURSIONLIMIT = -53;
+
+    /**
+     * Match error: requested value is not available
+     */
     static final int ERROR_UNAVAILABLE = -54;
+
+    /**
+     * Match error: requested value is not set
+     */
     static final int ERROR_UNSET = -55;
+
+    /**
+     * Match error: offset limit set without {@link #USE_OFFSET_LIMIT}
+     */
     static final int ERROR_BADOFFSETLIMIT = -56;
+
+    /**
+     * Match error: bad escape sequence in replacement string
+     */
     static final int ERROR_BADREPESCAPE = -57;
+
+    /**
+     * Match error: expected closing curly bracket in replacement string
+     */
     static final int ERROR_REPMISSINGBRACE = -58;
+
+    /**
+     * Match error: bad substitution in replacement string
+     */
     static final int ERROR_BADSUBSTITUTION = -59;
+
+    /**
+     * Match error: match with end before start or start moved backwards is not supported
+     */
     static final int ERROR_BADSUBSPATTERN = -60;
+
+    /**
+     * Match error: too many replacements (more than INT_MAX)
+     */
     static final int ERROR_TOOMANYREPLACE = -61;
+
+    /**
+     * Match error: bad serialized data
+     */
     static final int ERROR_BADSERIALIZEDDATA = -62;
+
+    /**
+     * Match error: heap limit exceeded
+     */
     static final int ERROR_HEAPLIMIT = -63;
+
+    /**
+     * Match error: invalid syntax in pattern conversion
+     */
     static final int ERROR_CONVERT_SYNTAX = -64;
+
+    /**
+     * Match error: internal error: duplicate substitution match
+     */
     static final int ERROR_INTERNAL_DUPMATCH = -65;
+
+    /**
+     * Match error: {@link #MATCH_INVALID_UTF} is not supported for DFA matching
+     */
     static final int ERROR_DFA_UINVALID_UTF = -66;
+
+    /**
+     * Match error: internal error: invalid substring offset
+     */
     static final int ERROR_INVALIDOFFSET = -67;
 
     // Request types for pcre2_pattern_info()
@@ -661,24 +1450,91 @@ public interface IPcre2 {
 
     // Request types for pcre2_config()
 
+    /**
+     * Query the default backslash-R (⧵R) convention
+     */
     static final int CONFIG_BSR = 0;
+
+    /**
+     * Query JIT compilation availability (1 = available, 0 = not available)
+     */
     static final int CONFIG_JIT = 1;
+
+    /**
+     * Query the target architecture string for the JIT compiler
+     */
     static final int CONFIG_JITTARGET = 2;
+
+    /**
+     * Query the number of bytes used for internal linkage in compiled patterns
+     */
     static final int CONFIG_LINKSIZE = 3;
+
+    /**
+     * Query the default match limit
+     */
     static final int CONFIG_MATCHLIMIT = 4;
+
+    /**
+     * Query the default newline convention
+     */
     static final int CONFIG_NEWLINE = 5;
+
+    /**
+     * Query the default parentheses nesting limit
+     */
     static final int CONFIG_PARENSLIMIT = 6;
+
+    /**
+     * Query the default backtracking depth limit
+     */
     static final int CONFIG_DEPTHLIMIT = 7;
+
+    /**
+     * @deprecated Use {@link #CONFIG_DEPTHLIMIT}
+     */
     @Deprecated
     static final int CONFIG_RECURSIONLIMIT = 7;
+
+    /**
+     * @deprecated Obsolete, always returns 0
+     */
     @Deprecated
     static final int CONFIG_STACKRECURSE = 8;
+
+    /**
+     * Query Unicode support availability (1 = available, 0 = not available)
+     */
     static final int CONFIG_UNICODE = 9;
+
+    /**
+     * Query the Unicode version string
+     */
     static final int CONFIG_UNICODE_VERSION = 10;
+
+    /**
+     * Query the PCRE2 version string
+     */
     static final int CONFIG_VERSION = 11;
+
+    /**
+     * Query the default heap memory limit in kibibytes
+     */
     static final int CONFIG_HEAPLIMIT = 12;
+
+    /**
+     * Query whether ⧵C is permanently disabled (1 = disabled, 0 = enabled)
+     */
     static final int CONFIG_NEVER_BACKSLASH_C = 13;
+
+    /**
+     * Query a bitmask of compiled code unit widths (8-bit, 16-bit, 32-bit)
+     */
     static final int CONFIG_COMPILED_WIDTHS = 14;
+
+    /**
+     * Query the length of PCRE2's character processing tables in bytes
+     */
     static final int CONFIG_TABLES_LENGTH = 15;
 
     /**
