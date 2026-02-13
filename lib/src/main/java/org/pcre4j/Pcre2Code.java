@@ -14,6 +14,7 @@
  */
 package org.pcre4j;
 
+import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
@@ -534,7 +535,7 @@ public class Pcre2Code {
         // Each entry starts with a 2-byte group number (big-endian)
         for (int i = 0; i < numEntries; i++) {
             final var entryStart = first[0] + ((long) i * entrySize);
-            final var bytes = api.readBytes(entryStart, 2);
+            final var bytes = ((INativeMemoryAccess) api).readBytes(entryStart, 2);
             // Group number is stored as big-endian 16-bit value
             groupNumbers[i] = ((bytes[0] & 0xFF) << 8) | (bytes[1] & 0xFF);
         }

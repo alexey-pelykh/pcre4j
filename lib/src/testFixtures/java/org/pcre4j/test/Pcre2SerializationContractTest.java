@@ -15,6 +15,7 @@
 package org.pcre4j.test;
 
 import org.junit.jupiter.api.Test;
+import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -54,7 +55,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
         assertTrue(serializedSize[0] > 0, "serializedSize should be positive");
 
         // Read the serialized data to verify it's accessible
-        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        final var bytes = ((INativeMemoryAccess) api).readBytes(serializedBytes[0], (int) serializedSize[0]);
         assertEquals(serializedSize[0], bytes.length, "Read bytes should match serialized size");
 
         api.serializeFree(serializedBytes[0]);
@@ -137,7 +138,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
         assertEquals(1, encodeResult, "serializeEncode should return 1 for single pattern");
 
         // Read the serialized data
-        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        final var bytes = ((INativeMemoryAccess) api).readBytes(serializedBytes[0], (int) serializedSize[0]);
         assertEquals(serializedSize[0], bytes.length, "Read bytes should match serialized size");
 
         // Decode the pattern
@@ -172,7 +173,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
         final var encodeResult2 = api.serializeEncode(codes12, 2, serializedBytes2, serializedSize2, 0);
         assertEquals(2, encodeResult2, "serializeEncode should return 2 for two patterns");
 
-        final var bytes2 = api.readBytes(serializedBytes2[0], (int) serializedSize2[0]);
+        final var bytes2 = ((INativeMemoryAccess) api).readBytes(serializedBytes2[0], (int) serializedSize2[0]);
 
         final var decodedCodes2 = new long[2];
         final var decodeResult2 = api.serializeDecode(decodedCodes2, 2, bytes2, 0);
@@ -207,7 +208,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
         final var encodeResult3 = api.serializeEncode(new long[]{code3}, 1, serializedBytes3, serializedSize3, 0);
         assertEquals(1, encodeResult3, "serializeEncode should return 1");
 
-        final var bytes3 = api.readBytes(serializedBytes3[0], (int) serializedSize3[0]);
+        final var bytes3 = ((INativeMemoryAccess) api).readBytes(serializedBytes3[0], (int) serializedSize3[0]);
 
         final var decodedCodes3 = new long[1];
         final var decodeResult3 = api.serializeDecode(decodedCodes3, 1, bytes3, 0);
@@ -313,7 +314,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
         final var encodeResult = api.serializeEncode(new long[]{code}, 1, serializedBytes, serializedSize, 0);
         assertEquals(1, encodeResult, "serializeEncode should return 1 for single pattern");
 
-        final var bytes = api.readBytes(serializedBytes[0], (int) serializedSize[0]);
+        final var bytes = ((INativeMemoryAccess) api).readBytes(serializedBytes[0], (int) serializedSize[0]);
         final var count = api.serializeGetNumberOfCodes(bytes);
         assertEquals(1, count, "serializeGetNumberOfCodes should return 1 for single pattern");
 
@@ -337,7 +338,7 @@ public interface Pcre2SerializationContractTest<T extends IPcre2> {
                 new long[]{code1, code2, code3}, 3, serializedBytes2, serializedSize2, 0);
         assertEquals(3, encodeResult2, "serializeEncode should return 3 for three patterns");
 
-        final var bytes2 = api.readBytes(serializedBytes2[0], (int) serializedSize2[0]);
+        final var bytes2 = ((INativeMemoryAccess) api).readBytes(serializedBytes2[0], (int) serializedSize2[0]);
         final var count2 = api.serializeGetNumberOfCodes(bytes2);
         assertEquals(3, count2, "serializeGetNumberOfCodes should return 3 for three patterns");
 
