@@ -18,7 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2UtfWidth;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
