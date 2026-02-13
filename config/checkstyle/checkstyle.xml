@@ -4,6 +4,11 @@
         "https://checkstyle.sourceforge.io/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
+    <!-- module-info.java uses 'module' keyword that Checkstyle's parser cannot handle -->
+    <module name="BeforeExecutionExclusionFileFilter">
+        <property name="fileNamePattern" value="module\-info\.java$"/>
+    </module>
+
     <module name="LineLength">
         <property name="fileExtensions" value="java"/>
         <property name="max" value="120"/>
