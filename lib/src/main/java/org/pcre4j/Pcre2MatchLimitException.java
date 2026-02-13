@@ -12,13 +12,12 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j.regex;
+package org.pcre4j;
 
-import org.pcre4j.Pcre2MatchLimitException;
 import org.pcre4j.api.IPcre2;
 
 /**
- * Thrown when a match operation exceeds a configured resource limit.
+ * An exception thrown when a match operation exceeds a configured resource limit.
  * <p>
  * This exception is thrown when PCRE2 terminates a match operation because a match limit,
  * backtracking depth limit, or heap memory limit was exceeded. These limits provide protection
@@ -30,39 +29,28 @@ import org.pcre4j.api.IPcre2;
  *   <li>{@link IPcre2#ERROR_DEPTHLIMIT} - the backtracking depth limit was exceeded</li>
  *   <li>{@link IPcre2#ERROR_HEAPLIMIT} - the heap memory limit was exceeded</li>
  * </ul>
- * <p>
- * Limits can be configured via system properties:
- * <ul>
- *   <li>{@code pcre2.regex.match.limit} - maximum number of match function calls</li>
- *   <li>{@code pcre2.regex.depth.limit} - maximum backtracking depth</li>
- *   <li>{@code pcre2.regex.heap.limit} - maximum heap memory in kibibytes</li>
- * </ul>
- *
- * @see Matcher#MATCH_LIMIT_PROPERTY
- * @see Matcher#DEPTH_LIMIT_PROPERTY
- * @see Matcher#HEAP_LIMIT_PROPERTY
  */
-public class MatchLimitException extends Pcre2MatchLimitException {
+public class Pcre2MatchLimitException extends Pcre2MatchException {
 
     /**
-     * Creates a new {@link MatchLimitException} with the given message and PCRE2 error code.
+     * Creates a new match limit exception.
      *
      * @param message   the error message from PCRE2
      * @param errorCode the PCRE2 error code (one of {@link IPcre2#ERROR_MATCHLIMIT},
      *                  {@link IPcre2#ERROR_DEPTHLIMIT}, or {@link IPcre2#ERROR_HEAPLIMIT})
      */
-    public MatchLimitException(String message, int errorCode) {
-        super(message, errorCode);
+    public Pcre2MatchLimitException(String message, int errorCode) {
+        this(message, errorCode, null);
     }
 
     /**
-     * Returns the PCRE2 error code that caused this exception.
+     * Creates a new match limit exception.
      *
-     * @return the PCRE2 error code
-     * @deprecated Use {@link #errorCode()} instead.
+     * @param message   the error message from PCRE2
+     * @param errorCode the PCRE2 error code
+     * @param cause     the cause of the exception, or {@code null}
      */
-    @Deprecated(forRemoval = true)
-    public int getErrorCode() {
-        return errorCode();
+    public Pcre2MatchLimitException(String message, int errorCode, Throwable cause) {
+        super(message, errorCode, cause);
     }
 }

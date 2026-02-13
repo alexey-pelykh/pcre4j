@@ -15,38 +15,28 @@
 package org.pcre4j;
 
 /**
- * An error indicating an unexpected data size for a {@link Pcre2PatternInfo} query.
- *
- * @deprecated Use {@link Pcre2PatternInfoSizeException} instead. This class will be removed in a future release.
+ * An exception indicating an unexpected data size for a {@link Pcre2PatternInfo} query.
  */
-@Deprecated(forRemoval = true)
-public class Pcre2PatternInfoSizeError extends Pcre2PatternInfoSizeException {
+public class Pcre2PatternInfoSizeException extends Pcre2InternalException {
 
     /**
-     * Create a new pattern info size error.
+     * Creates a new pattern info size exception.
      *
      * @param info the pattern info that had an unexpected size
      * @param size the unexpected size in bytes
-     * @deprecated Use {@link Pcre2PatternInfoSizeException#Pcre2PatternInfoSizeException(Pcre2PatternInfo, long)}
-     *     instead.
      */
-    @Deprecated(forRemoval = true)
-    public Pcre2PatternInfoSizeError(Pcre2PatternInfo info, long size) {
+    public Pcre2PatternInfoSizeException(Pcre2PatternInfo info, long size) {
         this(info, size, null);
     }
 
     /**
-     * Create a new pattern info size error.
+     * Creates a new pattern info size exception.
      *
      * @param info  the pattern info that had an unexpected size
      * @param size  the unexpected size in bytes
-     * @param cause the cause of the error
-     * @deprecated Use
-     *     {@link Pcre2PatternInfoSizeException#Pcre2PatternInfoSizeException(Pcre2PatternInfo, long, Throwable)}
-     *     instead.
+     * @param cause the cause of the exception, or {@code null}
      */
-    @Deprecated(forRemoval = true)
-    public Pcre2PatternInfoSizeError(Pcre2PatternInfo info, long size, Throwable cause) {
-        super(info, size, cause);
+    public Pcre2PatternInfoSizeException(Pcre2PatternInfo info, long size, Throwable cause) {
+        super("Unexpected size of %d bytes for %s".formatted(size, info), 0, cause);
     }
 }

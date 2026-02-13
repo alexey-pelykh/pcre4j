@@ -16,7 +16,7 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileContext;
-import org.pcre4j.Pcre2CompileError;
+import org.pcre4j.Pcre2CompileException;
 import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2JitStack;
 import org.pcre4j.Pcre2MatchContext;
@@ -1732,7 +1732,7 @@ public class Matcher implements java.util.regex.MatchResult {
                     compileContext
             );
             return anchoringBoundsCode;
-        } catch (Pcre2CompileError e) {
+        } catch (Pcre2CompileException e) {
             // If transformation produces invalid pattern, fall back to original
             return null;
         }

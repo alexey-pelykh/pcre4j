@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.pcre4j.Pcre2Bsr;
 import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileContext;
-import org.pcre4j.Pcre2CompileError;
+import org.pcre4j.Pcre2CompileException;
 import org.pcre4j.Pcre2CompileExtraOption;
 import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2MatchData;
@@ -177,7 +177,7 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
         compileContext.setParensNestLimit(2);
 
         // A pattern with nesting depth of 3 should fail to compile with limit of 2
-        final var exception = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(
+        final var exception = assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(
                 getApi(),
                 "(((a)))",
                 EnumSet.noneOf(Pcre2CompileOption.class),
@@ -245,7 +245,7 @@ public interface Pcre2CompileContextContractTest<T extends IPcre2> {
         compileContext.setMaxPatternLength(5);
 
         // A pattern longer than the limit should fail to compile
-        final var exception = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(
+        final var exception = assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(
                 getApi(),
                 "abcdefghij",
                 EnumSet.noneOf(Pcre2CompileOption.class),

@@ -30,7 +30,7 @@ public class Pcre2CodeTests {
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void badPattern(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () -> {
+        assertThrows(Pcre2CompileException.class, () -> {
             new Pcre2Code(api, "?");
         });
     }

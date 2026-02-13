@@ -48,7 +48,7 @@ public class Pcre2CodeErrorHandlingTests {
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unmatchedBracketThrows(IPcre2 api) {
-        var error = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "[abc"));
+        var error = assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "[abc"));
         assertNotNull(error.pattern());
         assertTrue(error.offset() >= 0);
         assertNotNull(error.message());
@@ -57,33 +57,33 @@ public class Pcre2CodeErrorHandlingTests {
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void unmatchedParenthesisThrows(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "(abc"));
+        assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "(abc"));
     }
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidQuantifierThrows(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "?"));
+        assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "?"));
     }
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidEscapeThrows(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "\\"));
+        assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "\\"));
     }
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void invalidRepetitionRangeThrows(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "a{5,3}"));
+        assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "a{5,3}"));
     }
 
-    // --- Pcre2CompileError fields ---
+    // --- Pcre2CompileException fields ---
 
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void compileErrorContainsPatternInfo(IPcre2 api) {
-        var error = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, "(?P<>)"));
+        var error = assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, "(?P<>)"));
         assertNotNull(error.getMessage());
         assertNotNull(error.pattern());
         assertNotNull(error.message());
@@ -95,7 +95,7 @@ public class Pcre2CodeErrorHandlingTests {
         // Pattern with error far from the start to exercise getPatternRegion truncation
         // Use a long valid prefix followed by an invalid construct
         var longPattern = "abcdefghijklmnopqrstuvwxyz(((";
-        var error = assertThrows(Pcre2CompileError.class, () -> new Pcre2Code(api, longPattern));
+        var error = assertThrows(Pcre2CompileException.class, () -> new Pcre2Code(api, longPattern));
         assertNotNull(error.getMessage());
         assertTrue(error.getMessage().length() > 0);
     }
@@ -217,7 +217,7 @@ public class Pcre2CodeErrorHandlingTests {
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void jitCodeBadPatternThrows(IPcre2 api) {
-        assertThrows(Pcre2CompileError.class, () ->
+        assertThrows(Pcre2CompileException.class, () ->
                 new Pcre2JitCode(api, "?", null, null, null));
     }
 

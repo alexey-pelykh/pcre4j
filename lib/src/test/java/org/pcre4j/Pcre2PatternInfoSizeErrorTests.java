@@ -22,46 +22,52 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests for {@link Pcre2PatternInfoSizeError}.
+ * Tests for {@link Pcre2PatternInfoSizeException}.
  */
 public class Pcre2PatternInfoSizeErrorTests {
 
     @Test
-    void isRuntimeException() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42);
-        assertInstanceOf(RuntimeException.class, error);
+    void isPcre2InternalException() {
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        assertInstanceOf(Pcre2InternalException.class, ex);
+    }
+
+    @Test
+    void isPcre2Exception() {
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        assertInstanceOf(Pcre2Exception.class, ex);
     }
 
     @Test
     void messageContainsSizeAndInfoName() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42);
-        assertTrue(error.getMessage().contains("42"));
-        assertTrue(error.getMessage().contains("INFO_SIZE"));
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        assertTrue(ex.getMessage().contains("42"));
+        assertTrue(ex.getMessage().contains("INFO_SIZE"));
     }
 
     @Test
     void messageFormatMatchesExpected() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_CAPTURECOUNT, 99);
-        assertEquals("Unexpected size of 99 bytes for INFO_CAPTURECOUNT", error.getMessage());
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_CAPTURECOUNT, 99);
+        assertEquals("Unexpected size of 99 bytes for INFO_CAPTURECOUNT", ex.getMessage());
     }
 
     @Test
     void causeIsNullWhenNotProvided() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42);
-        assertNull(error.getCause());
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        assertNull(ex.getCause());
     }
 
     @Test
     void causeIsSetWhenProvided() {
         var cause = new RuntimeException("underlying");
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42, cause);
-        assertEquals(cause, error.getCause());
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42, cause);
+        assertEquals(cause, ex.getCause());
     }
 
     @Test
     void messageIsSameWithAndWithoutCause() {
-        var withoutCause = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_ALLOPTIONS, 16);
-        var withCause = new Pcre2PatternInfoSizeError(
+        var withoutCause = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_ALLOPTIONS, 16);
+        var withCause = new Pcre2PatternInfoSizeException(
                 Pcre2PatternInfo.INFO_ALLOPTIONS, 16, new RuntimeException("cause")
         );
         assertEquals(withoutCause.getMessage(), withCause.getMessage());
@@ -69,37 +75,43 @@ public class Pcre2PatternInfoSizeErrorTests {
 
     @Test
     void withNullCauseMatchesSingleArgConstructor() {
-        var singleArg = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42);
-        var nullCause = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 42, null);
+        var singleArg = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        var nullCause = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42, null);
         assertEquals(singleArg.getMessage(), nullCause.getMessage());
         assertNull(nullCause.getCause());
     }
 
     @Test
     void zeroSize() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, 0);
-        assertTrue(error.getMessage().contains("0 bytes"));
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 0);
+        assertTrue(ex.getMessage().contains("0 bytes"));
     }
 
     @Test
     void negativeSize() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_SIZE, -1);
-        assertTrue(error.getMessage().contains("-1"));
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, -1);
+        assertTrue(ex.getMessage().contains("-1"));
     }
 
     @Test
     void largeSizeValue() {
-        var error = new Pcre2PatternInfoSizeError(Pcre2PatternInfo.INFO_JITSIZE, Long.MAX_VALUE);
-        assertTrue(error.getMessage().contains(String.valueOf(Long.MAX_VALUE)));
-        assertTrue(error.getMessage().contains("INFO_JITSIZE"));
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_JITSIZE, Long.MAX_VALUE);
+        assertTrue(ex.getMessage().contains(String.valueOf(Long.MAX_VALUE)));
+        assertTrue(ex.getMessage().contains("INFO_JITSIZE"));
     }
 
     @Test
     void differentPatternInfoValues() {
         for (var info : Pcre2PatternInfo.values()) {
-            var error = new Pcre2PatternInfoSizeError(info, 8);
-            assertTrue(error.getMessage().contains(info.name()));
-            assertTrue(error.getMessage().contains("8"));
+            var ex = new Pcre2PatternInfoSizeException(info, 8);
+            assertTrue(ex.getMessage().contains(info.name()));
+            assertTrue(ex.getMessage().contains("8"));
         }
+    }
+
+    @Test
+    void errorCodeIsZero() {
+        var ex = new Pcre2PatternInfoSizeException(Pcre2PatternInfo.INFO_SIZE, 42);
+        assertEquals(0, ex.errorCode());
     }
 }
