@@ -23,6 +23,7 @@ import java.util.EnumSet;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Behavioral tests for enum flag combinations.
@@ -585,6 +586,10 @@ public class Pcre2EnumFlagCombinationTests {
     @ParameterizedTest
     @MethodSource("org.pcre4j.test.BackendProvider#parameters")
     void extraMultipleAsciiRestrictions(IPcre2 api) {
+        // ASCII_BSD and ASCII_BSW were added in PCRE2 10.43
+        assumeTrue(Pcre4jUtils.isVersionAtLeast(api, 10, 43),
+                "Skipping test: ASCII_BSD and ASCII_BSW require PCRE2 10.43+");
+
         var ctx = new Pcre2CompileContext(api, null);
         ctx.setCompileExtraOptions(EnumSet.of(
                 Pcre2CompileExtraOption.ASCII_BSD,
