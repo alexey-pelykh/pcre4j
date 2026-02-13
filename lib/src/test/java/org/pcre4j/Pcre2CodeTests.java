@@ -21,6 +21,7 @@ import org.pcre4j.api.IPcre2;
 import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -132,6 +133,119 @@ public class Pcre2CodeTests {
         var code = new Pcre2Code(api, "test");
         assertEquals(1, code.firstCodeType(),
                 "Pattern starting with literal should return 1 (first code unit set)");
+    }
+
+    // --- Constructor variants ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithPatternOnly(IPcre2 api) {
+        Pcre4j.setup(api);
+        var code = new Pcre2Code("test");
+        assertEquals(api, code.api());
+        assertTrue(code.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithPatternAndOptions(IPcre2 api) {
+        Pcre4j.setup(api);
+        var code = new Pcre2Code("test", EnumSet.of(Pcre2CompileOption.CASELESS));
+        assertTrue(code.argOptions().contains(Pcre2CompileOption.CASELESS));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithPatternOptionsAndCompileContext(IPcre2 api) {
+        Pcre4j.setup(api);
+        var compileContext = new Pcre2CompileContext(api, null);
+        var code = new Pcre2Code("test", null, compileContext);
+        assertTrue(code.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithApiAndPattern(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        assertEquals(api, code.api());
+        assertTrue(code.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithApiPatternAndOptions(IPcre2 api) {
+        var code = new Pcre2Code(api, "test", EnumSet.of(Pcre2CompileOption.DOTALL));
+        assertTrue(code.argOptions().contains(Pcre2CompileOption.DOTALL));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithApiPatternOptionsAndCompileContext(IPcre2 api) {
+        var compileContext = new Pcre2CompileContext(api, null);
+        var code = new Pcre2Code(api, "test", EnumSet.of(Pcre2CompileOption.MULTILINE), compileContext);
+        assertTrue(code.argOptions().contains(Pcre2CompileOption.MULTILINE));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithNullOptions(IPcre2 api) {
+        var code = new Pcre2Code(api, "test", null);
+        assertNotNull(code.argOptions());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void constructorWithNullCompileContext(IPcre2 api) {
+        var code = new Pcre2Code(api, "test", null, null);
+        assertTrue(code.handle() != 0);
+    }
+
+    // --- Match edge cases ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchEmptySubjectNoMatch(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result < 0, "Non-matching pattern should return negative on empty subject");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchStartOffsetAtEndNoMatch(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("abc", 3, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result < 0, "Should not match when startOffset is at end and pattern requires chars");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchWithMatchContext(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var matchData = new Pcre2MatchData(code);
+        var matchContext = new Pcre2MatchContext(api, null);
+        var result = code.match("test", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, matchContext);
+        assertTrue(result >= 0, "Should match 'test' in 'test' with match context");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchWithStartOffsetMid(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("XXtest", 2, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertTrue(result >= 0, "Should match 'test' starting at offset 2 in 'XXtest'");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void matchReturnsCorrectCaptureCount(IPcre2 api) {
+        var code = new Pcre2Code(api, "(a)(b)(c)");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.match("abc", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        assertEquals(4, result, "Should return 4 (full match + 3 captures)");
     }
 
 }
