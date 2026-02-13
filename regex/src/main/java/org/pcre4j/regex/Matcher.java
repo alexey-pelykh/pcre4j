@@ -213,7 +213,7 @@ public class Matcher implements java.util.regex.MatchResult {
         } else {
             this.jitStack = null;
         }
-        configureMatchLimits(this.matchContext);
+        configureMatchLimits(this.matchContext, pattern);
         this.groupNameToIndex = pattern.namedGroups();
 
         this.input = input.toString();
@@ -228,27 +228,42 @@ public class Matcher implements java.util.regex.MatchResult {
     }
 
     /**
-     * Configures match limits on the given match context from system properties.
+     * Configures match limits on the given match context.
      * <p>
-     * This reads the {@link #MATCH_LIMIT_PROPERTY}, {@link #DEPTH_LIMIT_PROPERTY},
-     * and {@link #HEAP_LIMIT_PROPERTY} system properties and applies them to the match context.
+     * Per-pattern limits (configured via {@link Pattern.Builder}) take precedence over
+     * system property defaults ({@link #MATCH_LIMIT_PROPERTY}, {@link #DEPTH_LIMIT_PROPERTY},
+     * {@link #HEAP_LIMIT_PROPERTY}). If a per-pattern limit is not set (value is 0),
+     * the system property value is used as a fallback.
      *
      * @param matchContext the match context to configure
+     * @param pattern      the pattern whose limits to apply
      */
-    private static void configureMatchLimits(Pcre2MatchContext matchContext) {
-        final var matchLimit = System.getProperty(MATCH_LIMIT_PROPERTY);
-        if (matchLimit != null) {
-            matchContext.setMatchLimit(parsePositiveInt(MATCH_LIMIT_PROPERTY, matchLimit));
+    private static void configureMatchLimits(Pcre2MatchContext matchContext, Pattern pattern) {
+        if (pattern.matchLimit() > 0) {
+            matchContext.setMatchLimit(pattern.matchLimit());
+        } else {
+            final var matchLimit = System.getProperty(MATCH_LIMIT_PROPERTY);
+            if (matchLimit != null) {
+                matchContext.setMatchLimit(parsePositiveInt(MATCH_LIMIT_PROPERTY, matchLimit));
+            }
         }
 
-        final var depthLimit = System.getProperty(DEPTH_LIMIT_PROPERTY);
-        if (depthLimit != null) {
-            matchContext.setDepthLimit(parsePositiveInt(DEPTH_LIMIT_PROPERTY, depthLimit));
+        if (pattern.depthLimit() > 0) {
+            matchContext.setDepthLimit(pattern.depthLimit());
+        } else {
+            final var depthLimit = System.getProperty(DEPTH_LIMIT_PROPERTY);
+            if (depthLimit != null) {
+                matchContext.setDepthLimit(parsePositiveInt(DEPTH_LIMIT_PROPERTY, depthLimit));
+            }
         }
 
-        final var heapLimit = System.getProperty(HEAP_LIMIT_PROPERTY);
-        if (heapLimit != null) {
-            matchContext.setHeapLimit(parsePositiveInt(HEAP_LIMIT_PROPERTY, heapLimit));
+        if (pattern.heapLimit() > 0) {
+            matchContext.setHeapLimit(pattern.heapLimit());
+        } else {
+            final var heapLimit = System.getProperty(HEAP_LIMIT_PROPERTY);
+            if (heapLimit != null) {
+                matchContext.setHeapLimit(parsePositiveInt(HEAP_LIMIT_PROPERTY, heapLimit));
+            }
         }
     }
 
@@ -1316,7 +1331,7 @@ public class Matcher implements java.util.regex.MatchResult {
         } else {
             this.jitStack = null;
         }
-        configureMatchLimits(this.matchContext);
+        configureMatchLimits(this.matchContext, pattern);
         this.groupNameToIndex = newPattern.namedGroups();
 
         // Clear cached transformed pattern since the pattern changed

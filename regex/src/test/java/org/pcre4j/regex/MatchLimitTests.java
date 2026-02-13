@@ -20,6 +20,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -180,5 +181,221 @@ public class MatchLimitTests {
         matcher.usePattern(pattern2);
 
         assertThrows(MatchLimitException.class, matcher::find);
+    }
+
+    // --- Per-pattern match limit tests (Pattern.Builder) ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderMatchLimitThrowsMatchLimitException(IPcre2 api) {
+        // Per-pattern match limit via builder
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        var exception = assertThrows(MatchLimitException.class, matcher::find);
+        assertEquals(IPcre2.ERROR_MATCHLIMIT, exception.getErrorCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderDepthLimitThrowsMatchLimitException(IPcre2 api) {
+        // Depth limits are only enforced by the interpreter, not the JIT matcher
+        System.setProperty("pcre2.regex.jit", "false");
+
+        // Per-pattern depth limit via builder with high match limit
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100_000_000)
+                .depthLimit(10)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        var exception = assertThrows(MatchLimitException.class, matcher::find);
+        assertEquals(IPcre2.ERROR_DEPTHLIMIT, exception.getErrorCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderHeapLimitThrowsMatchLimitException(IPcre2 api) {
+        // Heap limits are only enforced by the interpreter, not the JIT matcher
+        System.setProperty("pcre2.regex.jit", "false");
+
+        // Per-pattern heap limit via builder with high match/depth limits
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100_000_000)
+                .depthLimit(100_000)
+                .heapLimit(1)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        var exception = assertThrows(MatchLimitException.class, matcher::find);
+        assertEquals(IPcre2.ERROR_HEAPLIMIT, exception.getErrorCode());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderWithFlagsCompiles(IPcre2 api) {
+        // Builder with compile flags
+        var pattern = Pattern.builder(api, "hello")
+                .flags(Pattern.CASE_INSENSITIVE)
+                .compile();
+        var matcher = pattern.matcher("HELLO");
+
+        assertTrue(matcher.matches());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderWithoutLimitsUsesDefaults(IPcre2 api) {
+        // Builder without limits should behave like compile()
+        var pattern = Pattern.builder(api, "\\d+")
+                .compile();
+        var matcher = pattern.matcher("abc123def");
+
+        assertTrue(matcher.find());
+        assertEquals("123", matcher.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderMatchLimitOverridesSystemProperty(IPcre2 api) {
+        // System property sets a high limit that would allow matching
+        System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100000000");
+
+        // Per-pattern limit overrides system property with a low limit
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        assertThrows(MatchLimitException.class, matcher::find);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderWithoutMatchLimitFallsBackToSystemProperty(IPcre2 api) {
+        // System property sets a low match limit
+        System.setProperty(Matcher.MATCH_LIMIT_PROPERTY, "100");
+
+        // Builder without match limit should fall back to system property
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        assertThrows(MatchLimitException.class, matcher::find);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderMatchLimitAppliesToMatches(IPcre2 api) {
+        // Per-pattern match limit applies to matches() method
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        assertThrows(MatchLimitException.class, matcher::matches);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderMatchLimitAppliesToLookingAt(IPcre2 api) {
+        // Per-pattern match limit applies to lookingAt() method
+        var pattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+        var matcher = pattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+
+        assertThrows(MatchLimitException.class, matcher::lookingAt);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderMatchLimitAppliesToUsePattern(IPcre2 api) {
+        // Per-pattern match limits are reconfigured when usePattern() is called
+        var pattern1 = Pattern.compile(api, "\\d+");
+        var pattern2 = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+
+        var matcher = pattern1.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+        matcher.usePattern(pattern2);
+
+        assertThrows(MatchLimitException.class, matcher::find);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderHighLimitAllowsNormalMatching(IPcre2 api) {
+        // High per-pattern limits should not interfere with normal matching
+        var pattern = Pattern.builder(api, "\\d+")
+                .matchLimit(10_000_000)
+                .depthLimit(250)
+                .heapLimit(20_000)
+                .compile();
+        var matcher = pattern.matcher("abc123def");
+
+        assertTrue(matcher.find());
+        assertEquals("123", matcher.group());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderNegativeMatchLimitThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () ->
+                Pattern.builder(api, "test").matchLimit(-1)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderNegativeDepthLimitThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () ->
+                Pattern.builder(api, "test").depthLimit(-1)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderNegativeHeapLimitThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () ->
+                Pattern.builder(api, "test").heapLimit(-1)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderNullApiThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () ->
+                Pattern.builder(null, "test")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void builderNullRegexThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () ->
+                Pattern.builder(api, null)
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void usePatternClearsPerPatternLimits(IPcre2 api) {
+        // Start with a pattern that has a low per-pattern match limit
+        var limitedPattern = Pattern.builder(api, "(*NO_AUTO_POSSESS)(*NO_START_OPT)(a+)+$")
+                .matchLimit(100)
+                .compile();
+
+        // Create matcher with limited pattern and input that triggers backtracking - should throw
+        var matcher = limitedPattern.matcher("aaaaaaaaaaaaaaaaaaaaaaaab");
+        assertThrows(MatchLimitException.class, matcher::find);
+
+        // Switch to a simple pattern without per-pattern limits - should match normally
+        var simplePattern = Pattern.compile(api, "\\d+");
+        matcher.usePattern(simplePattern);
+        matcher.reset("abc123def");
+        assertDoesNotThrow(() -> matcher.find());
     }
 }
