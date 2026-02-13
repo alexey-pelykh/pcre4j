@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -569,6 +570,119 @@ public class Pcre4jUtilsExtendedTests {
         var code = new Pcre2Code(api, "test");
         assertThrows(IllegalArgumentException.class, () ->
                 Pcre4jUtils.getNamedMatchGroups(code, "test", (long[]) null));
+    }
+
+    // === JIT target / JIT support consistency ===
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getJitTargetConsistentWithIsJitSupported(IPcre2 api) {
+        var jitSupported = Pcre4jUtils.isJitSupported(api);
+        var jitTarget = Pcre4jUtils.getJitTarget(api);
+        if (jitSupported) {
+            assertNotNull(jitTarget, "JIT target should be non-null when JIT is supported");
+            assertFalse(jitTarget.isEmpty(), "JIT target should be non-empty when JIT is supported");
+        } else {
+            assertNull(jitTarget, "JIT target should be null when JIT is not supported");
+        }
+    }
+
+    // === getErrorMessage with various error codes ===
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getErrorMessageMultipleCodes(IPcre2 api) {
+        // Test several well-known error codes produce non-empty messages
+        int[] errorCodes = {
+                IPcre2.ERROR_NOMATCH,
+                IPcre2.ERROR_NULL,
+                IPcre2.ERROR_BADOPTION,
+                IPcre2.ERROR_NOMEMORY
+        };
+        for (var code : errorCodes) {
+            var msg = Pcre4jUtils.getErrorMessage(api, code);
+            assertNotNull(msg, "Error message for code " + code + " should not be null");
+            assertFalse(msg.isEmpty(), "Error message for code " + code + " should not be empty");
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getErrorMessageDistinctMessages(IPcre2 api) {
+        // Different error codes should produce different messages
+        var noMatchMsg = Pcre4jUtils.getErrorMessage(api, IPcre2.ERROR_NOMATCH);
+        var nullMsg = Pcre4jUtils.getErrorMessage(api, IPcre2.ERROR_NULL);
+        assertFalse(noMatchMsg.equals(nullMsg), "Different error codes should produce different messages");
+    }
+
+    // === getGroupNames with many named groups ===
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getGroupNamesManyNamedGroups(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<a>.)(?<b>.)(?<c>.)(?<d>.)(?<e>.)");
+        var names = Pcre4jUtils.getGroupNames(code);
+        assertEquals(5, names.length);
+        assertEquals("a", names[0]);
+        assertEquals("b", names[1]);
+        assertEquals("c", names[2]);
+        assertEquals("d", names[3]);
+        assertEquals("e", names[4]);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getGroupNamesNoGroups(IPcre2 api) {
+        var code = new Pcre2Code(api, "hello");
+        var names = Pcre4jUtils.getGroupNames(code);
+        assertEquals(0, names.length);
+    }
+
+    // === getMatchGroups with unmatched optional groups ===
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getMatchGroupsUnmatchedOptionalGroup(IPcre2 api) {
+        // Pattern with an optional group that won't match
+        var code = new Pcre2Code(api, "(hello)(?: (world))?", EnumSet.of(Pcre2CompileOption.UTF));
+        var matchData = new Pcre2MatchData(code);
+        var subject = "hello";
+        code.match(subject, 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+        var ovector = matchData.ovector();
+
+        // The second group should be unmatched (-1)
+        assertEquals(-1L, ovector[4]);
+        assertEquals(-1L, ovector[5]);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getMatchGroupsAtStringBoundaries(IPcre2 api) {
+        // Match at start and end boundaries
+        var code = new Pcre2Code(api, "^(hello)$");
+        var matchData = new Pcre2MatchData(code);
+        var subject = "hello";
+        code.match(subject, 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+
+        var groups = Pcre4jUtils.getMatchGroups(code, subject, matchData);
+        assertEquals(2, groups.length);
+        assertEquals("hello", groups[0]);
+        assertEquals("hello", groups[1]);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void getMatchGroupsMultiByteSubject(IPcre2 api) {
+        // Match within a multi-byte UTF-8 subject
+        var code = new Pcre2Code(api, "(café)", EnumSet.of(Pcre2CompileOption.UTF));
+        var matchData = new Pcre2MatchData(code);
+        var subject = "café";
+        code.match(subject, 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, null);
+
+        var groups = Pcre4jUtils.getMatchGroups(code, subject, matchData);
+        assertEquals(2, groups.length);
+        assertEquals("café", groups[0]);
+        assertEquals("café", groups[1]);
     }
 
 }
