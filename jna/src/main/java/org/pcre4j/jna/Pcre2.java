@@ -22,6 +22,7 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
+import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2LibraryFinder;
 import org.pcre4j.api.Pcre2UtfWidth;
@@ -35,7 +36,7 @@ import java.util.Map;
 /**
  * A PCRE2 API using the JNA.
  */
-public class Pcre2 implements IPcre2 {
+public class Pcre2 implements IPcre2, INativeMemoryAccess {
 
     /**
      * The PCRE2 library loaded by JNA.

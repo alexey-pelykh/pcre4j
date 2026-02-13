@@ -1824,14 +1824,4 @@ public interface IPcre2 {
      */
     int serializeGetNumberOfCodes(byte[] bytes);
 
-    /**
-     * Read bytes from a native memory pointer.
-     * <p>
-     * This is a utility method used internally to read string data from native memory.
-     *
-     * @param pointer the native memory pointer
-     * @param length  the number of bytes to read
-     * @return the bytes read from the pointer
-     */
-    byte[] readBytes(long pointer, int length);
 }

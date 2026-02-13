@@ -14,6 +14,7 @@
  */
 package org.pcre4j;
 
+import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.ref.Cleaner;
@@ -175,7 +176,7 @@ public class Pcre2MatchData {
 
         if (result == 0) {
             try {
-                return api.readBytes(bufferptr[0], (int) bufflen[0]);
+                return ((INativeMemoryAccess) api).readBytes(bufferptr[0], (int) bufflen[0]);
             } finally {
                 api.substringFree(bufferptr[0]);
             }
@@ -229,7 +230,7 @@ public class Pcre2MatchData {
 
         if (result == 0) {
             try {
-                return api.readBytes(bufferptr[0], (int) bufflen[0]);
+                return ((INativeMemoryAccess) api).readBytes(bufferptr[0], (int) bufflen[0]);
             } finally {
                 api.substringFree(bufferptr[0]);
             }

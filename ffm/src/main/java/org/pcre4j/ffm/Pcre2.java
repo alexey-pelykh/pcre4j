@@ -14,6 +14,7 @@
  */
 package org.pcre4j.ffm;
 
+import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2LibraryFinder;
 import org.pcre4j.api.Pcre2UtfWidth;
@@ -28,7 +29,7 @@ import java.nio.ByteBuffer;
 /**
  * A PCRE2 API using the Foreign Function {@literal &} Memory API.
  */
-public class Pcre2 implements IPcre2 {
+public class Pcre2 implements IPcre2, INativeMemoryAccess {
 
     private static final Linker LINKER = Linker.nativeLinker();
     private static final SymbolLookup SYMBOL_LOOKUP = SymbolLookup.loaderLookup();
