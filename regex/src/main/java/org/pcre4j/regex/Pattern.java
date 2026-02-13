@@ -30,6 +30,21 @@ import java.util.stream.Stream;
 /**
  * A compiled representation of a regular expression that uses the PCRE library yet aims to have a
  * {@link java.util.regex.Pattern}-alike API.
+ *
+ * <h2>Resource Lifecycle</h2>
+ *
+ * <p>Each {@code Pattern} instance holds one or more native PCRE2 compiled pattern handles
+ * (via {@link Pcre2Code}). These native resources are <strong>not</strong> managed through
+ * {@link AutoCloseable}; instead, they are automatically released by a {@link java.lang.ref.Cleaner}
+ * when the {@code Pattern} becomes unreachable. This mirrors the lifecycle model of
+ * {@link java.util.regex.Pattern}, which also does not implement {@link AutoCloseable}.</p>
+ *
+ * <p>Patterns are designed to be compiled once and reused across many {@link Matcher} instances.
+ * There is no {@code close()} method and no need for try-with-resources.</p>
+ *
+ * <p><strong>Note:</strong> Because native memory is reclaimed during garbage collection rather
+ * than deterministically, applications that compile a very large number of short-lived patterns
+ * may observe higher native memory usage until the garbage collector runs.</p>
  */
 public class Pattern {
 

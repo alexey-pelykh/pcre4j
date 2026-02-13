@@ -28,7 +28,17 @@ import java.util.stream.Stream;
 
 /**
  * Performs match operations on a character sequence by interpreting a {@link Pattern} using the PCRE library yet aims
- * to have a {@link java.util.regex.Matcher}-alike API
+ * to have a {@link java.util.regex.Matcher}-alike API.
+ *
+ * <h2>Resource Lifecycle</h2>
+ *
+ * <p>Each {@code Matcher} instance holds native PCRE2 resources (a match context and, when JIT
+ * compilation is active, a JIT stack). Like {@link java.util.regex.Matcher}, this class does
+ * <strong>not</strong> implement {@link AutoCloseable}. The native resources are automatically
+ * released by a {@link java.lang.ref.Cleaner} when the {@code Matcher} becomes unreachable.</p>
+ *
+ * <p>A {@code Matcher} is created via {@link Pattern#matcher(CharSequence)} and is not safe for
+ * use by multiple concurrent threads.</p>
  */
 public class Matcher implements java.util.regex.MatchResult {
 
