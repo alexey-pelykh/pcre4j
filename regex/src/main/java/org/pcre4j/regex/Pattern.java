@@ -162,6 +162,9 @@ public class Pattern {
     private final IPcre2 api;
     private final String regex;
     private final int flags;
+    private final int matchLimit;
+    private final int depthLimit;
+    private final int heapLimit;
     private final Map<String, Integer> namedGroups;
     private final String compiledRegex;
     private final EnumSet<Pcre2CompileOption> compileOptions;
@@ -171,13 +174,16 @@ public class Pattern {
     private volatile Pcre2Code lookingAtCode;
 
     /**
-     * Create a new {@link Pattern} using the given regular expression and flags.
+     * Create a new {@link Pattern} using the given regular expression, flags, and match limits.
      *
-     * @param api   the PCRE API to use
-     * @param regex the regular expression to compile
-     * @param flags the flags to use when compiling the pattern
+     * @param api        the PCRE API to use
+     * @param regex      the regular expression to compile
+     * @param flags      the flags to use when compiling the pattern
+     * @param matchLimit the match limit (0 = use default)
+     * @param depthLimit the depth limit (0 = use default)
+     * @param heapLimit  the heap limit in kibibytes (0 = use default)
      */
-    private Pattern(IPcre2 api, String regex, int flags) {
+    private Pattern(IPcre2 api, String regex, int flags, int matchLimit, int depthLimit, int heapLimit) {
         if (api == null) {
             throw new IllegalArgumentException("api cannot be null");
         }
@@ -188,6 +194,9 @@ public class Pattern {
         this.api = api;
         this.regex = regex;
         this.flags = flags;
+        this.matchLimit = matchLimit;
+        this.depthLimit = depthLimit;
+        this.heapLimit = heapLimit;
 
         // When CANON_EQ is set, normalize the pattern to NFD form for compilation
         // The original regex is preserved in this.regex for pattern() method
@@ -297,7 +306,44 @@ public class Pattern {
      * @return the compiled pattern
      */
     public static Pattern compile(IPcre2 api, String regex, int flags) {
-        return new Pattern(api, regex, flags);
+        return new Pattern(api, regex, flags, 0, 0, 0);
+    }
+
+    /**
+     * Creates a new builder for constructing a {@link Pattern} with custom match limits.
+     * <p>
+     * The builder allows configuring per-pattern match limits for ReDoS protection,
+     * in addition to the standard compile flags.
+     * <p>
+     * Example usage:
+     * <pre>{@code
+     * Pattern pattern = Pattern.builder("complex.*regex")
+     *     .flags(Pattern.CASE_INSENSITIVE)
+     *     .matchLimit(10_000)
+     *     .depthLimit(5_000)
+     *     .heapLimit(1024)
+     *     .compile();
+     * }</pre>
+     *
+     * @param regex the regular expression to compile
+     * @return a new builder
+     */
+    public static Builder builder(String regex) {
+        return builder(Pcre4j.api(), regex);
+    }
+
+    /**
+     * Creates a new builder for constructing a {@link Pattern} with custom match limits.
+     * <p>
+     * The builder allows configuring per-pattern match limits for ReDoS protection,
+     * in addition to the standard compile flags.
+     *
+     * @param api   the PCRE API to use
+     * @param regex the regular expression to compile
+     * @return a new builder
+     */
+    public static Builder builder(IPcre2 api, String regex) {
+        return new Builder(api, regex);
     }
 
     /**
@@ -567,5 +613,177 @@ public class Pattern {
             }
         }
         return result;
+    }
+
+    /**
+     * Returns the match limit configured for this pattern, or 0 if using the default.
+     *
+     * @return the match limit, or 0 for default
+     */
+    /* package-private */ int matchLimit() {
+        return matchLimit;
+    }
+
+    /**
+     * Returns the depth limit configured for this pattern, or 0 if using the default.
+     *
+     * @return the depth limit, or 0 for default
+     */
+    /* package-private */ int depthLimit() {
+        return depthLimit;
+    }
+
+    /**
+     * Returns the heap limit configured for this pattern, or 0 if using the default.
+     *
+     * @return the heap limit in kibibytes, or 0 for default
+     */
+    /* package-private */ int heapLimit() {
+        return heapLimit;
+    }
+
+    /**
+     * A builder for constructing {@link Pattern} instances with custom match limits.
+     * <p>
+     * Match limits provide per-pattern ReDoS protection by capping the resources a match
+     * operation can consume. When a limit is exceeded during matching, a {@link MatchLimitException}
+     * is thrown.
+     * <p>
+     * Limits set via the builder take precedence over system property defaults
+     * ({@link Matcher#MATCH_LIMIT_PROPERTY}, {@link Matcher#DEPTH_LIMIT_PROPERTY},
+     * {@link Matcher#HEAP_LIMIT_PROPERTY}). A limit value of 0 (the default) means the
+     * system property value is used, or the PCRE2 compiled-in default if no system property
+     * is set.
+     * <p>
+     * Example:
+     * <pre>{@code
+     * Pattern pattern = Pattern.builder("complex.*regex")
+     *     .flags(Pattern.CASE_INSENSITIVE)
+     *     .matchLimit(10_000)
+     *     .depthLimit(5_000)
+     *     .heapLimit(1024)  // KiB
+     *     .compile();
+     * }</pre>
+     */
+    public static class Builder {
+
+        private final IPcre2 api;
+        private final String regex;
+        private int flags;
+        private int matchLimit;
+        private int depthLimit;
+        private int heapLimit;
+
+        private Builder(IPcre2 api, String regex) {
+            if (api == null) {
+                throw new IllegalArgumentException("api cannot be null");
+            }
+            if (regex == null) {
+                throw new IllegalArgumentException("regex cannot be null");
+            }
+            this.api = api;
+            this.regex = regex;
+        }
+
+        /**
+         * Sets the compile flags for this pattern.
+         *
+         * @param flags the flags to use when compiling the pattern
+         * @return this builder
+         * @see Pattern#CASE_INSENSITIVE
+         * @see Pattern#DOTALL
+         * @see Pattern#MULTILINE
+         * @see Pattern#LITERAL
+         * @see Pattern#UNICODE_CHARACTER_CLASS
+         * @see Pattern#UNIX_LINES
+         * @see Pattern#COMMENTS
+         * @see Pattern#UNICODE_CASE
+         * @see Pattern#CANON_EQ
+         */
+        public Builder flags(int flags) {
+            this.flags = flags;
+            return this;
+        }
+
+        /**
+         * Sets the match limit for this pattern.
+         * <p>
+         * The match limit caps the number of times the internal {@code match()} function can
+         * be called during a single match operation. This provides protection against
+         * catastrophic backtracking (ReDoS).
+         * <p>
+         * A value of 0 means the system property ({@link Matcher#MATCH_LIMIT_PROPERTY})
+         * or PCRE2's compiled-in default is used.
+         *
+         * @param matchLimit the match limit (must be non-negative)
+         * @return this builder
+         * @throws IllegalArgumentException if the match limit is negative
+         * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_match_limit.html">
+         *     pcre2_set_match_limit</a>
+         */
+        public Builder matchLimit(int matchLimit) {
+            if (matchLimit < 0) {
+                throw new IllegalArgumentException("matchLimit must be non-negative, got: " + matchLimit);
+            }
+            this.matchLimit = matchLimit;
+            return this;
+        }
+
+        /**
+         * Sets the backtracking depth limit for this pattern.
+         * <p>
+         * The depth limit caps the depth of nested backtracking during a single match
+         * operation. This provides protection against patterns that cause deep recursion.
+         * <p>
+         * A value of 0 means the system property ({@link Matcher#DEPTH_LIMIT_PROPERTY})
+         * or PCRE2's compiled-in default is used.
+         *
+         * @param depthLimit the depth limit (must be non-negative)
+         * @return this builder
+         * @throws IllegalArgumentException if the depth limit is negative
+         * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_depth_limit.html">
+         *     pcre2_set_depth_limit</a>
+         */
+        public Builder depthLimit(int depthLimit) {
+            if (depthLimit < 0) {
+                throw new IllegalArgumentException("depthLimit must be non-negative, got: " + depthLimit);
+            }
+            this.depthLimit = depthLimit;
+            return this;
+        }
+
+        /**
+         * Sets the heap memory limit for this pattern.
+         * <p>
+         * The heap limit caps the amount of heap memory (in kibibytes) that can be used
+         * during a single match operation. This provides protection against patterns that
+         * consume excessive memory.
+         * <p>
+         * A value of 0 means the system property ({@link Matcher#HEAP_LIMIT_PROPERTY})
+         * or PCRE2's compiled-in default is used.
+         *
+         * @param heapLimit the heap limit in kibibytes (must be non-negative)
+         * @return this builder
+         * @throws IllegalArgumentException if the heap limit is negative
+         * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_heap_limit.html">
+         *     pcre2_set_heap_limit</a>
+         */
+        public Builder heapLimit(int heapLimit) {
+            if (heapLimit < 0) {
+                throw new IllegalArgumentException("heapLimit must be non-negative, got: " + heapLimit);
+            }
+            this.heapLimit = heapLimit;
+            return this;
+        }
+
+        /**
+         * Compiles the pattern with the configured flags and match limits.
+         *
+         * @return the compiled pattern
+         * @throws java.util.regex.PatternSyntaxException if the regex syntax is invalid
+         */
+        public Pattern compile() {
+            return new Pattern(api, regex, flags, matchLimit, depthLimit, heapLimit);
+        }
     }
 }
