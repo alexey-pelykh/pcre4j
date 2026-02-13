@@ -63,10 +63,6 @@ tasks.jacocoTestReport {
     }
 }
 
-tasks.named<Jar>("sourcesJar") {
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
-}
-
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
