@@ -13,66 +13,14 @@
  * <https://www.gnu.org/licenses/>.
  */
 plugins {
-    `java-library`
-    checkstyle
-    `maven-publish`
-    jacoco
-}
-
-version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
-}
-
-dependencies {
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-configurations {
-    implementation {
-        resolutionStrategy.failOnVersionConflict()
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-
-    withSourcesJar()
-    withJavadocJar()
-}
-
-tasks.test {
-    useJUnitPlatform()
-    finalizedBy(tasks.jacocoTestReport)
-}
-
-tasks.jacocoTestReport {
-    dependsOn(tasks.test)
-
-    reports {
-        xml.required = true
-        html.required = true
-    }
+    id("pcre4j-module")
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = project.name
-
-            pom {
-                name = "PCRE4J Backend API"
-                description = "PCRE4J Backend API"
-            }
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            name = "PCRE4J Backend API"
+            description = "PCRE4J Backend API"
         }
     }
 }

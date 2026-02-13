@@ -13,17 +13,9 @@
  * <https://www.gnu.org/licenses/>.
  */
 plugins {
-    `java-library`
+    id("pcre4j-module")
+    id("pcre4j-native-test")
     `java-test-fixtures`
-    checkstyle
-    `maven-publish`
-    jacoco
-}
-
-version = findProperty("pcre4j.version") as String? ?: "0.0.0-SNAPSHOT"
-
-repositories {
-    mavenCentral()
 }
 
 dependencies {
@@ -33,27 +25,6 @@ dependencies {
     // Runtime-only: lib tests discover backends reflectively to avoid compile-time coupling
     testRuntimeOnly(project(":jna"))
     testRuntimeOnly(project(":ffm"))
-    testImplementation(platform(libs.junit.bom))
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.platform.launcher)
-}
-
-configurations {
-    implementation {
-        resolutionStrategy.failOnVersionConflict()
-    }
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
-
-    withSourcesJar()
-    withJavadocJar()
 }
 
 // --enable-preview on test tasks only: lib's own code does not use preview
@@ -62,59 +33,18 @@ java {
 //   - compileTestJava: test code may reference FFM-backed types
 //   - test JVM args: JVM must enable preview features for FFM backend loading
 tasks.test {
-    useJUnitPlatform()
     jvmArgs("--enable-preview")
-
-    systemProperty(
-        "jna.library.path", listOf(
-            providers.systemProperty("pcre2.library.path").orNull,
-            providers.systemProperty("jna.library.path").orNull
-        ).joinToString(File.pathSeparator)
-    )
-
-    systemProperty(
-        "java.library.path", listOf(
-            providers.systemProperty("pcre2.library.path").orNull,
-            providers.systemProperty("java.library.path").orNull
-        ).joinToString(File.pathSeparator)
-    )
-
-    val pcre2LibraryName = providers.systemProperty("pcre2.library.name").orNull
-    if (pcre2LibraryName != null) {
-        systemProperty("pcre2.library.name", pcre2LibraryName)
-    }
-
-    val pcre2FunctionSuffix = providers.systemProperty("pcre2.function.suffix").orNull
-    if (pcre2FunctionSuffix != null) {
-        systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
-    }
-
-    finalizedBy(tasks.jacocoTestReport)
 }
 
 tasks.named<JavaCompile>("compileTestJava") {
     options.compilerArgs.add("--enable-preview")
 }
 
-tasks.jacocoTestReport {
-    dependsOn(tasks.test)
-
-    reports {
-        xml.required = true
-        html.required = true
-    }
-}
-
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = project.name
-
-            pom {
-                name = "PCRE4J Library"
-                description = "PCRE4J Library"
-            }
+    publications.named<MavenPublication>("mavenJava") {
+        pom {
+            name = "PCRE4J Library"
+            description = "PCRE4J Library"
         }
     }
 }
