@@ -232,8 +232,34 @@ tasks.check {
 // ============================================================
 // JaCoCo configuration
 // ============================================================
+
+// Report for Java 22+ tests
+val jacocoTestJava22Report by tasks.registering(JacocoReport::class) {
+    dependsOn(testJava22)
+
+    executionData(testJava22.get())
+
+    // Use only Java 22 compiled classes (Pcre2 + ArenaHelper) to avoid duplicate class errors
+    classDirectories.setFrom(java22.output.classesDirs)
+    sourceDirectories.setFrom(
+        java22.java.srcDirs + sourceSets.main.get().java.srcDirs
+    )
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+testJava22 {
+    finalizedBy(jacocoTestJava22Report)
+}
+
+// Report for Java 21 tests (includes testJava22 execution data for aggregation)
 tasks.jacocoTestReport {
-    dependsOn(tasks.test)
+    dependsOn(tasks.test, testJava22)
+
+    executionData(testJava22.get())
 
     reports {
         xml.required = true
