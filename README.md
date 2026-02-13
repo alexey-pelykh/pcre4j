@@ -393,6 +393,10 @@ The `ffm` module is packaged as a Multi-Release JAR supporting both:
 - **Java 21**: Requires `--enable-preview` flag (FFM was a preview feature)
 - **Java 22+**: No special flags required (FFM is finalized)
 
+> **Note:** The `ffm` backend is incompatible with OpenJ9-based JVMs (including IBM Semeru) on Java
+> 21 due to a JVM bug in the preview FFM implementation that causes memory corruption assertions.
+> OpenJ9 Java 22+, where FFM is finalized, works correctly. Use the `jna` backend on OpenJ9 Java 21.
+
 > **Note:** Automatic library discovery can be disabled by setting `-Dpcre2.library.discovery=false`.
 
 ## Contributing
