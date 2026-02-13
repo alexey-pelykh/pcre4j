@@ -46,23 +46,30 @@ tasks.register("checkModuleDependencies") {
     description = "Validates module dependency constraints (api ← lib ← backends ← regex)"
     group = "verification"
 
+    // Resolve all dependency data at configuration time into plain collections so the doLast
+    // action captures only serializable values (compatible with the configuration cache)
+    val checkedConfigurations = setOf("api", "implementation", "compileOnly", "compileOnlyApi")
+    val allowed = allowedProjectDependencies.toMap()
+    val actual = allowedProjectDependencies.keys.associate { modulePath ->
+        modulePath to project(modulePath).configurations
+            .filter { it.name in checkedConfigurations }
+            .flatMap { config ->
+                config.dependencies.filterIsInstance<ProjectDependency>()
+                    .map { dep -> config.name to dep.path }
+            }
+    }
+
     doLast {
         val violations = mutableListOf<String>()
-        allowedProjectDependencies.forEach { (modulePath, allowed) ->
-            val subproject = project(modulePath)
-            subproject.configurations
-                .filter { it.name in setOf("api", "implementation", "compileOnly", "compileOnlyApi") }
-                .forEach { config ->
-                    config.dependencies.filterIsInstance<ProjectDependency>().forEach { dep ->
-                        val depPath = dep.path
-                        if (depPath !in allowed) {
-                            violations.add(
-                                "$modulePath → $depPath (via '${config.name}') " +
-                                    "violates allowed dependencies: $allowed"
-                            )
-                        }
-                    }
+        allowed.forEach { (modulePath, allowedDeps) ->
+            actual[modulePath]?.forEach { (configName, depPath) ->
+                if (depPath !in allowedDeps) {
+                    violations.add(
+                        "$modulePath → $depPath (via '$configName') " +
+                            "violates allowed dependencies: $allowedDeps"
+                    )
                 }
+            }
         }
         if (violations.isNotEmpty()) {
             throw GradleException(
