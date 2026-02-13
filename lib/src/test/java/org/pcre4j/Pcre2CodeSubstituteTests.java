@@ -22,6 +22,8 @@ import java.util.EnumSet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for {@link Pcre2Code#substitute} method.
@@ -122,5 +124,70 @@ public class Pcre2CodeSubstituteTests {
         var result = code.substitute(subject, 0,
                 EnumSet.of(Pcre2SubstituteOption.GLOBAL), null, null, "XX");
         assertEquals("XXXXXXXXXXXX", result); // Each char replaced with "XX"
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteWithMatchData(IPcre2 api) {
+        var code = new Pcre2Code(api, "(\\w+)");
+        var matchData = new Pcre2MatchData(code);
+        var result = code.substitute("hello", 0, null, matchData, null, "world");
+        assertEquals("world", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteWithMatchContext(IPcre2 api) {
+        var code = new Pcre2Code(api, "test");
+        var matchContext = new Pcre2MatchContext(api, null);
+        var result = code.substitute("test", 0, null, null, matchContext, "replaced");
+        assertEquals("replaced", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteEmptySubject(IPcre2 api) {
+        var code = new Pcre2Code(api, "^$");
+        var result = code.substitute("", 0, null, null, null, "inserted");
+        assertEquals("inserted", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteStartOffsetAtEnd(IPcre2 api) {
+        // substituting with offset at the end of subject — pattern $ can match here
+        var code = new Pcre2Code(api, "$");
+        var result = code.substitute("abc", 3, null, null, null, "X");
+        assertEquals("abcX", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteMultipleBackreferences(IPcre2 api) {
+        var code = new Pcre2Code(api, "(\\w)(\\w)(\\w)");
+        var result = code.substitute("abc", 0, null, null, null, "$3$2$1");
+        assertEquals("cba", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteGlobalEmptyReplacement(IPcre2 api) {
+        var code = new Pcre2Code(api, "\\d");
+        var result = code.substitute("a1b2c3", 0,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL), null, null, "");
+        assertEquals("abc", result);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void substituteVeryLargeBufferReallocation(IPcre2 api) {
+        // Force buffer reallocation with global substitution expanding each char to 500 chars
+        var code = new Pcre2Code(api, ".");
+        var subject = "abcdefghij"; // 10 chars
+        var largeReplacement = "X".repeat(500);
+        var result = code.substitute(subject, 0,
+                EnumSet.of(Pcre2SubstituteOption.GLOBAL), null, null, largeReplacement);
+        assertEquals(5000, result.length());
+        assertTrue(result.chars().allMatch(c -> c == 'X'));
     }
 }

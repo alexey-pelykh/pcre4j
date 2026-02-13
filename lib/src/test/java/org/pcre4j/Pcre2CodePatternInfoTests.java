@@ -427,4 +427,113 @@ public class Pcre2CodePatternInfoTests {
         var code = new Pcre2Code(api, "(?<name>a)");
         assertThrows(Pcre2NoSubstringError.class, () -> code.scanNametable("nonexistent"));
     }
+
+    // --- nameTable with multi-byte (Unicode) group names ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void nameTableWithMultiByteNames(IPcre2 api) {
+        // PCRE2 group names must be ASCII word characters, so use longer ASCII names instead
+        var code = new Pcre2Code(api, "(?<longername>a)(?<anothername>b)");
+        var nameTable = code.nameTable();
+        assertEquals(2, nameTable.length);
+
+        boolean foundFirst = false;
+        boolean foundSecond = false;
+        for (var entry : nameTable) {
+            if ("longername".equals(entry.name()) && entry.group() == 1) foundFirst = true;
+            if ("anothername".equals(entry.name()) && entry.group() == 2) foundSecond = true;
+        }
+        assertTrue(foundFirst, "Name table should contain 'longername' mapped to group 1");
+        assertTrue(foundSecond, "Name table should contain 'anothername' mapped to group 2");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void nameTableWithManyNamedGroups(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<a>.)(?<bb>..)(?<ccc>...)(?<dddd>....)");
+        var nameTable = code.nameTable();
+        assertEquals(4, nameTable.length);
+        assertEquals(4, code.nameCount());
+    }
+
+    // --- scanNametable with (?J) duplicate names ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void scanNametableWithJChangedDuplicates(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?J)(?<name>a)|(?<name>b)");
+        assertTrue(code.jChanged());
+        var groups = code.scanNametable("name");
+        assertEquals(2, groups.length);
+        assertEquals(1, groups[0]);
+        assertEquals(2, groups[1]);
+    }
+
+    // --- backRefMax with higher backreference ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void backRefMaxHigherRef(IPcre2 api) {
+        var code = new Pcre2Code(api, "(a)(b)(c)\\3");
+        assertEquals(3, code.backRefMax());
+    }
+
+    // --- minLength with alternation ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void minLengthWithAlternation(IPcre2 api) {
+        // "ab|c" matches "c" (1 char) or "ab" (2 chars), minimum is 1
+        var code = new Pcre2Code(api, "ab|c");
+        assertEquals(1, code.minLength());
+    }
+
+    // --- hasBackslashC true ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void hasBackslashCTrue(IPcre2 api) {
+        var code = new Pcre2Code(api, "\\C");
+        assertTrue(code.hasBackslashC());
+    }
+
+    // --- maxLookBehind with multiple lookbehinds ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void maxLookBehindMultiple(IPcre2 api) {
+        // Two lookbehinds of different sizes; max should be the larger one
+        var code = new Pcre2Code(api, "(?<=ab)x|(?<=cdef)y");
+        assertEquals(4, code.maxLookBehind());
+    }
+
+    // --- firstCodeType for alternation ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void firstCodeTypeAlternation(IPcre2 api) {
+        // Pattern "a|b" has no single fixed start character → firstCodeType should be 0
+        var code = new Pcre2Code(api, "a|b");
+        assertEquals(0, code.firstCodeType());
+    }
+
+    // --- groupNumberFromName with multiple named groups ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void groupNumberFromNameThirdGroup(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<a>x)(?<b>y)(?<c>z)");
+        assertEquals(3, code.groupNumberFromName("c"));
+    }
+
+    // --- scanNametable single unique name ---
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void scanNametableSingleResult(IPcre2 api) {
+        var code = new Pcre2Code(api, "(?<alpha>a)(?<beta>b)");
+        var groups = code.scanNametable("beta");
+        assertArrayEquals(new int[]{2}, groups);
+    }
 }
