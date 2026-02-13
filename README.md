@@ -88,6 +88,32 @@ The PCRE4J library provides several APIs to interact with the PCRE library:
 - The PCRE4J API via `org.pcre4j.Pcre2Code` and related classes
 - The `libpcre2` direct API via backends that implement `org.pcre4j.api.IPcre2`
 
+### Library Initialization
+
+The `regex` and `lib` convenience APIs use a global backend held by `Pcre4j`. Call
+`Pcre4j.setup()` once — typically in a static initializer — before any other PCRE4J usage:
+
+```java
+import org.pcre4j.Pcre4j;
+import org.pcre4j.jna.Pcre2;   // or org.pcre4j.ffm.Pcre2
+
+static {
+    Pcre4j.setup(new Pcre2());
+}
+```
+
+`setup()` may be called again to replace the backend; existing compiled patterns are unaffected
+because each `Pcre2Code` instance captures the backend it was created with.
+
+Every convenience constructor and factory method (e.g. `Pcre2Code(String)`,
+`Pattern.compile(String)`) has an explicit-API overload that accepts an `IPcre2` parameter
+directly, bypassing the global singleton entirely.
+
+> **Multi-classloader note:** `Pcre4j` stores the backend in a `static` field, so each
+> classloader that loads PCRE4J gets its own independent singleton. In application servers or
+> plugin frameworks, either place the PCRE4J JARs in a shared classloader, or use the
+> explicit-API overloads to avoid relying on the global state.
+
 ### Quick Start with `java.util.regex`-compatible API
 
 Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
