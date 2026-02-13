@@ -14,7 +14,15 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.*;
+import org.pcre4j.Pcre2Code;
+import org.pcre4j.Pcre2CompileContext;
+import org.pcre4j.Pcre2CompileError;
+import org.pcre4j.Pcre2CompileOption;
+import org.pcre4j.Pcre2JitCode;
+import org.pcre4j.Pcre2JitOption;
+import org.pcre4j.Pcre2Newline;
+import org.pcre4j.Pcre4j;
+import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
 
 import java.text.Normalizer;

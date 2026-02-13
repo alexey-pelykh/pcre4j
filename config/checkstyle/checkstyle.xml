@@ -10,4 +10,59 @@
         <property name="ignorePattern"
                   value="^package.*|^import.*|href\s*=\s*&quot;[^&quot;]*&quot;|http://|https://|ftp://"/>
     </module>
+
+    <!-- File-level checks -->
+    <module name="NewlineAtEndOfFile"/>
+    <module name="FileTabCharacter"/>
+
+    <!-- Copyright header -->
+    <module name="RegexpHeader">
+        <property name="headerFile" value="${config_loc}/java-header.txt"/>
+        <property name="fileExtensions" value="java"/>
+    </module>
+
+    <!-- JNA backend methods mirror native C function names (pcre2_*) -->
+    <module name="SuppressionSingleFilter">
+        <property name="files" value="jna[/\\].*Pcre2\.java$"/>
+        <property name="checks" value="MethodName"/>
+    </module>
+
+    <!-- Test methods use descriptive underscore-separated naming (method_scenario_expected) -->
+    <module name="SuppressionSingleFilter">
+        <property name="files" value="[/\\]src[/\\](test|testFixtures)[/\\]"/>
+        <property name="checks" value="MethodName"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Import hygiene -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+
+        <!-- Naming conventions -->
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="PackageName"/>
+
+        <!-- Whitespace -->
+        <module name="WhitespaceAfter"/>
+        <module name="WhitespaceAround">
+            <property name="allowEmptyConstructors" value="true"/>
+            <property name="allowEmptyMethods" value="true"/>
+            <property name="allowEmptyTypes" value="true"/>
+            <property name="allowEmptyLoops" value="true"/>
+            <property name="allowEmptyLambdas" value="true"/>
+            <property name="allowEmptyCatches" value="true"/>
+        </module>
+        <module name="NoWhitespaceBefore"/>
+        <module name="GenericWhitespace"/>
+
+        <!-- Indentation -->
+        <module name="Indentation">
+            <property name="basicOffset" value="4"/>
+            <property name="caseIndent" value="4"/>
+            <property name="throwsIndent" value="8"/>
+            <property name="lineWrappingIndentation" value="8"/>
+        </module>
+    </module>
 </module>
