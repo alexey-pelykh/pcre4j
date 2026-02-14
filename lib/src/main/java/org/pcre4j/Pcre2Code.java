@@ -44,6 +44,30 @@ public class Pcre2Code {
     private final Cleaner.Cleanable cleanable;
 
     /**
+     * Wrap an existing compiled pattern handle.
+     * <p>
+     * This constructor is package-private because deserialized handles have constraints
+     * that callers should not bypass: the handle must have been produced by
+     * {@link IPcre2#serializeDecode} and must match the backend's PCRE2 version
+     * and architecture.
+     *
+     * @param api    the PCRE2 API to use
+     * @param handle the compiled pattern handle
+     */
+    Pcre2Code(IPcre2 api, long handle) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+        if (handle == 0) {
+            throw new IllegalArgumentException("handle must not be 0");
+        }
+
+        this.api = api;
+        this.handle = handle;
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Clean(api, handle));
+    }
+
+    /**
      * Create a compiled pattern from a pattern string
      *
      * @param pattern the pattern to compile
@@ -157,6 +181,137 @@ public class Pcre2Code {
         this.api = api;
         this.handle = handle;
         this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Clean(api, handle));
+    }
+
+    /**
+     * Serialize one or more compiled patterns into a portable byte array.
+     * <p>
+     * All patterns must have been compiled with the same {@link IPcre2} backend
+     * and the same character tables. The serialized data can be stored and later
+     * restored using {@link #deserialize(IPcre2, byte[])}.
+     * <p>
+     * <strong>Portability note:</strong> PCRE2 serialized data is not portable across
+     * different PCRE2 versions or platforms with different endianness. Ensure that
+     * deserialization is performed with the same PCRE2 version and architecture
+     * as serialization.
+     *
+     * @param patterns the compiled patterns to serialize
+     * @return the serialized byte array
+     * @throws IllegalArgumentException if patterns is null or empty, or if patterns
+     *                                  use different backends
+     * @throws Pcre2Exception           if the serialization operation fails
+     */
+    public static byte[] serialize(Pcre2Code... patterns) {
+        if (patterns == null || patterns.length == 0) {
+            throw new IllegalArgumentException(
+                    "At least one pattern is required"
+            );
+        }
+
+        final var api = patterns[0].api;
+        for (var pattern : patterns) {
+            if (pattern.api != api) {
+                throw new IllegalArgumentException(
+                        "All patterns must use the same IPcre2 backend"
+                );
+            }
+        }
+
+        final var handles = new long[patterns.length];
+        for (int i = 0; i < patterns.length; i++) {
+            handles[i] = patterns[i].handle;
+        }
+
+        final var serializedBytes = new long[1];
+        final var serializedSize = new long[1];
+        final var result = api.serializeEncode(
+                handles, patterns.length,
+                serializedBytes, serializedSize, 0
+        );
+        if (result < 0) {
+            throw new Pcre2Exception(
+                    Pcre4jUtils.getErrorMessage(api, result), result
+            );
+        }
+
+        try {
+            return ((INativeMemoryAccess) api).readBytes(
+                    serializedBytes[0], (int) serializedSize[0]
+            );
+        } finally {
+            api.serializeFree(serializedBytes[0]);
+        }
+    }
+
+    /**
+     * Deserialize patterns from a byte array previously created by
+     * {@link #serialize(Pcre2Code...)}.
+     * <p>
+     * The returned {@link Pcre2Code} instances have full lifecycle management
+     * via {@link java.lang.ref.Cleaner}, same as compiled patterns.
+     * <p>
+     * <strong>Portability note:</strong> PCRE2 serialized data is not portable across
+     * different PCRE2 versions or platforms with different endianness. The data must
+     * have been serialized with the same PCRE2 version and architecture.
+     *
+     * @param api  the PCRE2 backend to use for the deserialized patterns
+     * @param data the serialized pattern data
+     * @return an array of deserialized compiled patterns
+     * @throws IllegalArgumentException if api or data is null, or if data is empty
+     * @throws Pcre2Exception           if the deserialization operation fails
+     */
+    public static Pcre2Code[] deserialize(IPcre2 api, byte[] data) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+        if (data == null) {
+            throw new IllegalArgumentException("data must not be null");
+        }
+        if (data.length == 0) {
+            throw new IllegalArgumentException("data must not be empty");
+        }
+
+        final var numberOfCodes = api.serializeGetNumberOfCodes(data);
+        if (numberOfCodes < 0) {
+            throw new Pcre2Exception(
+                    Pcre4jUtils.getErrorMessage(api, numberOfCodes),
+                    numberOfCodes
+            );
+        }
+
+        final var handles = new long[numberOfCodes];
+        final var result = api.serializeDecode(
+                handles, numberOfCodes, data, 0
+        );
+        if (result < 0) {
+            throw new Pcre2Exception(
+                    Pcre4jUtils.getErrorMessage(api, result), result
+            );
+        }
+
+        final var codes = new Pcre2Code[result];
+        for (int i = 0; i < result; i++) {
+            codes[i] = new Pcre2Code(api, handles[i]);
+        }
+        return codes;
+    }
+
+    /**
+     * Deserialize patterns from a byte array using the global backend.
+     * <p>
+     * This is a convenience method equivalent to
+     * {@code deserialize(Pcre4j.api(), data)}.
+     *
+     * @param data the serialized pattern data
+     * @return an array of deserialized compiled patterns
+     * @throws IllegalArgumentException if data is null or empty
+     * @throws IllegalStateException    if the global backend has not been set up
+     * @throws Pcre2Exception           if the deserialization operation fails
+     * @see #deserialize(IPcre2, byte[])
+     * @see Pcre4j#api()
+     */
+    public static Pcre2Code[] deserialize(byte[] data) {
+        return deserialize(Pcre4j.api(), data);
     }
 
     /**
