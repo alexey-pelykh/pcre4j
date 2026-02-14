@@ -210,6 +210,93 @@ jobs:
             }
             core.info(`${compatJobs.length} compatibility job(s) completed successfully`);
 
+  native-image:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+
+    timeout-minutes: 30
+
+    needs:
+      - lint
+      - compatibility-all
+
+    env:
+      PCRE2_VERSION: '10.47'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@f29f5a9d7b09a7c6b29859002d29d24e1674c884 # v4
+
+      # JDK 21 for building base MRJAR classes
+      - name: Set up temurin-jdk-21 (MRJAR base)
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # JDK 22 for building MRJAR overlay classes
+      - name: Set up temurin-jdk-22 (MRJAR overlay)
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: 22
+
+      # Gradle needs JDK 21 as daemon JVM
+      - name: Configure Gradle JVM
+        run: echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
+
+      - name: Cache Gradle packages
+        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}
+
+      - name: Build PCRE2
+        uses: ./.github/actions/build-pcre2
+        with:
+          version: ${{ env.PCRE2_VERSION }}
+
+      - name: Build PCRE4J JARs
+        run: ./gradlew api:jar lib:jar ffm:jar regex:jar -Dpcre2.library.path=/opt/pcre2/lib
+
+      # GraalVM JDK 25 for native-image (full FFM + reachability-metadata.json foreign section)
+      # Installed AFTER Gradle build to avoid toolchain auto-detection conflicts
+      - name: Set up GraalVM JDK 25 (native-image + FFM GA)
+        uses: graalvm/setup-graalvm@54b4f5a65c1a84b2fdfdc2078fe43df32819e4b1 # v1.4.5
+        with:
+          java-version: '25'
+          distribution: 'graalvm'
+          set-java-home: 'false'
+
+      - name: Compile smoke test
+        run: |
+          CP=$(find api/build/libs lib/build/libs ffm/build/libs regex/build/libs -name '*.jar' ! -name '*-sources*' ! -name '*-javadoc*' | tr '\n' ':')
+          "$GRAALVM_HOME/bin/javac" -cp "$CP" \
+            -d build/native-image-test \
+            .github/native-image-test/NativeImageSmokeTest.java
+
+      - name: Build native image
+        run: |
+          CP=$(find api/build/libs lib/build/libs ffm/build/libs regex/build/libs -name '*.jar' ! -name '*-sources*' ! -name '*-javadoc*' | tr '\n' ':')
+          "$GRAALVM_HOME/bin/native-image" \
+            -cp "${CP}build/native-image-test" \
+            --no-fallback \
+            --enable-native-access=ALL-UNNAMED \
+            -H:Name=build/native-image-test/pcre4j-smoke-test \
+            NativeImageSmokeTest
+
+      - name: Run native image smoke test
+        run: |
+          LD_LIBRARY_PATH=/opt/pcre2/lib ./build/native-image-test/pcre4j-smoke-test
+
   package:
     runs-on: ubuntu-24.04
 
