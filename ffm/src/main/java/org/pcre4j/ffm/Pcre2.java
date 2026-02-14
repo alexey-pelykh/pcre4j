@@ -17,6 +17,7 @@ package org.pcre4j.ffm;
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2LibraryFinder;
+import org.pcre4j.api.Pcre2NativeLoader;
 import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.io.File;
@@ -191,7 +192,12 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
             throw new IllegalArgumentException("suffix must not be null");
         }
 
-        if (library.indexOf(File.separatorChar) != -1) {
+        // Try bundled native library first (if on classpath)
+        var bundledDir = Pcre2NativeLoader.load(library);
+        if (bundledDir.isPresent()) {
+            var bundledPath = bundledDir.get().resolve(System.mapLibraryName(library));
+            System.load(bundledPath.toString());
+        } else if (library.indexOf(File.separatorChar) != -1) {
             System.load(library);
         } else {
             try {

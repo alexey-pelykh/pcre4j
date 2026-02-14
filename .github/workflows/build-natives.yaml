@@ -1,0 +1,85 @@
+name: Build Natives
+
+on:
+  workflow_dispatch:
+    inputs:
+      pcre2-version:
+        description: 'PCRE2 version to build'
+        required: true
+        default: '10.47'
+        type: string
+
+permissions: {}
+
+jobs:
+
+  build-native:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+            lib-name: libpcre2-8.so
+          - os: ubuntu-24.04-arm
+            platform: linux-aarch64
+            lib-name: libpcre2-8.so
+          - os: macos-13
+            platform: macos-x86_64
+            lib-name: libpcre2-8.dylib
+          - os: macos-14
+            platform: macos-aarch64
+            lib-name: libpcre2-8.dylib
+          - os: windows-2022
+            platform: windows-x86_64
+            lib-name: pcre2-8.dll
+
+    runs-on: ${{ matrix.os }}
+
+    permissions:
+      contents: read
+
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Build PCRE2
+        uses: ./.github/actions/build-pcre2
+        with:
+          version: ${{ inputs.pcre2-version }}
+
+      - name: Locate built library
+        id: locate
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            # Windows CMake puts DLLs in bin/
+            lib_file=$(find /opt/pcre2 -name "${{ matrix.lib-name }}" -type f | head -1)
+          else
+            lib_file="/opt/pcre2/lib/${{ matrix.lib-name }}"
+          fi
+          if [[ ! -f "$lib_file" ]]; then
+            echo "::error::Library not found: ${{ matrix.lib-name }}"
+            find /opt/pcre2 -type f -name "*.so" -o -name "*.dylib" -o -name "*.dll" 2>/dev/null || true
+            exit 1
+          fi
+          echo "lib-file=$lib_file" >> "$GITHUB_OUTPUT"
+          echo "Found library: $lib_file"
+
+      - name: Copy library to module resources
+        shell: bash
+        run: |
+          target_dir="native/${{ matrix.platform }}/src/main/resources/META-INF/native/${{ matrix.platform }}"
+          mkdir -p "$target_dir"
+          cp "${{ steps.locate.outputs.lib-file }}" "$target_dir/${{ matrix.lib-name }}"
+          echo "Copied to: $target_dir/${{ matrix.lib-name }}"
+          ls -la "$target_dir/"
+
+      - name: Upload native library artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-${{ matrix.platform }}
+          path: native/${{ matrix.platform }}/src/main/resources/META-INF/native/${{ matrix.platform }}/${{ matrix.lib-name }}
+          retention-days: 7

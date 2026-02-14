@@ -34,12 +34,26 @@ reporting {
 // Module dependency constraints
 // Enforces: api ← lib ← backends (jna, ffm) ← regex
 // ==========================================================================
+val nativeModules = setOf(
+    ":native:linux-x86_64",
+    ":native:linux-aarch64",
+    ":native:macos-x86_64",
+    ":native:macos-aarch64",
+    ":native:windows-x86_64"
+)
+
 val allowedProjectDependencies = mapOf(
     ":api" to emptySet(),
     ":lib" to setOf(":api"),
     ":jna" to setOf(":api"),
     ":ffm" to setOf(":api"),
-    ":regex" to setOf(":api", ":lib")
+    ":regex" to setOf(":api", ":lib"),
+    ":native:linux-x86_64" to emptySet<String>(),
+    ":native:linux-aarch64" to emptySet<String>(),
+    ":native:macos-x86_64" to emptySet<String>(),
+    ":native:macos-aarch64" to emptySet<String>(),
+    ":native:windows-x86_64" to emptySet<String>(),
+    ":native:all" to nativeModules
 )
 
 tasks.register("checkModuleDependencies") {
