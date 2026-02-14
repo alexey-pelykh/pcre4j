@@ -768,6 +768,140 @@ public class Pcre2Code {
     }
 
     /**
+     * The default workspace size (number of int-sized slots) for DFA matching.
+     */
+    private static final int DEFAULT_DFA_WORKSPACE_SIZE = 1000;
+
+    /**
+     * Match this compiled pattern against a given subject string using the DFA (Deterministic Finite Automaton)
+     * matching algorithm.
+     * <p>
+     * DFA matching finds all possible match lengths at a given starting position. This is useful for tokenizers,
+     * lexers, and protocol parsers. Unlike standard NFA matching, DFA matching does not support capturing groups
+     * and has different semantics — it finds the longest match and can find all possible match lengths.
+     * <p>
+     * This convenience overload uses a default workspace size and no options or match context.
+     *
+     * @param subject the subject string to match against
+     * @return the match result, or {@code null} if no match was found
+     * @throws IllegalArgumentException if subject is null
+     * @throws Pcre2MatchException if a DFA-specific error occurs (e.g., unsupported pattern item, recursion)
+     */
+    public Pcre2DfaMatchResult dfaMatch(String subject) {
+        return dfaMatch(subject, 0, null, null, DEFAULT_DFA_WORKSPACE_SIZE);
+    }
+
+    /**
+     * Match this compiled pattern against a given subject string using the DFA matching algorithm.
+     * <p>
+     * DFA matching finds all possible match lengths at a given starting position. Unlike standard NFA matching,
+     * DFA matching does not support capturing groups.
+     *
+     * @param subject       the subject string to match against
+     * @param startOffset   offset in the subject at which to start matching (character index)
+     * @param options       the match options, see {@link Pcre2DfaMatchOption}, or {@code null} for no options
+     * @param matchContext  the match context to use, or {@code null}
+     * @param workspaceSize the number of int-sized slots in the workspace used by the DFA algorithm
+     * @return the match result, or {@code null} if no match was found
+     * @throws IllegalArgumentException if subject is null, startOffset is out of bounds, or workspaceSize is less
+     *                                  than 1
+     * @throws Pcre2MatchException if a DFA-specific error occurs (e.g., unsupported pattern item, recursion)
+     */
+    public Pcre2DfaMatchResult dfaMatch(
+            String subject,
+            int startOffset,
+            EnumSet<Pcre2DfaMatchOption> options,
+            Pcre2MatchContext matchContext,
+            int workspaceSize
+    ) {
+        if (subject == null) {
+            throw new IllegalArgumentException("subject must not be null");
+        }
+        if (startOffset < 0) {
+            throw new IllegalArgumentException("startOffset must be greater than or equal to zero");
+        }
+        if (startOffset > subject.length()) {
+            throw new IllegalArgumentException("startOffset must be less than or equal to the length of the subject");
+        }
+        if (workspaceSize < 1) {
+            throw new IllegalArgumentException("workspaceSize must be at least 1");
+        }
+
+        if (options == null) {
+            options = EnumSet.noneOf(Pcre2DfaMatchOption.class);
+        }
+
+        final var optionBits = options
+                .stream()
+                .mapToInt(Pcre2DfaMatchOption::value)
+                .sum();
+
+        // Allocate match data with enough space for multiple matches.
+        // DFA matching can return multiple match lengths, so we need a reasonable ovector size.
+        final var matchData = api.matchDataCreate(workspaceSize, 0);
+        if (matchData == 0) {
+            throw new IllegalStateException("Failed to create match data");
+        }
+
+        try {
+            var workspace = new int[workspaceSize];
+            var result = api.dfaMatch(
+                    handle,
+                    subject,
+                    Pcre4jUtils.convertCharacterIndexToByteOffset(subject, startOffset),
+                    optionBits,
+                    matchData,
+                    matchContext != null ? matchContext.handle : 0,
+                    workspace,
+                    workspace.length
+            );
+
+            // Auto-retry with larger workspace if needed
+            if (result == IPcre2.ERROR_DFA_WSSIZE) {
+                workspace = new int[workspaceSize * 2];
+                result = api.dfaMatch(
+                        handle,
+                        subject,
+                        Pcre4jUtils.convertCharacterIndexToByteOffset(subject, startOffset),
+                        optionBits,
+                        matchData,
+                        matchContext != null ? matchContext.handle : 0,
+                        workspace,
+                        workspace.length
+                );
+            }
+
+            if (result == IPcre2.ERROR_NOMATCH) {
+                return null;
+            }
+
+            final var isPartial = result == IPcre2.ERROR_PARTIAL;
+            if (result < 0 && !isPartial) {
+                throw new Pcre2MatchException(Pcre4jUtils.getErrorMessage(api, result), result);
+            }
+
+            // For partial matches, result is ERROR_PARTIAL and ovector has 1 pair
+            final var matchCount = isPartial ? 1 : result;
+            final var ovector = new long[matchCount * 2];
+            api.getOvector(matchData, ovector);
+
+            // Convert byte offsets to character indices
+            final var stringIndices = Pcre4jUtils.convertOvectorToStringIndices(subject, ovector);
+
+            // Build result: start is common, ends are per-match
+            final var matchStart = stringIndices[0];
+            final var matchEnds = new int[matchCount];
+            for (var i = 0; i < matchCount; i++) {
+                matchEnds[i] = stringIndices[i * 2 + 1];
+            }
+
+            return new Pcre2DfaMatchResult(subject, matchStart, matchEnds, isPartial);
+        } finally {
+            api.matchDataFree(matchData);
+        }
+    }
+
+    /**
      * A name table entry
      *
      * @param group the group
