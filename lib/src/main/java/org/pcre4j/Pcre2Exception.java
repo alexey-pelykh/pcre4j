@@ -22,6 +22,7 @@ package org.pcre4j;
  * error code when applicable, enabling programmatic error handling.
  *
  * @see Pcre2CompileException
+ * @see Pcre2ConvertException
  * @see Pcre2MatchException
  * @see Pcre2SubstituteException
  * @see Pcre2SubstringException

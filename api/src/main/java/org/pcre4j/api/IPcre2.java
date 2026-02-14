@@ -2052,6 +2052,21 @@ public interface IPcre2 {
     void convertedPatternFree(long convertedPattern);
 
     /**
+     * Read a converted pattern from native memory as a Java String.
+     * <p>
+     * This method reads a UTF-8 encoded string from the native memory pointer returned by
+     * {@link #patternConvert(String, int, long[], long[], long)}. The pointer and length should be
+     * obtained from the {@code buffer} and {@code blength} output parameters of that method.
+     *
+     * @param convertedPattern the pointer to the converted pattern (as returned in the buffer parameter
+     *                         of {@link #patternConvert(String, int, long[], long[], long)})
+     * @param length           the length of the converted pattern in bytes (as returned in the blength
+     *                         parameter of {@link #patternConvert(String, int, long[], long[], long)})
+     * @return the converted pattern as a Java String
+     */
+    String readConvertedPattern(long convertedPattern, long length);
+
+    /**
      * Match a compiled pattern against a subject string.
      *
      * @param code        the compiled pattern handle

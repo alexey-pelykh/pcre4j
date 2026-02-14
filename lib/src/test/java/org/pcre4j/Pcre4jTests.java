@@ -323,6 +323,11 @@ public class Pcre4jTests {
         }
 
         @Override
+        public String readConvertedPattern(long convertedPattern, long length) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
             throw new UnsupportedOperationException();
         }

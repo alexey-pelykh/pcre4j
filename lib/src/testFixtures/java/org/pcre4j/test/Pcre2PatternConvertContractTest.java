@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,6 +58,11 @@ public interface Pcre2PatternConvertContractTest<T extends IPcre2> {
         assertEquals(0, result, "patternConvert should return 0 on success");
         assertTrue(buffer[0] != 0, "Buffer should contain a pointer after conversion");
         assertTrue(blength[0] > 0, "blength should contain the pattern length");
+
+        // Read the converted pattern as a string
+        String convertedPattern = api.readConvertedPattern(buffer[0], blength[0]);
+        assertNotNull(convertedPattern, "Converted pattern should not be null");
+        assertFalse(convertedPattern.isEmpty(), "Converted pattern should not be empty");
 
         // The buffer was allocated by PCRE2, so we need to free it
         api.convertedPatternFree(buffer[0]);
