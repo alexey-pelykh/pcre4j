@@ -1,0 +1,67 @@
+{
+  "reflection": [
+    {
+      "condition": {
+        "typeReached": "org.pcre4j.ffm.Pcre2"
+      },
+      "type": "org.pcre4j.ffm.Pcre2",
+      "allDeclaredConstructors": true,
+      "methods": [
+        {
+          "name": "calloutCallbackImpl",
+          "parameterTypes": [
+            "org.pcre4j.api.Pcre2CalloutHandler",
+            "int",
+            "java.nio.charset.Charset",
+            "java.lang.foreign.MemorySegment",
+            "java.lang.foreign.MemorySegment"
+          ]
+        },
+        {
+          "name": "calloutEnumerateCallbackImpl",
+          "parameterTypes": [
+            "org.pcre4j.api.Pcre2CalloutEnumerateHandler",
+            "int",
+            "java.nio.charset.Charset",
+            "java.lang.foreign.MemorySegment",
+            "java.lang.foreign.MemorySegment"
+          ]
+        }
+      ]
+    }
+  ],
+  "resources": [
+    {
+      "glob": "META-INF/services/org.pcre4j.api.IPcre2"
+    }
+  ],
+  "foreign": {
+    "downcalls": [
+      { "returnType": "void", "parameterTypes": ["void*"] },
+      { "returnType": "void*", "parameterTypes": ["void*"] },
+      { "returnType": "int", "parameterTypes": ["void*"] },
+      { "returnType": "int", "parameterTypes": ["int", "void*"] },
+      { "returnType": "void*", "parameterTypes": ["int", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "int"] },
+      { "returnType": "void", "parameterTypes": ["void*", "void*"] },
+      { "returnType": "void*", "parameterTypes": ["void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["int", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "int", "void*"] },
+      { "returnType": "void", "parameterTypes": ["void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "void*"] },
+      { "returnType": "void*", "parameterTypes": ["void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "int", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "int", "void*", "void*", "void*"] },
+      { "returnType": "void*", "parameterTypes": ["void*", "void*", "int", "void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "int", "void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "void*", "void*", "int", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "void*", "void*", "int", "void*", "void*", "void*", "void*"] },
+      { "returnType": "int", "parameterTypes": ["void*", "void*", "void*", "void*", "int", "void*", "void*", "void*", "void*", "void*", "void*"] }
+    ],
+    "upcalls": [
+      { "returnType": "int", "parameterTypes": ["void*", "void*"] }
+    ]
+  }
+}

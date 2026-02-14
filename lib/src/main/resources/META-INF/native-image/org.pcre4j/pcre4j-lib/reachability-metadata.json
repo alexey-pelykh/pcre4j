@@ -1,0 +1,7 @@
+{
+  "resources": [
+    {
+      "glob": "META-INF/services/org.pcre4j.api.IPcre2"
+    }
+  ]
+}
