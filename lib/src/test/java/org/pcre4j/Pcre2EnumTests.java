@@ -405,4 +405,54 @@ public class Pcre2EnumTests {
         assertNotNull(error.getMessage());
         assertEquals(cause, error.getCause());
     }
+
+    // === Pcre2ConvertOption ===
+
+    @Test
+    void convertOptionValueOfValid() {
+        assertTrue(Pcre2ConvertOption.valueOf(IPcre2.CONVERT_GLOB).isPresent());
+        assertEquals(Pcre2ConvertOption.GLOB, Pcre2ConvertOption.valueOf(IPcre2.CONVERT_GLOB).get());
+
+        assertTrue(Pcre2ConvertOption.valueOf(IPcre2.CONVERT_POSIX_BASIC).isPresent());
+        assertEquals(Pcre2ConvertOption.POSIX_BASIC, Pcre2ConvertOption.valueOf(IPcre2.CONVERT_POSIX_BASIC).get());
+
+        assertTrue(Pcre2ConvertOption.valueOf(IPcre2.CONVERT_POSIX_EXTENDED).isPresent());
+        assertEquals(Pcre2ConvertOption.POSIX_EXTENDED,
+                Pcre2ConvertOption.valueOf(IPcre2.CONVERT_POSIX_EXTENDED).get());
+    }
+
+    @Test
+    void convertOptionValueOfInvalid() {
+        assertFalse(Pcre2ConvertOption.valueOf(-999).isPresent());
+    }
+
+    @Test
+    void convertOptionValue() {
+        assertEquals(IPcre2.CONVERT_UTF, Pcre2ConvertOption.UTF.value());
+        assertEquals(IPcre2.CONVERT_NO_UTF_CHECK, Pcre2ConvertOption.NO_UTF_CHECK.value());
+        assertEquals(IPcre2.CONVERT_POSIX_BASIC, Pcre2ConvertOption.POSIX_BASIC.value());
+        assertEquals(IPcre2.CONVERT_POSIX_EXTENDED, Pcre2ConvertOption.POSIX_EXTENDED.value());
+        assertEquals(IPcre2.CONVERT_GLOB, Pcre2ConvertOption.GLOB.value());
+        assertEquals(IPcre2.CONVERT_GLOB_NO_WILD_SEPARATOR, Pcre2ConvertOption.GLOB_NO_WILD_SEPARATOR.value());
+        assertEquals(IPcre2.CONVERT_GLOB_NO_STARSTAR, Pcre2ConvertOption.GLOB_NO_STARSTAR.value());
+    }
+
+    // === Pcre2ConvertException ===
+
+    @Test
+    void convertExceptionMessage() {
+        var ex = new Pcre2ConvertException("*.{bad", "invalid syntax", IPcre2.ERROR_CONVERT_SYNTAX);
+        assertNotNull(ex.getMessage());
+        assertTrue(ex.getMessage().contains("*.{bad"));
+        assertTrue(ex.getMessage().contains("invalid syntax"));
+        assertEquals("*.{bad", ex.pattern());
+        assertEquals(IPcre2.ERROR_CONVERT_SYNTAX, ex.errorCode());
+    }
+
+    @Test
+    void convertExceptionWithCause() {
+        var cause = new RuntimeException("underlying");
+        var ex = new Pcre2ConvertException("pattern", "error", -64, cause);
+        assertEquals(cause, ex.getCause());
+    }
 }

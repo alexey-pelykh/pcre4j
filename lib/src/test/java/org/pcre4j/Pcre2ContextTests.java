@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for context classes: {@link Pcre2GeneralContext}, {@link Pcre2CompileContext},
- * {@link Pcre2MatchContext}, and {@link Pcre2JitStack}.
+ * {@link Pcre2MatchContext}, {@link Pcre2ConvertContext}, and {@link Pcre2JitStack}.
  */
 public class Pcre2ContextTests {
 
@@ -476,5 +476,79 @@ public class Pcre2ContextTests {
         var matchData = new Pcre2MatchData(code);
         var result = code.match("world", 0, EnumSet.noneOf(Pcre2MatchOption.class), matchData, matchCtx);
         assertTrue(result > 0, "JIT match with custom stack and general context should succeed");
+    }
+
+    // === Pcre2ConvertContext ===
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextCreation(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertNotNull(ctx);
+        assertNotNull(ctx.api());
+        assertEquals(api, ctx.api());
+        assertTrue(ctx.handle() != 0);
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextNullApiThrows(IPcre2 api) {
+        assertThrows(IllegalArgumentException.class, () -> new Pcre2ConvertContext(null, null));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextWithGeneralContext(IPcre2 api) {
+        var generalCtx = new Pcre2GeneralContext(api);
+        assertDoesNotThrow(() -> new Pcre2ConvertContext(api, generalCtx));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobEscape(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertDoesNotThrow(() -> ctx.setGlobEscape('\\'));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobEscapeDisable(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertDoesNotThrow(() -> ctx.setGlobEscape(0));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobEscapeInvalid(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertThrows(IllegalStateException.class, () -> ctx.setGlobEscape('a'));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobSeparatorForwardSlash(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertDoesNotThrow(() -> ctx.setGlobSeparator('/'));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobSeparatorBackslash(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertDoesNotThrow(() -> ctx.setGlobSeparator('\\'));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobSeparatorDot(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertDoesNotThrow(() -> ctx.setGlobSeparator('.'));
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void convertContextSetGlobSeparatorInvalid(IPcre2 api) {
+        var ctx = new Pcre2ConvertContext(api, null);
+        assertThrows(IllegalStateException.class, () -> ctx.setGlobSeparator('a'));
     }
 }

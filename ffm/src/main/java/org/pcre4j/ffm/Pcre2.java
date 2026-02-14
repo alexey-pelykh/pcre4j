@@ -1552,6 +1552,21 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
     }
 
     @Override
+    public String readConvertedPattern(long convertedPattern, long length) {
+        if (convertedPattern == 0) {
+            throw new IllegalArgumentException("convertedPattern must not be null");
+        }
+        if (length < 0) {
+            throw new IllegalArgumentException("length must not be negative");
+        }
+
+        final var byteLength = length * codeUnitSize;
+        final var segment = MemorySegment.ofAddress(convertedPattern).reinterpret(byteLength);
+        final var bytes = segment.toArray(ValueLayout.JAVA_BYTE);
+        return new String(bytes, charset);
+    }
+
+    @Override
     public int match(long code, String subject, int startoffset, int options, long matchData, long mcontext) {
         if (subject == null) {
             throw new IllegalArgumentException("subject must not be null");
