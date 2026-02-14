@@ -402,6 +402,7 @@ jobs:
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: >
           ./gradlew jreleaserDeploy
+          --no-configuration-cache
           -Ppcre4j.version=main-SNAPSHOT
 
   publish-github-pages:
