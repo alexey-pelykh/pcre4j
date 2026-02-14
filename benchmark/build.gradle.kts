@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -12,11 +12,14 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-rootProject.name = "pcre4j"
+plugins {
+    id("pcre4j-benchmark")
+}
 
-include(":api")
-include(":lib")
-include(":jna")
-include(":ffm")
-include(":regex")
-include(":benchmark")
+dependencies {
+    implementation(project(":api"))
+    implementation(project(":lib"))
+    implementation(project(":regex"))
+    implementation(project(":jna"))
+    implementation(project(":ffm"))
+}
