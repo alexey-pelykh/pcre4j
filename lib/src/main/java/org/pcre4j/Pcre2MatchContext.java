@@ -15,6 +15,7 @@
 package org.pcre4j;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2CalloutHandler;
 
 import java.lang.ref.Cleaner;
 
@@ -37,6 +38,11 @@ public class Pcre2MatchContext {
      * The cleaner to free the resources
      */
     private final Cleaner.Cleanable cleanable;
+
+    /**
+     * The cleanup state shared between the match context and the cleaner
+     */
+    private final Clean cleanState;
 
     /**
      * Create a new match context
@@ -67,7 +73,8 @@ public class Pcre2MatchContext {
 
         this.api = api;
         this.handle = handle;
-        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, new Pcre2MatchContext.Clean(api, handle));
+        this.cleanState = new Clean(api, handle);
+        this.cleanable = Pcre4jCleaner.INSTANCE.register(this, cleanState);
     }
 
     /**
@@ -98,6 +105,37 @@ public class Pcre2MatchContext {
             throw new IllegalArgumentException("jitStack must not be null");
         }
         api.jitStackAssign(handle, 0, jitStack.handle);
+    }
+
+    /**
+     * Set a callout handler for match operations using this context.
+     * <p>
+     * When a callout point is reached during matching (either auto-generated via
+     * {@link Pcre2CompileOption#AUTO_CALLOUT} or explicitly placed using {@code (?C)} or
+     * {@code (?Cn)} syntax), the handler is invoked with information about the current
+     * match state.
+     * <p>
+     * The handler must be thread-safe if this match context is used from multiple threads.
+     *
+     * @param handler the callout handler, or {@code null} to disable callouts
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_set_callout.html">pcre2_set_callout</a>
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2callout.html">PCRE2 Callouts</a>
+     */
+    public void setCallout(Pcre2CalloutHandler handler) {
+        // Free any existing callback
+        final var oldCallbackHandle = cleanState.calloutCallbackHandle;
+        if (oldCallbackHandle != 0) {
+            api.freeCalloutCallback(oldCallbackHandle);
+            cleanState.calloutCallbackHandle = 0;
+        }
+
+        if (handler != null) {
+            final var callbackHandle = api.createCalloutCallback(handler);
+            cleanState.calloutCallbackHandle = callbackHandle;
+            api.setCallout(handle, callbackHandle, 0);
+        } else {
+            api.setCallout(handle, 0, 0);
+        }
     }
 
     /**
@@ -169,9 +207,21 @@ public class Pcre2MatchContext {
         api.setOffsetLimit(handle, limit);
     }
 
-    private record Clean(IPcre2 api, long matchContext) implements Runnable {
+    private static final class Clean implements Runnable {
+        private final IPcre2 api;
+        private final long matchContext;
+        volatile long calloutCallbackHandle;
+
+        Clean(IPcre2 api, long matchContext) {
+            this.api = api;
+            this.matchContext = matchContext;
+        }
+
         @Override
         public void run() {
+            if (calloutCallbackHandle != 0) {
+                api.freeCalloutCallback(calloutCallbackHandle);
+            }
             api.matchContextFree(matchContext);
         }
     }

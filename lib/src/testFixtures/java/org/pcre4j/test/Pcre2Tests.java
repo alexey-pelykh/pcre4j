@@ -35,6 +35,7 @@ import org.pcre4j.api.Pcre2UtfWidth;
  *   <li>{@link Pcre2PatternConvertContractTest} - Pattern conversion (glob, POSIX)</li>
  *   <li>{@link Pcre2MiscContractTest} - Miscellaneous operations</li>
  *   <li>{@link Pcre2UtfWidthContractTest} - UTF width support (UTF-8, UTF-16, UTF-32)</li>
+ *   <li>{@link Pcre2CalloutContractTest} - Callout operations (matching and enumeration)</li>
  * </ul>
  */
 public abstract class Pcre2Tests implements
@@ -49,7 +50,8 @@ public abstract class Pcre2Tests implements
         Pcre2JitContractTest<IPcre2>,
         Pcre2PatternConvertContractTest<IPcre2>,
         Pcre2MiscContractTest<IPcre2>,
-        Pcre2UtfWidthContractTest<IPcre2> {
+        Pcre2UtfWidthContractTest<IPcre2>,
+        Pcre2CalloutContractTest<IPcre2> {
 
     protected final IPcre2 api;
 

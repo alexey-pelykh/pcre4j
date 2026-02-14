@@ -16,6 +16,10 @@ package org.pcre4j.ffm;
 
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2CalloutBlock;
+import org.pcre4j.api.Pcre2CalloutEnumerateBlock;
+import org.pcre4j.api.Pcre2CalloutEnumerateHandler;
+import org.pcre4j.api.Pcre2CalloutHandler;
 import org.pcre4j.api.Pcre2LibraryFinder;
 import org.pcre4j.api.Pcre2NativeLoader;
 import org.pcre4j.api.Pcre2UtfWidth;
@@ -30,7 +34,10 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
 import java.nio.ByteBuffer;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A PCRE2 API using the Foreign Function {@literal &} Memory API.
@@ -131,6 +138,8 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
 
     private final Charset charset;
     private final int codeUnitSize;
+
+    private final ConcurrentHashMap<Long, CallbackEntry> callbackEntries = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8" with UTF-8 encoding.
@@ -2470,6 +2479,218 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
             if (e instanceof Error) throw (Error) e;
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public long createCalloutCallback(Pcre2CalloutHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler must not be null");
+        }
+
+        try {
+            final var callbackHandle = MethodHandles.lookup().findStatic(
+                    Pcre2.class,
+                    "calloutCallbackImpl",
+                    MethodType.methodType(int.class,
+                            Pcre2CalloutHandler.class, int.class, Charset.class,
+                            MemorySegment.class, MemorySegment.class)
+            );
+            final var boundHandle = MethodHandles.insertArguments(callbackHandle, 0,
+                    handler, codeUnitSize, charset);
+
+            final var arena = Arena.ofShared();
+            final var upcallStub = LINKER.upcallStub(
+                    boundHandle,
+                    FunctionDescriptor.of(
+                            ValueLayout.JAVA_INT,
+                            ValueLayout.ADDRESS,
+                            ValueLayout.ADDRESS
+                    ),
+                    arena
+            );
+
+            final var nativeAddress = upcallStub.address();
+            callbackEntries.put(nativeAddress, new CallbackEntry(arena, upcallStub));
+            return nativeAddress;
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void freeCalloutCallback(long callbackHandle) {
+        final var entry = callbackEntries.remove(callbackHandle);
+        if (entry != null) {
+            entry.arena.close();
+        }
+    }
+
+    @Override
+    public long createCalloutEnumerateCallback(Pcre2CalloutEnumerateHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler must not be null");
+        }
+
+        try {
+            final var callbackHandle = MethodHandles.lookup().findStatic(
+                    Pcre2.class,
+                    "calloutEnumerateCallbackImpl",
+                    MethodType.methodType(int.class,
+                            Pcre2CalloutEnumerateHandler.class, int.class, Charset.class,
+                            MemorySegment.class, MemorySegment.class)
+            );
+            final var boundHandle = MethodHandles.insertArguments(callbackHandle, 0,
+                    handler, codeUnitSize, charset);
+
+            final var arena = Arena.ofShared();
+            final var upcallStub = LINKER.upcallStub(
+                    boundHandle,
+                    FunctionDescriptor.of(
+                            ValueLayout.JAVA_INT,
+                            ValueLayout.ADDRESS,
+                            ValueLayout.ADDRESS
+                    ),
+                    arena
+            );
+
+            final var nativeAddress = upcallStub.address();
+            callbackEntries.put(nativeAddress, new CallbackEntry(arena, upcallStub));
+            return nativeAddress;
+        } catch (NoSuchMethodException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void freeCalloutEnumerateCallback(long callbackHandle) {
+        final var entry = callbackEntries.remove(callbackHandle);
+        if (entry != null) {
+            entry.arena.close();
+        }
+    }
+
+    /**
+     * Static callback implementation for pcre2_set_callout.
+     */
+    public static int calloutCallbackImpl(Pcre2CalloutHandler handler, int codeUnitSize, Charset charset,
+                                          MemorySegment block, MemorySegment userData) {
+        // pcre2_callout_block layout (64-bit):
+        // offset 0:  uint32_t version
+        // offset 4:  uint32_t callout_number
+        // offset 8:  uint32_t capture_top
+        // offset 12: uint32_t capture_last
+        // offset 16: PCRE2_SIZE* offset_vector (pointer, 8 bytes)
+        // offset 24: PCRE2_SPTR mark (pointer, 8 bytes)
+        // offset 32: PCRE2_SPTR subject (pointer, 8 bytes)
+        // offset 40: PCRE2_SIZE subject_length
+        // offset 48: PCRE2_SIZE start_match
+        // offset 56: PCRE2_SIZE current_position
+        // offset 64: PCRE2_SIZE pattern_position
+        // offset 72: PCRE2_SIZE next_item_length
+        // --- Version 1 fields ---
+        // offset 80: PCRE2_SIZE callout_string_offset
+        // offset 88: PCRE2_SIZE callout_string_length
+        // offset 96: PCRE2_SPTR callout_string (pointer, 8 bytes)
+        // --- Version 2 fields ---
+        // offset 104: uint32_t callout_flags
+        final var reinterpreted = block.reinterpret(108);
+        final var version = reinterpreted.get(ValueLayout.JAVA_INT, 0);
+        final var calloutNumber = reinterpreted.get(ValueLayout.JAVA_INT, 4);
+        final var captureTop = reinterpreted.get(ValueLayout.JAVA_INT, 8);
+        final var captureLast = reinterpreted.get(ValueLayout.JAVA_INT, 12);
+        final var startMatch = reinterpreted.get(ValueLayout.JAVA_LONG, 48);
+        final var currentPosition = reinterpreted.get(ValueLayout.JAVA_LONG, 56);
+        final var patternPosition = reinterpreted.get(ValueLayout.JAVA_LONG, 64);
+        final var nextItemLength = reinterpreted.get(ValueLayout.JAVA_LONG, 72);
+
+        long calloutStringOffset = 0;
+        long calloutStringLength = 0;
+        String calloutString = null;
+        if (version >= 1) {
+            calloutStringOffset = reinterpreted.get(ValueLayout.JAVA_LONG, 80);
+            calloutStringLength = reinterpreted.get(ValueLayout.JAVA_LONG, 88);
+            final var stringAddr = reinterpreted.get(ValueLayout.ADDRESS, 96);
+            if (stringAddr.address() != 0 && calloutStringLength > 0) {
+                final var stringSegment = stringAddr.reinterpret(calloutStringLength * codeUnitSize);
+                final var bytes = stringSegment.toArray(ValueLayout.JAVA_BYTE);
+                calloutString = new String(bytes, charset);
+            }
+        }
+
+        int calloutFlags = 0;
+        if (version >= 2) {
+            calloutFlags = reinterpreted.get(ValueLayout.JAVA_INT, 104);
+        }
+
+        final var calloutBlock = new Pcre2CalloutBlock(
+                calloutNumber,
+                captureTop,
+                captureLast,
+                startMatch,
+                currentPosition,
+                patternPosition,
+                nextItemLength,
+                calloutStringOffset,
+                calloutStringLength,
+                calloutString,
+                calloutFlags
+        );
+
+        try {
+            return handler.onCallout(calloutBlock);
+        } catch (Exception e) {
+            return IPcre2.ERROR_CALLOUT;
+        }
+    }
+
+    /**
+     * Static callback implementation for pcre2_callout_enumerate.
+     */
+    public static int calloutEnumerateCallbackImpl(Pcre2CalloutEnumerateHandler handler, int codeUnitSize,
+                                                   Charset charset,
+                                                   MemorySegment block, MemorySegment userData) {
+        // pcre2_callout_enumerate_block layout (64-bit):
+        // offset 0:  uint32_t version
+        // offset 4:  padding (4 bytes for alignment of PCRE2_SIZE)
+        // offset 8:  PCRE2_SIZE pattern_position
+        // offset 16: PCRE2_SIZE next_item_length
+        // offset 24: uint32_t callout_number
+        // offset 28: padding (4 bytes)
+        // offset 32: PCRE2_SIZE callout_string_offset
+        // offset 40: PCRE2_SIZE callout_string_length
+        // offset 48: PCRE2_SPTR callout_string (pointer, 8 bytes)
+        final var reinterpreted = block.reinterpret(56);
+        final var patternPosition = reinterpreted.get(ValueLayout.JAVA_LONG, 8);
+        final var nextItemLength = reinterpreted.get(ValueLayout.JAVA_LONG, 16);
+        final var calloutNumber = reinterpreted.get(ValueLayout.JAVA_INT, 24);
+        final var calloutStringOffset = reinterpreted.get(ValueLayout.JAVA_LONG, 32);
+        final var calloutStringLength = reinterpreted.get(ValueLayout.JAVA_LONG, 40);
+
+        String calloutString = null;
+        final var stringAddr = reinterpreted.get(ValueLayout.ADDRESS, 48);
+        if (stringAddr.address() != 0 && calloutStringLength > 0) {
+            final var stringSegment = stringAddr.reinterpret(calloutStringLength * codeUnitSize);
+            final var bytes = stringSegment.toArray(ValueLayout.JAVA_BYTE);
+            calloutString = new String(bytes, charset);
+        }
+
+        final var enumerateBlock = new Pcre2CalloutEnumerateBlock(
+                patternPosition,
+                nextItemLength,
+                calloutNumber,
+                calloutStringOffset,
+                calloutStringLength,
+                calloutString
+        );
+
+        try {
+            return handler.onCallout(enumerateBlock);
+        } catch (Exception e) {
+            return IPcre2.ERROR_CALLOUT;
+        }
+    }
+
+    private record CallbackEntry(Arena arena, MemorySegment upcallStub) {
     }
 
     /**

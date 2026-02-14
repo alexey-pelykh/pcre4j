@@ -2700,4 +2700,49 @@ public interface IPcre2 {
      */
     int serializeGetNumberOfCodes(byte[] bytes);
 
+    /**
+     * Create a native callback function pointer for a callout handler.
+     * <p>
+     * The returned handle represents a native function pointer that, when called by PCRE2 during matching,
+     * reads the native {@code pcre2_callout_block} structure and delegates to the provided Java handler.
+     * <p>
+     * The handle must be freed with {@link #freeCalloutCallback(long)} when no longer needed.
+     *
+     * @param handler the Java callout handler to wrap
+     * @return a handle representing the native callback, for use with {@link #setCallout(long, long, long)}
+     * @throws IllegalArgumentException if handler is null
+     */
+    long createCalloutCallback(Pcre2CalloutHandler handler);
+
+    /**
+     * Free a native callback function pointer previously created by {@link #createCalloutCallback}.
+     *
+     * @param callbackHandle the handle returned by {@link #createCalloutCallback}
+     */
+    void freeCalloutCallback(long callbackHandle);
+
+    /**
+     * Create a native callback function pointer for a callout enumeration handler.
+     * <p>
+     * The returned handle represents a native function pointer that, when called by PCRE2 during
+     * callout enumeration, reads the native {@code pcre2_callout_enumerate_block} structure and
+     * delegates to the provided Java handler.
+     * <p>
+     * The handle must be freed with {@link #freeCalloutEnumerateCallback(long)} when no longer needed.
+     *
+     * @param handler the Java callout enumeration handler to wrap
+     * @return a handle representing the native callback, for use with
+     *         {@link #calloutEnumerate(long, long, long)}
+     * @throws IllegalArgumentException if handler is null
+     */
+    long createCalloutEnumerateCallback(Pcre2CalloutEnumerateHandler handler);
+
+    /**
+     * Free a native callback function pointer previously created by
+     * {@link #createCalloutEnumerateCallback}.
+     *
+     * @param callbackHandle the handle returned by {@link #createCalloutEnumerateCallback}
+     */
+    void freeCalloutEnumerateCallback(long callbackHandle);
+
 }

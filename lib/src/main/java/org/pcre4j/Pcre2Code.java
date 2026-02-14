@@ -16,6 +16,7 @@ package org.pcre4j;
 
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2CalloutEnumerateHandler;
 
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
@@ -1053,6 +1054,34 @@ public class Pcre2Code {
             return new Pcre2DfaMatchResult(subject, matchStart, matchEnds, isPartial);
         } finally {
             api.matchDataFree(matchData);
+        }
+    }
+
+    /**
+     * Enumerate all callout points in this compiled pattern.
+     * <p>
+     * The handler is called once for each callout point found in the pattern. Callout points
+     * are inserted by {@code (?C)}, {@code (?Cn)}, or {@code (?C"string")} syntax, or
+     * automatically when compiled with {@link Pcre2CompileOption#AUTO_CALLOUT}.
+     *
+     * @param handler the handler to call for each callout point
+     * @throws IllegalArgumentException if handler is null
+     * @throws Pcre2Exception if an error occurs during enumeration
+     * @see <a href="https://www.pcre.org/current/doc/html/pcre2_callout_enumerate.html">pcre2_callout_enumerate</a>
+     */
+    public void enumerateCallouts(Pcre2CalloutEnumerateHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler must not be null");
+        }
+
+        final var callback = api.createCalloutEnumerateCallback(handler);
+        try {
+            final var result = api.calloutEnumerate(handle, callback, 0);
+            if (result < 0) {
+                throw new Pcre2Exception(Pcre4jUtils.getErrorMessage(api, result), result);
+            }
+        } finally {
+            api.freeCalloutEnumerateCallback(callback);
         }
     }
 
