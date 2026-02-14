@@ -14,6 +14,8 @@
  */
 package org.pcre4j.jna;
 
+import com.sun.jna.Callback;
+import com.sun.jna.CallbackReference;
 import com.sun.jna.FunctionMapper;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
@@ -24,6 +26,10 @@ import com.sun.jna.ptr.LongByReference;
 import com.sun.jna.ptr.PointerByReference;
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2CalloutBlock;
+import org.pcre4j.api.Pcre2CalloutEnumerateBlock;
+import org.pcre4j.api.Pcre2CalloutEnumerateHandler;
+import org.pcre4j.api.Pcre2CalloutHandler;
 import org.pcre4j.api.Pcre2LibraryFinder;
 import org.pcre4j.api.Pcre2NativeLoader;
 import org.pcre4j.api.Pcre2UtfWidth;
@@ -33,6 +39,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * A PCRE2 API using the JNA.
@@ -53,6 +60,8 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
      * The size of a code unit in bytes (1 for UTF-8, 2 for UTF-16, 4 for UTF-32).
      */
     private final int codeUnitSize;
+
+    private final ConcurrentHashMap<Long, Callback> callbackEntries = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new PCRE2 API using the common library name "pcre2-8" (UTF-8).
@@ -1161,6 +1170,197 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
         pBytes.write(0, bytes, 0, bytes.length);
 
         return library.pcre2_serialize_get_number_of_codes(pBytes);
+    }
+
+    @Override
+    public long createCalloutCallback(Pcre2CalloutHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler must not be null");
+        }
+
+        final var jnaCallback = new NativeCalloutCallback(handler, codeUnitSize, charset);
+        final var functionPointer = CallbackReference.getFunctionPointer(jnaCallback);
+        final var nativeAddress = Pointer.nativeValue(functionPointer);
+        callbackEntries.put(nativeAddress, jnaCallback);
+        return nativeAddress;
+    }
+
+    @Override
+    public void freeCalloutCallback(long callbackHandle) {
+        callbackEntries.remove(callbackHandle);
+    }
+
+    @Override
+    public long createCalloutEnumerateCallback(Pcre2CalloutEnumerateHandler handler) {
+        if (handler == null) {
+            throw new IllegalArgumentException("handler must not be null");
+        }
+
+        final var jnaCallback = new NativeCalloutEnumerateCallback(handler, codeUnitSize, charset);
+        final var functionPointer = CallbackReference.getFunctionPointer(jnaCallback);
+        final var nativeAddress = Pointer.nativeValue(functionPointer);
+        callbackEntries.put(nativeAddress, jnaCallback);
+        return nativeAddress;
+    }
+
+    @Override
+    public void freeCalloutEnumerateCallback(long callbackHandle) {
+        callbackEntries.remove(callbackHandle);
+    }
+
+    private static String readCalloutString(Pointer block, long stringOffset, long stringLengthOffset,
+                                            long stringPtrOffset, int codeUnitSize, Charset charset) {
+        final var stringLength = block.getLong(stringLengthOffset);
+        if (stringLength == 0) {
+            return null;
+        }
+        final var stringPtr = block.getPointer(stringPtrOffset);
+        if (stringPtr == null || Pointer.nativeValue(stringPtr) == 0) {
+            return null;
+        }
+        final var bytes = stringPtr.getByteArray(0, (int) stringLength * codeUnitSize);
+        return new String(bytes, charset);
+    }
+
+    /**
+     * JNA Callback for pcre2_set_callout: int (*)(pcre2_callout_block *, void *)
+     */
+    private static class NativeCalloutCallback implements Callback {
+        private final Pcre2CalloutHandler handler;
+        private final int codeUnitSize;
+        private final Charset charset;
+
+        NativeCalloutCallback(Pcre2CalloutHandler handler, int codeUnitSize, Charset charset) {
+            this.handler = handler;
+            this.codeUnitSize = codeUnitSize;
+            this.charset = charset;
+        }
+
+        @SuppressWarnings("unused")
+        public int invoke(Pointer block, Pointer userData) {
+            // pcre2_callout_block layout (64-bit):
+            // offset 0:  uint32_t version
+            // offset 4:  uint32_t callout_number
+            // offset 8:  uint32_t capture_top
+            // offset 12: uint32_t capture_last
+            // offset 16: PCRE2_SIZE* offset_vector (pointer, 8 bytes)
+            // offset 24: PCRE2_SPTR mark (pointer, 8 bytes)
+            // offset 32: PCRE2_SPTR subject (pointer, 8 bytes)
+            // offset 40: PCRE2_SIZE subject_length
+            // offset 48: PCRE2_SIZE start_match
+            // offset 56: PCRE2_SIZE current_position
+            // offset 64: PCRE2_SIZE pattern_position
+            // offset 72: PCRE2_SIZE next_item_length
+            // --- Version 1 fields ---
+            // offset 80: PCRE2_SIZE callout_string_offset
+            // offset 88: PCRE2_SIZE callout_string_length
+            // offset 96: PCRE2_SPTR callout_string (pointer, 8 bytes)
+            // --- Version 2 fields ---
+            // offset 104: uint32_t callout_flags
+            final var version = block.getInt(0);
+            final var calloutNumber = block.getInt(4);
+            final var captureTop = block.getInt(8);
+            final var captureLast = block.getInt(12);
+            final var startMatch = block.getLong(48);
+            final var currentPosition = block.getLong(56);
+            final var patternPosition = block.getLong(64);
+            final var nextItemLength = block.getLong(72);
+
+            long calloutStringOffset = 0;
+            long calloutStringLength = 0;
+            String calloutString = null;
+            if (version >= 1) {
+                calloutStringOffset = block.getLong(80);
+                calloutStringLength = block.getLong(88);
+                final var stringPtr = block.getPointer(96);
+                if (stringPtr != null && Pointer.nativeValue(stringPtr) != 0 && calloutStringLength > 0) {
+                    final var bytes = stringPtr.getByteArray(0, (int) calloutStringLength * codeUnitSize);
+                    calloutString = new String(bytes, charset);
+                }
+            }
+
+            int calloutFlags = 0;
+            if (version >= 2) {
+                calloutFlags = block.getInt(104);
+            }
+
+            final var calloutBlock = new Pcre2CalloutBlock(
+                    calloutNumber,
+                    captureTop,
+                    captureLast,
+                    startMatch,
+                    currentPosition,
+                    patternPosition,
+                    nextItemLength,
+                    calloutStringOffset,
+                    calloutStringLength,
+                    calloutString,
+                    calloutFlags
+            );
+
+            try {
+                return handler.onCallout(calloutBlock);
+            } catch (Exception e) {
+                // Store exception for later re-throwing; return non-zero to abort matching
+                return IPcre2.ERROR_CALLOUT;
+            }
+        }
+    }
+
+    /**
+     * JNA Callback for pcre2_callout_enumerate: int (*)(pcre2_callout_enumerate_block *, void *)
+     */
+    private static class NativeCalloutEnumerateCallback implements Callback {
+        private final Pcre2CalloutEnumerateHandler handler;
+        private final int codeUnitSize;
+        private final Charset charset;
+
+        NativeCalloutEnumerateCallback(Pcre2CalloutEnumerateHandler handler, int codeUnitSize, Charset charset) {
+            this.handler = handler;
+            this.codeUnitSize = codeUnitSize;
+            this.charset = charset;
+        }
+
+        @SuppressWarnings("unused")
+        public int invoke(Pointer block, Pointer userData) {
+            // pcre2_callout_enumerate_block layout (64-bit):
+            // offset 0:  uint32_t version
+            // offset 4:  padding (4 bytes for alignment of PCRE2_SIZE)
+            // offset 8:  PCRE2_SIZE pattern_position
+            // offset 16: PCRE2_SIZE next_item_length
+            // offset 24: uint32_t callout_number
+            // offset 28: padding (4 bytes)
+            // offset 32: PCRE2_SIZE callout_string_offset
+            // offset 40: PCRE2_SIZE callout_string_length
+            // offset 48: PCRE2_SPTR callout_string (pointer, 8 bytes)
+            final var patternPosition = block.getLong(8);
+            final var nextItemLength = block.getLong(16);
+            final var calloutNumber = block.getInt(24);
+            final var calloutStringOffset = block.getLong(32);
+            final var calloutStringLength = block.getLong(40);
+
+            String calloutString = null;
+            final var stringPtr = block.getPointer(48);
+            if (stringPtr != null && Pointer.nativeValue(stringPtr) != 0 && calloutStringLength > 0) {
+                final var bytes = stringPtr.getByteArray(0, (int) calloutStringLength * codeUnitSize);
+                calloutString = new String(bytes, charset);
+            }
+
+            final var enumerateBlock = new Pcre2CalloutEnumerateBlock(
+                    patternPosition,
+                    nextItemLength,
+                    calloutNumber,
+                    calloutStringOffset,
+                    calloutStringLength,
+                    calloutString
+            );
+
+            try {
+                return handler.onCallout(enumerateBlock);
+            } catch (Exception e) {
+                return IPcre2.ERROR_CALLOUT;
+            }
+        }
     }
 
     private interface Library extends com.sun.jna.Library {

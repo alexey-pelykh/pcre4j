@@ -19,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.api.Pcre2CalloutEnumerateHandler;
+import org.pcre4j.api.Pcre2CalloutHandler;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
@@ -539,6 +541,26 @@ public class Pcre4jTests {
 
         @Override
         public int serializeGetNumberOfCodes(byte[] bytes) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long createCalloutCallback(Pcre2CalloutHandler handler) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void freeCalloutCallback(long callbackHandle) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long createCalloutEnumerateCallback(Pcre2CalloutEnumerateHandler handler) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void freeCalloutEnumerateCallback(long callbackHandle) {
             throw new UnsupportedOperationException();
         }
     }
