@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -17,25 +17,33 @@ package org.pcre4j;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2UtfWidth;
 
+import java.util.ServiceLoader;
+
 
 /**
  * Global singleton that holds the active {@link IPcre2} backend instance.
  *
  * <h2>Initialization</h2>
  *
- * <p>Applications must call {@link #setup(IPcre2)} once before using any PCRE4J convenience API
- * that relies on the global backend (e.g.&nbsp;{@link Pcre2Code#Pcre2Code(String)},
- * {@code org.pcre4j.regex.Pattern.compile(String)}). A static initializer in the application's
- * entry point is the recommended approach:</p>
+ * <p>The backend can be initialized in two ways:</p>
+ *
+ * <ol>
+ *   <li><strong>Automatic discovery (recommended)</strong> — simply add a backend artifact
+ *       ({@code pcre4j-jna} or {@code pcre4j-ffm}) to your classpath. The first call to
+ *       {@link #api()} will use {@link ServiceLoader} to discover and initialize a backend
+ *       automatically. When both backends are present, the FFM backend is preferred for its
+ *       better performance.</li>
+ *   <li><strong>Explicit setup</strong> — call {@link #setup(IPcre2)} with a backend instance
+ *       before any other PCRE4J usage. This takes priority over auto-discovery.</li>
+ * </ol>
+ *
+ * <p>Example with explicit setup:</p>
  *
  * <pre>{@code
  * static {
  *     Pcre4j.setup(new org.pcre4j.jna.Pcre2());   // or org.pcre4j.ffm.Pcre2
  * }
  * }</pre>
- *
- * <p>Calling {@link #api()} before {@link #setup(IPcre2)} throws
- * {@link IllegalStateException}.</p>
  *
  * <h2>Thread Safety</h2>
  *
@@ -52,7 +60,8 @@ import org.pcre4j.api.Pcre2UtfWidth;
  * singleton. This means:</p>
  *
  * <ul>
- *   <li>Each classloader must call {@link #setup(IPcre2)} independently.</li>
+ *   <li>Each classloader must call {@link #setup(IPcre2)} independently (or rely on
+ *       auto-discovery independently).</li>
  *   <li>{@link Pcre2Code} and other objects created under one classloader cannot be mixed with a
  *       backend set up under a different classloader.</li>
  * </ul>
@@ -99,18 +108,64 @@ public final class Pcre4j {
     }
 
     /**
-     * Return the global {@link IPcre2} backend previously installed via {@link #setup(IPcre2)}.
+     * Return the global {@link IPcre2} backend.
+     *
+     * <p>If no backend has been installed via {@link #setup(IPcre2)}, this method attempts
+     * automatic discovery using {@link ServiceLoader}. When both the FFM and JNA backends are
+     * present on the classpath, the FFM backend is preferred for its better performance. A
+     * discovered backend must support UTF-8; backends that fail to load or lack UTF-8 support
+     * are skipped.</p>
      *
      * @return the active backend instance
-     * @throws IllegalStateException if {@link #setup(IPcre2)} has not been called yet
+     * @throws IllegalStateException if no backend has been set up and none could be discovered
      */
     public static IPcre2 api() {
         synchronized (lock) {
             if (api == null) {
-                throw new IllegalStateException("Call Pcre4j.setup() first.");
+                api = discoverBackend();
+                if (api == null) {
+                    throw new IllegalStateException(
+                            "No PCRE2 backend found. Add pcre4j-jna or pcre4j-ffm to your classpath, "
+                                    + "or call Pcre4j.setup() explicitly."
+                    );
+                }
             }
             return api;
         }
+    }
+
+    /**
+     * Attempt to discover a usable {@link IPcre2} backend via {@link ServiceLoader}.
+     *
+     * <p>Backends are loaded lazily and checked for UTF-8 support. The FFM backend
+     * ({@code org.pcre4j.ffm.Pcre2}) is preferred over the JNA backend
+     * ({@code org.pcre4j.jna.Pcre2}) when both are available.</p>
+     *
+     * @return a usable backend, or {@code null} if none could be loaded
+     */
+    private static IPcre2 discoverBackend() {
+        final var loader = ServiceLoader.load(IPcre2.class);
+
+        IPcre2 fallback = null;
+        for (var provider : loader) {
+            try {
+                final var candidate = provider;
+                final var compiledWidths = Pcre4jUtils.getCompiledWidths(candidate);
+                if (!compiledWidths.contains(Pcre2UtfWidth.UTF8)) {
+                    continue;
+                }
+                if (candidate.getClass().getName().equals("org.pcre4j.ffm.Pcre2")) {
+                    return candidate;
+                }
+                if (fallback == null) {
+                    fallback = candidate;
+                }
+            } catch (Exception ignored) {
+                // Backend failed to load (e.g. native library not found, FFM preview not
+                // enabled on Java 21); skip and try the next one.
+            }
+        }
+        return fallback;
     }
 
 }

@@ -90,8 +90,14 @@ The PCRE4J library provides several APIs to interact with the PCRE library:
 
 ### Library Initialization
 
-The `regex` and `lib` convenience APIs use a global backend held by `Pcre4j`. Call
-`Pcre4j.setup()` once — typically in a static initializer — before any other PCRE4J usage:
+The `regex` and `lib` convenience APIs use a global backend held by `Pcre4j`. The backend is
+initialized automatically — just add a backend artifact (`jna` or `ffm`) to your classpath and
+start using PCRE4J. No explicit setup call is required.
+
+On first use, `Pcre4j.api()` discovers available backends via `ServiceLoader`. When both the
+FFM and JNA backends are present, the FFM backend is preferred for its better performance.
+
+For explicit control, you can still call `Pcre4j.setup()` to install a specific backend:
 
 ```java
 import org.pcre4j.Pcre4j;
@@ -102,8 +108,9 @@ static {
 }
 ```
 
-`setup()` may be called again to replace the backend; existing compiled patterns are unaffected
-because each `Pcre2Code` instance captures the backend it was created with.
+`setup()` takes priority over auto-discovery and may be called again to replace the backend;
+existing compiled patterns are unaffected because each `Pcre2Code` instance captures the
+backend it was created with.
 
 Every convenience constructor and factory method (e.g. `Pcre2Code(String)`,
 `Pattern.compile(String)`) has an explicit-API overload that accepts an `IPcre2` parameter
@@ -158,17 +165,9 @@ dependencies {
 Proceed using the PCRE4J library in your Java code similarly like if you were using the `java.util.regex` package:
 
 ```java
-import org.pcre4j.Pcre4j;
-// TODO: Select one of the following imports for the backend you want to use:
-import org.pcre4j.jna.Pcre2;
-// import org.pcre4j.ffm.Pcre2;
 import org.pcre4j.regex.Pattern;
 
 public class Usage {
-    static {
-        Pcre4j.setup(new Pcre2());
-    }
-
     public static String[] example(String pattern, String subject) {
         final var matcher = Pattern.compile(pattern).matcher(subject);
         if (matcher.find()) {
@@ -231,15 +230,8 @@ Proceed using the PCRE4J library in your Java code:
 
 ```java
 import org.pcre4j.*;
-// TODO: Select one of the following imports for the backend you want to use:
-import org.pcre4j.jna.Pcre2;
-// import org.pcre4j.ffm.Pcre2;
 
 public class Usage {
-    static {
-        Pcre4j.setup(new Pcre2());
-    }
-
     public static String[] example(String pattern, String subject) {
         final Pcre2Code code;
         if (Pcre4jUtils.isJitSupported(Pcre4j.api())) {

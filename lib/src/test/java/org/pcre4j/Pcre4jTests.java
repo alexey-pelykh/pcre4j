@@ -24,6 +24,7 @@ import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -44,15 +45,20 @@ public class Pcre4jTests {
     }
 
     @Test
-    void api_beforeSetup_throwsIllegalStateException() {
-        var error = assertThrows(
-                IllegalStateException.class,
-                () -> Pcre4j.api()
-        );
-        assertNotNull(error.getMessage(), "Error message must not be null");
+    void api_withoutSetup_autoDiscoversBackend() {
+        // Both JNA and FFM backends are on the test classpath, so auto-discovery should succeed
+        var api = assertDoesNotThrow(() -> Pcre4j.api());
+        assertNotNull(api, "Auto-discovered backend must not be null");
+        assertInstanceOf(IPcre2.class, api);
+    }
+
+    @Test
+    void api_withoutSetup_prefersFfmBackend() {
+        // Both backends are on the test classpath; FFM should be preferred
+        var api = Pcre4j.api();
         assertTrue(
-                error.getMessage().contains("setup"),
-                "Error message should mention setup(), got: " + error.getMessage()
+                api.getClass().getName().equals("org.pcre4j.ffm.Pcre2"),
+                "Expected FFM backend to be preferred, got: " + api.getClass().getName()
         );
     }
 
@@ -91,6 +97,20 @@ public class Pcre4jTests {
         // Second setup call should succeed and replace the API
         Pcre4j.setup(api);
         assertSame(api, Pcre4j.api());
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void setup_overridesAutoDiscovery(IPcre2 api) {
+        Pcre4j.setup(api);
+        assertSame(api, Pcre4j.api(), "Explicit setup should take priority over auto-discovery");
+    }
+
+    @Test
+    void api_autoDiscovery_cachesSingleton() {
+        var first = Pcre4j.api();
+        var second = Pcre4j.api();
+        assertSame(first, second, "Auto-discovered backend should be cached as singleton");
     }
 
     @Test
