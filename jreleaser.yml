@@ -47,6 +47,12 @@ deploy:
           - jna/build/staging-deploy
           - ffm/build/staging-deploy
           - regex/build/staging-deploy
+          - native/linux-x86_64/build/staging-deploy
+          - native/linux-aarch64/build/staging-deploy
+          - native/macos-x86_64/build/staging-deploy
+          - native/macos-aarch64/build/staging-deploy
+          - native/windows-x86_64/build/staging-deploy
+          - native/all/build/staging-deploy
     nexus2:
       snapshots:
         active: SNAPSHOT
@@ -59,3 +65,9 @@ deploy:
           - jna/build/staging-deploy
           - ffm/build/staging-deploy
           - regex/build/staging-deploy
+          - native/linux-x86_64/build/staging-deploy
+          - native/linux-aarch64/build/staging-deploy
+          - native/macos-x86_64/build/staging-deploy
+          - native/macos-aarch64/build/staging-deploy
+          - native/windows-x86_64/build/staging-deploy
+          - native/all/build/staging-deploy

@@ -25,6 +25,7 @@ import com.sun.jna.ptr.PointerByReference;
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2LibraryFinder;
+import org.pcre4j.api.Pcre2NativeLoader;
 import org.pcre4j.api.Pcre2UtfWidth;
 
 import java.lang.reflect.Method;
@@ -114,22 +115,34 @@ public class Pcre2 implements IPcre2, INativeMemoryAccess {
         this.codeUnitSize = codeUnitSize;
 
         Library loadedLibrary;
-        try {
+
+        // Try bundled native library first (if on classpath)
+        var bundledDir = Pcre2NativeLoader.load(library);
+        if (bundledDir.isPresent()) {
+            var bundledPath = bundledDir.get().resolve(System.mapLibraryName(library));
             loadedLibrary = Native.load(
-                    library,
+                    bundledPath.toString(),
                     Library.class,
                     Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
             );
-        } catch (UnsatisfiedLinkError e) {
-            var discovered = Pcre2LibraryFinder.discover(library);
-            if (discovered.isPresent()) {
+        } else {
+            try {
                 loadedLibrary = Native.load(
-                        discovered.get().toString(),
+                        library,
                         Library.class,
                         Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
                 );
-            } else {
-                throw e;
+            } catch (UnsatisfiedLinkError e) {
+                var discovered = Pcre2LibraryFinder.discover(library);
+                if (discovered.isPresent()) {
+                    loadedLibrary = Native.load(
+                            discovered.get().toString(),
+                            Library.class,
+                            Map.of(Library.OPTION_FUNCTION_MAPPER, new SuffixFunctionMapper(suffix))
+                    );
+                } else {
+                    throw e;
+                }
             }
         }
         this.library = loadedLibrary;
