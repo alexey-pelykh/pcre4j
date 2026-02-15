@@ -15,6 +15,8 @@
 package org.pcre4j;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.exception.Pcre2ConvertException;
+import org.pcre4j.option.Pcre2ConvertOption;
 
 import java.util.EnumSet;
 

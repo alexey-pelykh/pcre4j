@@ -16,14 +16,14 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileContext;
-import org.pcre4j.Pcre2CompileException;
-import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2JitCode;
-import org.pcre4j.Pcre2JitOption;
-import org.pcre4j.Pcre2Newline;
 import org.pcre4j.Pcre4j;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.exception.Pcre2CompileException;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2JitOption;
+import org.pcre4j.option.Pcre2Newline;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -58,42 +58,43 @@ public class Pattern {
 
     /**
      * A {@link java.util.regex.Pattern#CASE_INSENSITIVE}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#CASELESS}
+     * {@link org.pcre4j.option.Pcre2CompileOption#CASELESS}
      */
     public static final int CASE_INSENSITIVE = java.util.regex.Pattern.CASE_INSENSITIVE;
 
     /**
      * A {@link java.util.regex.Pattern#DOTALL}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#DOTALL}
+     * {@link org.pcre4j.option.Pcre2CompileOption#DOTALL}
      */
     public static final int DOTALL = java.util.regex.Pattern.DOTALL;
 
     /**
      * A {@link java.util.regex.Pattern#LITERAL}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#LITERAL}
+     * {@link org.pcre4j.option.Pcre2CompileOption#LITERAL}
      */
     public static final int LITERAL = java.util.regex.Pattern.LITERAL;
 
     /**
      * A {@link java.util.regex.Pattern#MULTILINE}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#MULTILINE}
+     * {@link org.pcre4j.option.Pcre2CompileOption#MULTILINE}
      */
     public static final int MULTILINE = java.util.regex.Pattern.MULTILINE;
 
     /**
      * A {@link java.util.regex.Pattern#UNICODE_CHARACTER_CLASS}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#UCP}
+     * {@link org.pcre4j.option.Pcre2CompileOption#UCP}
      */
     public static final int UNICODE_CHARACTER_CLASS = java.util.regex.Pattern.UNICODE_CHARACTER_CLASS;
 
     /**
-     * A {@link java.util.regex.Pattern#UNIX_LINES}-compatible flag implemented via {@link org.pcre4j.Pcre2Newline#LF}
+     * A {@link java.util.regex.Pattern#UNIX_LINES}-compatible flag implemented via
+     * {@link org.pcre4j.option.Pcre2Newline#LF}
      */
     public static final int UNIX_LINES = java.util.regex.Pattern.UNIX_LINES;
 
     /**
      * A {@link java.util.regex.Pattern#COMMENTS}-compatible flag implemented via
-     * {@link org.pcre4j.Pcre2CompileOption#EXTENDED}
+     * {@link org.pcre4j.option.Pcre2CompileOption#EXTENDED}
      * <p>
      * Permits whitespace and comments in the pattern. In this mode, whitespace is ignored except when escaped or
      * inside a character class, and comments starting with {@code #} are ignored until end of line.

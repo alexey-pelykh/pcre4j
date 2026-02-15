@@ -16,6 +16,7 @@ package org.pcre4j;
 
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2MatchOption;
 
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;

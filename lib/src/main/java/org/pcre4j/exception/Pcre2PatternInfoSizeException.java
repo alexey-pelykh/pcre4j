@@ -12,7 +12,9 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.exception;
+
+import org.pcre4j.option.Pcre2PatternInfo;
 
 /**
  * An exception indicating an unexpected data size for a {@link Pcre2PatternInfo} query.

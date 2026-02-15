@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2026 Oleksii PELYKH
+ * Copyright (C) 2024 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.option;
 
 import org.pcre4j.api.IPcre2;
 
@@ -20,38 +20,18 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * The newline convention.
+ * The \R processing option.
  */
-public enum Pcre2Newline {
+public enum Pcre2Bsr {
     /**
-     * Carriage return only (\r)
+     * \R corresponds to the Unicode line endings
      */
-    CR(IPcre2.NEWLINE_CR),
+    UNICODE(IPcre2.BSR_UNICODE),
 
     /**
-     * Linefeed only (\n)
+     * \R corresponds to CR, LF, and CRLF only
      */
-    LF(IPcre2.NEWLINE_LF),
-
-    /**
-     * CR followed by LF only (\r\n)
-     */
-    CRLF(IPcre2.NEWLINE_CRLF),
-
-    /**
-     * Any Unicode newline sequence
-     */
-    ANY(IPcre2.NEWLINE_ANY),
-
-    /**
-     * Any of {@link #CR}, {@link #LF}, or {@link #CRLF}
-     */
-    ANYCRLF(IPcre2.NEWLINE_ANYCRLF),
-
-    /**
-     * NUL character (\0)
-     */
-    NUL(IPcre2.NEWLINE_NUL);
+    ANYCRLF(IPcre2.BSR_ANYCRLF);
 
     /**
      * The integer value
@@ -63,7 +43,7 @@ public enum Pcre2Newline {
      *
      * @param value the integer value
      */
-    private Pcre2Newline(int value) {
+    private Pcre2Bsr(int value) {
         this.value = value;
     }
 
@@ -73,7 +53,7 @@ public enum Pcre2Newline {
      * @param value the integer value
      * @return the enum entry
      */
-    public static Optional<Pcre2Newline> valueOf(int value) {
+    public static Optional<Pcre2Bsr> valueOf(int value) {
         return Arrays.stream(values())
                 .filter(entry -> entry.value == value)
                 .findFirst();
@@ -87,5 +67,4 @@ public enum Pcre2Newline {
     public int value() {
         return value;
     }
-
 }

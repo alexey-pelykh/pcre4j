@@ -14,7 +14,7 @@
  */
 package org.pcre4j.regex;
 
-import org.pcre4j.Pcre2MatchLimitException;
+import org.pcre4j.exception.Pcre2MatchLimitException;
 import org.pcre4j.api.IPcre2;
 
 /**

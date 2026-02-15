@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.option;
 
 import org.pcre4j.api.IPcre2;
 
@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Pattern information codes for {@link Pcre2Code} introspection.
+ * Pattern information codes for {@link org.pcre4j.Pcre2Code} introspection.
  */
 public enum Pcre2PatternInfo {
     /**

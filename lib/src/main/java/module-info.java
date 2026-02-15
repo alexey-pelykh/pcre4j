@@ -24,4 +24,6 @@ module org.pcre4j {
     requires transitive org.pcre4j.api;
 
     exports org.pcre4j;
+    exports org.pcre4j.exception;
+    exports org.pcre4j.option;
 }

@@ -16,6 +16,7 @@ package org.pcre4j;
 
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2CalloutHandler;
+import org.pcre4j.option.Pcre2CompileOption;
 
 import java.lang.ref.Cleaner;
 

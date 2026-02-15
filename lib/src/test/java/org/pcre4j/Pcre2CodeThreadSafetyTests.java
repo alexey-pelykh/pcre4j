@@ -18,6 +18,8 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2MatchOption;
+import org.pcre4j.option.Pcre2SubstituteOption;
 
 import java.lang.ref.Reference;
 import java.util.ArrayList;

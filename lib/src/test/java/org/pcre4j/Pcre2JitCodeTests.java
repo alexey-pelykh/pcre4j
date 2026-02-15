@@ -17,6 +17,10 @@ package org.pcre4j;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2JitOption;
+import org.pcre4j.option.Pcre2MatchOption;
+import org.pcre4j.option.Pcre2Newline;
 
 import java.util.EnumSet;
 

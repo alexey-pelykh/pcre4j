@@ -17,6 +17,21 @@ package org.pcre4j;
 import org.pcre4j.api.INativeMemoryAccess;
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2CalloutEnumerateHandler;
+import org.pcre4j.exception.Pcre2CompileException;
+import org.pcre4j.exception.Pcre2Exception;
+import org.pcre4j.exception.Pcre2MatchException;
+import org.pcre4j.exception.Pcre2NoSubstringException;
+import org.pcre4j.exception.Pcre2NoUniqueSubstringException;
+import org.pcre4j.exception.Pcre2PatternInfoSizeException;
+import org.pcre4j.exception.Pcre2SubstituteException;
+import org.pcre4j.option.Pcre2Bsr;
+import org.pcre4j.option.Pcre2CompileExtraOption;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2DfaMatchOption;
+import org.pcre4j.option.Pcre2MatchOption;
+import org.pcre4j.option.Pcre2Newline;
+import org.pcre4j.option.Pcre2PatternInfo;
+import org.pcre4j.option.Pcre2SubstituteOption;
 
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
@@ -846,7 +861,7 @@ public class Pcre2Code {
      * @param matchContext the match context to use or null
      * @param replacement  the replacement string (supports backreferences like $1, ${name})
      * @return the result string after substitution
-     * @throws Pcre2SubstituteError if an error occurs during substitution
+     * @throws Pcre2SubstituteException if an error occurs during substitution
      */
     public String substitute(
             String subject,

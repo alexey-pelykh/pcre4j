@@ -15,6 +15,9 @@
 package org.pcre4j;
 
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2Bsr;
+import org.pcre4j.option.Pcre2CompileExtraOption;
+import org.pcre4j.option.Pcre2Newline;
 
 import java.lang.ref.Cleaner;
 import java.util.EnumSet;

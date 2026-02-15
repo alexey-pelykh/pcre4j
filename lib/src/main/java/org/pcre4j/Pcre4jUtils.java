@@ -16,6 +16,8 @@ package org.pcre4j;
 
 import org.pcre4j.api.IPcre2;
 import org.pcre4j.api.Pcre2UtfWidth;
+import org.pcre4j.option.Pcre2Bsr;
+import org.pcre4j.option.Pcre2Newline;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

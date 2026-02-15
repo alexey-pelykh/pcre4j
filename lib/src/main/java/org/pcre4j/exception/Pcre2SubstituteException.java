@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2026 Oleksii PELYKH
+ * Copyright (C) 2024-2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -12,32 +12,31 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.exception;
 
 /**
- * An exception indicating that a named substring is not unique (duplicate names exist when using the {@code (?J)}
- * option).
+ * An exception that occurs during a substitute operation.
  */
-public class Pcre2NoUniqueSubstringException extends Pcre2SubstringException {
+public class Pcre2SubstituteException extends Pcre2Exception {
 
     /**
-     * Creates a new no unique substring exception.
+     * Creates a new substitute exception.
      *
      * @param message   the error message
      * @param errorCode the PCRE2 native error code
      */
-    public Pcre2NoUniqueSubstringException(String message, int errorCode) {
+    public Pcre2SubstituteException(String message, int errorCode) {
         this(message, errorCode, null);
     }
 
     /**
-     * Creates a new no unique substring exception.
+     * Creates a new substitute exception.
      *
      * @param message   the error message
      * @param errorCode the PCRE2 native error code
      * @param cause     the cause of the exception, or {@code null}
      */
-    public Pcre2NoUniqueSubstringException(String message, int errorCode, Throwable cause) {
+    public Pcre2SubstituteException(String message, int errorCode, Throwable cause) {
         super(message, errorCode, cause);
     }
 }

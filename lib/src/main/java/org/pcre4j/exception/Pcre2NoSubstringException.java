@@ -12,31 +12,31 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.exception;
 
 /**
- * An exception that occurs during a substitute operation.
+ * An exception indicating that a named substring does not exist.
  */
-public class Pcre2SubstituteException extends Pcre2Exception {
+public class Pcre2NoSubstringException extends Pcre2SubstringException {
 
     /**
-     * Creates a new substitute exception.
+     * Creates a new no substring exception.
      *
      * @param message   the error message
      * @param errorCode the PCRE2 native error code
      */
-    public Pcre2SubstituteException(String message, int errorCode) {
+    public Pcre2NoSubstringException(String message, int errorCode) {
         this(message, errorCode, null);
     }
 
     /**
-     * Creates a new substitute exception.
+     * Creates a new no substring exception.
      *
      * @param message   the error message
      * @param errorCode the PCRE2 native error code
      * @param cause     the cause of the exception, or {@code null}
      */
-    public Pcre2SubstituteException(String message, int errorCode, Throwable cause) {
+    public Pcre2NoSubstringException(String message, int errorCode, Throwable cause) {
         super(message, errorCode, cause);
     }
 }
