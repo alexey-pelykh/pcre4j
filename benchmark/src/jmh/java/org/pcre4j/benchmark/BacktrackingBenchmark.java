@@ -25,7 +25,7 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
-import org.pcre4j.Pcre2MatchException;
+import org.pcre4j.exception.Pcre2MatchException;
 
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;

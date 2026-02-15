@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.option;
 
 import org.pcre4j.api.IPcre2;
 
@@ -20,7 +20,7 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * Substitute options for {@link Pcre2Code#substitute}
+ * Substitute options for {@link org.pcre4j.Pcre2Code#substitute}
  */
 public enum Pcre2SubstituteOption {
     /**

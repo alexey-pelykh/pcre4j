@@ -15,6 +15,10 @@
 package org.pcre4j;
 
 import org.junit.jupiter.api.Test;
+import org.pcre4j.exception.Pcre2Exception;
+import org.pcre4j.exception.Pcre2InternalException;
+import org.pcre4j.exception.Pcre2PatternInfoSizeException;
+import org.pcre4j.option.Pcre2PatternInfo;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

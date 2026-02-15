@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.option;
 
 import org.pcre4j.api.IPcre2;
 
@@ -22,7 +22,8 @@ import java.util.Optional;
 /**
  * Extra compile options for PCRE2 patterns.
  * <p>
- * These options are set via {@link Pcre2CompileContext#setCompileExtraOptions(java.util.EnumSet)} and provide
+ * These options are set via
+ * {@link org.pcre4j.Pcre2CompileContext#setCompileExtraOptions(java.util.EnumSet)} and provide
  * additional control over pattern compilation beyond the standard compile options.
  */
 public enum Pcre2CompileExtraOption {

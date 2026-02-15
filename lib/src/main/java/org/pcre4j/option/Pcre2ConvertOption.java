@@ -12,7 +12,7 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.option;
 
 import org.pcre4j.api.IPcre2;
 
@@ -20,28 +20,47 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * JIT compilation options for {@link Pcre2JitCode}
+ * Options for pattern conversion via {@link org.pcre4j.Pcre2PatternConverter}.
+ * <p>
+ * These options control the behavior of the PCRE2 pattern conversion functions, which convert
+ * glob patterns or POSIX regular expressions into PCRE2-compatible patterns.
  */
-public enum Pcre2JitOption {
-    /**
-     * Compile code for full matching
-     */
-    COMPLETE(IPcre2.JIT_COMPLETE),
+public enum Pcre2ConvertOption {
 
     /**
-     * Compile code for soft partial matching
+     * Treat the input pattern as a UTF string
      */
-    PARTIAL_SOFT(IPcre2.JIT_PARTIAL_SOFT),
+    UTF(IPcre2.CONVERT_UTF),
 
     /**
-     * Compile code for hard partial matching
+     * Skip UTF validity check on the input pattern
      */
-    PARTIAL_HARD(IPcre2.JIT_PARTIAL_HARD),
+    NO_UTF_CHECK(IPcre2.CONVERT_NO_UTF_CHECK),
 
     /**
-     * @deprecated Use {@link Pcre2CompileOption#MATCH_INVALID_UTF}
+     * Convert a POSIX basic regular expression
      */
-    @Deprecated INVALID_UTF(IPcre2.JIT_INVALID_UTF);
+    POSIX_BASIC(IPcre2.CONVERT_POSIX_BASIC),
+
+    /**
+     * Convert a POSIX extended regular expression
+     */
+    POSIX_EXTENDED(IPcre2.CONVERT_POSIX_EXTENDED),
+
+    /**
+     * Convert a glob pattern
+     */
+    GLOB(IPcre2.CONVERT_GLOB),
+
+    /**
+     * Convert a glob pattern where wildcards do not match the path separator
+     */
+    GLOB_NO_WILD_SEPARATOR(IPcre2.CONVERT_GLOB_NO_WILD_SEPARATOR),
+
+    /**
+     * Convert a glob pattern with the double-star ({@code **}) feature disabled
+     */
+    GLOB_NO_STARSTAR(IPcre2.CONVERT_GLOB_NO_STARSTAR);
 
     /**
      * The integer value of the option
@@ -53,7 +72,7 @@ public enum Pcre2JitOption {
      *
      * @param value the integer value of the option
      */
-    private Pcre2JitOption(int value) {
+    private Pcre2ConvertOption(int value) {
         this.value = value;
     }
 
@@ -61,9 +80,9 @@ public enum Pcre2JitOption {
      * Get the enum value by its option value.
      *
      * @param value the integer value of the option
-     * @return the flag
+     * @return the option
      */
-    public static Optional<Pcre2JitOption> valueOf(int value) {
+    public static Optional<Pcre2ConvertOption> valueOf(int value) {
         return Arrays.stream(values())
                 .filter(flag -> flag.value == value)
                 .findFirst();
@@ -77,4 +96,5 @@ public enum Pcre2JitOption {
     public int value() {
         return value;
     }
+
 }

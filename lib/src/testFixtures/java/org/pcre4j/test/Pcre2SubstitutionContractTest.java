@@ -16,9 +16,9 @@ package org.pcre4j.test;
 
 import org.junit.jupiter.api.Test;
 import org.pcre4j.Pcre2Code;
-import org.pcre4j.Pcre2CompileOption;
-import org.pcre4j.Pcre2SubstituteOption;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2SubstituteOption;
 
 import java.util.EnumSet;
 

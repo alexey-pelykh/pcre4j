@@ -16,6 +16,21 @@ package org.pcre4j;
 
 import org.junit.jupiter.api.Test;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.exception.Pcre2CompileError;
+import org.pcre4j.exception.Pcre2ConvertException;
+import org.pcre4j.exception.Pcre2NoSubstringError;
+import org.pcre4j.exception.Pcre2NoUniqueSubstringError;
+import org.pcre4j.exception.Pcre2PatternInfoSizeError;
+import org.pcre4j.exception.Pcre2SubstituteError;
+import org.pcre4j.option.Pcre2Bsr;
+import org.pcre4j.option.Pcre2CompileExtraOption;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2ConvertOption;
+import org.pcre4j.option.Pcre2JitOption;
+import org.pcre4j.option.Pcre2MatchOption;
+import org.pcre4j.option.Pcre2Newline;
+import org.pcre4j.option.Pcre2PatternInfo;
+import org.pcre4j.option.Pcre2SubstituteOption;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

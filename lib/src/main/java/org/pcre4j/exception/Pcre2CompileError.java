@@ -12,37 +12,41 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package org.pcre4j;
+package org.pcre4j.exception;
 
 /**
- * An error indicating that a named substring is not unique (duplicate names exist when using the {@code (?J)} option).
+ * An error that occurs when a pattern fails to compile.
  *
- * @deprecated Use {@link Pcre2NoUniqueSubstringException} instead. This class will be removed in a future release.
+ * @deprecated Use {@link Pcre2CompileException} instead. This class will be removed in a future release.
  */
 @Deprecated(forRemoval = true)
-public class Pcre2NoUniqueSubstringError extends Pcre2NoUniqueSubstringException {
+public class Pcre2CompileError extends Pcre2CompileException {
 
     /**
-     * Create a new no unique substring error.
+     * Create a new pattern compilation error.
      *
+     * @param pattern the pattern
+     * @param offset  the offset of the error in the pattern
      * @param message the error message
-     * @deprecated Use {@link Pcre2NoUniqueSubstringException#Pcre2NoUniqueSubstringException(String, int)} instead.
+     * @deprecated Use {@link Pcre2CompileException#Pcre2CompileException(String, long, String, int)} instead.
      */
     @Deprecated(forRemoval = true)
-    public Pcre2NoUniqueSubstringError(String message) {
-        this(message, null);
+    public Pcre2CompileError(String pattern, long offset, String message) {
+        this(pattern, offset, message, null);
     }
 
     /**
-     * Create a new no unique substring error.
+     * Create a new pattern compilation error.
      *
+     * @param pattern the pattern
+     * @param offset  the offset of the error in the pattern
      * @param message the error message
      * @param cause   the cause of the error
-     * @deprecated Use {@link Pcre2NoUniqueSubstringException#Pcre2NoUniqueSubstringException(String, int, Throwable)}
+     * @deprecated Use {@link Pcre2CompileException#Pcre2CompileException(String, long, String, int, Throwable)}
      *     instead.
      */
     @Deprecated(forRemoval = true)
-    public Pcre2NoUniqueSubstringError(String message, Throwable cause) {
-        super(message, 0, cause);
+    public Pcre2CompileError(String pattern, long offset, String message, Throwable cause) {
+        super(pattern, offset, message, 0, cause);
     }
 }

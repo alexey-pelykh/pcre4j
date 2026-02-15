@@ -16,16 +16,16 @@ package org.pcre4j.regex;
 
 import org.pcre4j.Pcre2Code;
 import org.pcre4j.Pcre2CompileContext;
-import org.pcre4j.Pcre2CompileException;
-import org.pcre4j.Pcre2CompileOption;
 import org.pcre4j.Pcre2JitStack;
 import org.pcre4j.Pcre2MatchContext;
 import org.pcre4j.Pcre2MatchData;
-import org.pcre4j.Pcre2MatchOption;
-import org.pcre4j.Pcre2Newline;
-import org.pcre4j.Pcre2SubstituteOption;
 import org.pcre4j.Pcre4jUtils;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.exception.Pcre2CompileException;
+import org.pcre4j.option.Pcre2CompileOption;
+import org.pcre4j.option.Pcre2MatchOption;
+import org.pcre4j.option.Pcre2Newline;
+import org.pcre4j.option.Pcre2SubstituteOption;
 
 import java.lang.ref.Reference;
 import java.nio.charset.StandardCharsets;

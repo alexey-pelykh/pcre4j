@@ -17,6 +17,7 @@ package org.pcre4j;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.pcre4j.api.IPcre2;
+import org.pcre4j.option.Pcre2MatchOption;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
