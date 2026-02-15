@@ -409,7 +409,7 @@ public class Matcher implements java.util.regex.MatchResult {
         // Append text between last append position and start of match
         sb.append(input, appendPos, start());
         // Process and append replacement string
-        appendReplacementInternal(sb, replacement);
+        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
         // Update append position to end of current match
         appendPos = end();
         return this;
@@ -442,103 +442,10 @@ public class Matcher implements java.util.regex.MatchResult {
         // Append text between last append position and start of match
         sb.append(input, appendPos, start());
         // Process and append replacement string
-        appendReplacementInternal(sb, replacement);
+        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
         // Update append position to end of current match
         appendPos = end();
         return this;
-    }
-
-    /**
-     * Process the replacement string and append to the given Appendable.
-     * Handles group references: $1, ${1}, ${name}
-     */
-    private void appendReplacementInternal(Appendable sb, String replacement) {
-        int cursor = 0;
-        final int len = replacement.length();
-
-        try {
-            while (cursor < len) {
-                char c = replacement.charAt(cursor);
-                if (c == '\\') {
-                    cursor++;
-                    if (cursor >= len) {
-                        throw new IllegalArgumentException("Illegal escape sequence at end of replacement string");
-                    }
-                    sb.append(replacement.charAt(cursor));
-                    cursor++;
-                } else if (c == '$') {
-                    cursor++;
-                    if (cursor >= len) {
-                        throw new IllegalArgumentException("Illegal group reference at end of replacement string");
-                    }
-                    c = replacement.charAt(cursor);
-                    if (c == '{') {
-                        // Named or numbered group reference: ${name} or ${number}
-                        cursor++;
-                        int start = cursor;
-                        while (cursor < len && replacement.charAt(cursor) != '}') {
-                            cursor++;
-                        }
-                        if (cursor >= len) {
-                            throw new IllegalArgumentException("Unclosed group reference");
-                        }
-                        final String groupRef = replacement.substring(start, cursor);
-                        cursor++; // skip '}'
-                        if (groupRef.isEmpty()) {
-                            throw new IllegalArgumentException("Empty group reference");
-                        }
-                        // Try to parse as number first
-                        String groupValue;
-                        if (Character.isDigit(groupRef.charAt(0))) {
-                            int groupNum = Integer.parseInt(groupRef);
-                            if (groupNum > groupCount()) {
-                                throw new IndexOutOfBoundsException("No group " + groupNum);
-                            }
-                            groupValue = group(groupNum);
-                        } else {
-                            groupValue = group(groupRef);
-                        }
-                        if (groupValue != null) {
-                            sb.append(groupValue);
-                        }
-                    } else if (Character.isDigit(c)) {
-                        // Numbered group reference: $1, $12, etc.
-                        int groupNum = c - '0';
-                        cursor++;
-                        // Greedily consume more digits to get the full group number
-                        // but only if the resulting number is a valid group
-                        while (cursor < len) {
-                            char nextChar = replacement.charAt(cursor);
-                            if (!Character.isDigit(nextChar)) {
-                                break;
-                            }
-                            int nextGroupNum = groupNum * 10 + (nextChar - '0');
-                            if (nextGroupNum > groupCount()) {
-                                break;
-                            }
-                            groupNum = nextGroupNum;
-                            cursor++;
-                        }
-                        if (groupNum > groupCount()) {
-                            throw new IndexOutOfBoundsException("No group " + groupNum);
-                        }
-                        String groupValue = group(groupNum);
-                        if (groupValue != null) {
-                            sb.append(groupValue);
-                        }
-                    } else {
-                        throw new IllegalArgumentException(
-                                "Illegal group reference: character '" + c + "' after '$'"
-                        );
-                    }
-                } else {
-                    sb.append(c);
-                    cursor++;
-                }
-            }
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("IOException during append", e);
-        }
     }
 
     /**
@@ -971,18 +878,7 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return a literal string replacement
      */
     public static String quoteReplacement(String s) {
-        if (s.indexOf('\\') == -1 && s.indexOf('$') == -1) {
-            return s;
-        }
-        final var sb = new StringBuilder(s.length() + 16);
-        for (int i = 0; i < s.length(); i++) {
-            final var c = s.charAt(i);
-            if (c == '\\' || c == '$') {
-                sb.append('\\');
-            }
-            sb.append(c);
-        }
-        return sb.toString();
+        return MatcherReplacementProcessor.quoteReplacement(s);
     }
 
     /**
@@ -1459,7 +1355,7 @@ public class Matcher implements java.util.regex.MatchResult {
                             // Check if the original pattern contained $ anchor (outside character classes)
                             // If so, we must verify the match ends at regionEnd (simulates $ at regionEnd)
                             final boolean originalHadDollar =
-                                    patternContainsDollarAnchor(pattern.pattern());
+                                    MatcherPatternAnalysis.patternContainsDollarAnchor(pattern.pattern());
                             if (!originalHadDollar) {
                                 // No $ in original - match is valid as long as it ends within region
                                 if (lastMatchIndices[1] <= regionEnd) {
@@ -1737,7 +1633,7 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         final var originalPattern = pattern.pattern();
-        final var transformed = transformPatternForAnchoringBounds(originalPattern);
+        final var transformed = MatcherPatternAnalysis.transformPatternForAnchoringBounds(originalPattern);
 
         // If no transformation needed, return null to indicate using the original pattern
         if (transformed.equals(originalPattern)) {
@@ -1789,114 +1685,6 @@ public class Matcher implements java.util.regex.MatchResult {
         }
     }
 
-    /**
-     * Transforms a regex pattern for anchoring bounds mode.
-     * <p>
-     * Replaces {@code ^} with {@code \G} and removes {@code $} (outside character classes).
-     * The {@code \G} assertion matches at startOffset (where matching begins), which is
-     * what Java's {@code ^} does with anchoring bounds enabled. The {@code $} removal
-     * is compensated by post-hoc verification that the match ends at regionEnd.
-     * <p>
-     * Handles POSIX character classes like {@code [[:alpha:]]} correctly by tracking
-     * nested bracket depth.
-     *
-     * @param pattern the original pattern
-     * @return the transformed pattern
-     */
-    private static String transformPatternForAnchoringBounds(String pattern) {
-        final var sb = new StringBuilder(pattern.length() + 10);
-        int charClassDepth = 0;  // Track nested character class depth for POSIX classes
-        boolean escaped = false;
-
-        for (int i = 0; i < pattern.length(); i++) {
-            char c = pattern.charAt(i);
-
-            if (escaped) {
-                sb.append(c);
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                sb.append(c);
-                escaped = true;
-                continue;
-            }
-
-            // Handle POSIX character classes like [[:alpha:]] - they contain nested brackets
-            // Also handles regular character classes
-            if (c == '[') {
-                charClassDepth++;
-                sb.append(c);
-                continue;
-            }
-
-            if (c == ']' && charClassDepth > 0) {
-                charClassDepth--;
-                sb.append(c);
-                continue;
-            }
-
-            if (charClassDepth == 0) {
-                if (c == '^') {
-                    // Replace ^ with \G (matches at startOffset)
-                    sb.append("\\G");
-                    continue;
-                }
-                if (c == '$') {
-                    // Remove $ (will verify match end position post-hoc)
-                    continue;
-                }
-            }
-
-            sb.append(c);
-        }
-
-        return sb.toString();
-    }
-
-    /**
-     * Checks if a regex pattern contains a $ anchor outside of character classes.
-     * This is used to determine if the match end position must be verified post-hoc
-     * when using the transformed pattern for anchoring bounds.
-     *
-     * @param pattern the pattern to check
-     * @return true if the pattern contains a $ anchor outside character classes
-     */
-    private static boolean patternContainsDollarAnchor(String pattern) {
-        int charClassDepth = 0;
-        boolean escaped = false;
-
-        for (int i = 0; i < pattern.length(); i++) {
-            char c = pattern.charAt(i);
-
-            if (escaped) {
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                escaped = true;
-                continue;
-            }
-
-            if (c == '[') {
-                charClassDepth++;
-                continue;
-            }
-
-            if (c == ']' && charClassDepth > 0) {
-                charClassDepth--;
-                continue;
-            }
-
-            if (charClassDepth == 0 && c == '$') {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     /**
      * Update hitEnd and requireEnd flags based on the match result.
@@ -1937,10 +1725,10 @@ public class Matcher implements java.util.regex.MatchResult {
                 // This is true for patterns with open-ended constructs like +, *, character classes.
 
                 // Check for soft end anchors ($ or \Z) first
-                if (patternContainsSoftEndAnchor(pattern.pattern())) {
+                if (MatcherPatternAnalysis.patternContainsSoftEndAnchor(pattern.pattern())) {
                     hitEnd = true;
                     requireEnd = true;
-                } else if (patternCanConsumeMoreAtEnd(pattern.pattern())) {
+                } else if (MatcherPatternAnalysis.patternCanConsumeMoreAtEnd(pattern.pattern())) {
                     // Pattern has constructs that could consume more input at the end
                     hitEnd = true;
                 }
@@ -1983,123 +1771,6 @@ public class Matcher implements java.util.regex.MatchResult {
         }
     }
 
-    /**
-     * Checks if a pattern can consume more input at the end of a match.
-     * <p>
-     * This returns true if the pattern ends with constructs that could consume
-     * more input, such as:
-     * <ul>
-     *   <li>{@code +}, {@code *}, {@code ?} quantifiers</li>
-     *   <li>{@code {n,}} or {@code {n,m}} quantifiers where the upper bound isn't reached</li>
-     *   <li>Character classes {@code [...]}</li>
-     *   <li>Dot {@code .}</li>
-     *   <li>{@code \w}, {@code \d}, {@code \s} and similar character type escapes</li>
-     * </ul>
-     *
-     * @param pattern the pattern to check
-     * @return true if the pattern could consume more input at the end
-     */
-    private static boolean patternCanConsumeMoreAtEnd(String pattern) {
-        if (pattern.isEmpty()) {
-            return false;
-        }
-
-        // Check the last character of the pattern to determine if it could consume more
-        int i = pattern.length() - 1;
-
-        while (i >= 0) {
-            char c = pattern.charAt(i);
-
-            // Check for quantifiers at the end
-            if (c == '+' || c == '*' || c == '?' || c == '}') {
-                return true; // Pattern has a quantifier that could consume more
-            }
-
-            // Check for character class end
-            if (c == ']') {
-                // Found end of character class without quantifier - matches exactly one character
-                // A character class like [a-z] matches one char just like . or \w
-                return false;
-            }
-
-            // Check for escape sequences
-            if (i > 0 && pattern.charAt(i - 1) == '\\') {
-                // Escape sequence at end
-                // Character type escapes (\w, \d, \s, \W, \D, \S, etc.) can match multiple chars
-                // when followed by a quantifier, but at the pattern end they match exactly one
-                // However, \w matches one character and if input ends with matching char,
-                // more matching chars could extend
-                if (c == 'w' || c == 'W' || c == 'd' || c == 'D' || c == 's' || c == 'S') {
-                    // These match a class of characters - similar to character class
-                    // But without a quantifier, they match exactly one character
-                    // Java seems to return hitEnd=false for these at end
-                    return false;
-                }
-                return false;
-            }
-
-            // Check for dot (matches any character)
-            if (c == '.') {
-                // Dot at end without quantifier matches exactly one char
-                return false;
-            }
-
-            // If we reach here with a normal character, the pattern ends with a literal
-            // Literals match exactly, so no more input could extend the match
-            return false;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if a regex pattern contains a "soft" end anchor ($ or \Z) outside of character classes.
-     * These anchors can match before a final newline, meaning more input could invalidate a match.
-     * <p>
-     * Note: \z (lowercase) is not included because it only matches at the absolute end,
-     * so more input cannot invalidate a match that used \z.
-     *
-     * @param pattern the pattern to check
-     * @return true if the pattern contains $ or \Z outside character classes
-     */
-    private static boolean patternContainsSoftEndAnchor(String pattern) {
-        int charClassDepth = 0;
-        boolean escaped = false;
-
-        for (int i = 0; i < pattern.length(); i++) {
-            char c = pattern.charAt(i);
-
-            if (escaped) {
-                // Check for \Z (uppercase only - \z is absolute end, not soft)
-                if (charClassDepth == 0 && c == 'Z') {
-                    return true;
-                }
-                escaped = false;
-                continue;
-            }
-
-            if (c == '\\') {
-                escaped = true;
-                continue;
-            }
-
-            if (c == '[') {
-                charClassDepth++;
-                continue;
-            }
-
-            if (c == ']' && charClassDepth > 0) {
-                charClassDepth--;
-                continue;
-            }
-
-            if (charClassDepth == 0 && c == '$') {
-                return true;
-            }
-        }
-
-        return false;
-    }
 
     /**
      * Process match results: convert ovector to string indices and adjust for region offset.
