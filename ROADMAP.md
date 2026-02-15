@@ -1,41 +1,27 @@
 # Roadmap
 
-This document outlines the planned direction for PCRE4J. Each section corresponds to a
-[GitHub Milestone](https://github.com/alexey-pelykh/pcre4j/milestones) where you can track
-detailed progress.
+PCRE4J is currently at **v0.7.x** (pre-1.0). This document describes what the project provides
+today and what remains for a stable 1.0 release.
 
-## v1.0 — Production Ready
+## Current State
 
-**Focus**: Core stability, code quality, and documentation.
+The 0.x release series has built out the core functionality:
 
-Key items include unified exception handling, comprehensive test coverage, JPMS module
-descriptors, build convention plugins, and architecture decision records.
+- **Three API layers**: low-level (`api`), mid-level (`lib`), and `java.util.regex`-compatible
+  (`regex`)
+- **Two backends**: JNA and FFM (Foreign Function & Memory API)
+- **Platform-specific native library bundles** for Linux, macOS, and Windows
+- **GraalVM native-image** support
+- **ServiceLoader-based backend discovery** for zero-configuration setup
+- **High-level API coverage**: pattern serialization, DFA matching, callout support, glob/POSIX
+  conversion
+- **Thread-scoped backend API** for multi-backend support (`Pcre4j.withBackend()`)
+- **JPMS module descriptors** across all modules
+- **Architecture Decision Records** documenting key design choices
 
-[See milestone](https://github.com/alexey-pelykh/pcre4j/milestone/1)
+## v1.0
 
-## v1.1 — Adoption
+The first stable release, with an API stability commitment.
 
-**Focus**: Zero-friction onboarding for new users.
-
-Key items include platform-specific native library bundles, GraalVM native-image support,
-ServiceLoader-based backend discovery, and published performance benchmarks.
-
-[See milestone](https://github.com/alexey-pelykh/pcre4j/milestone/2)
-
-## v1.2 — Feature Completeness
-
-**Focus**: Full PCRE2 feature coverage through the high-level API.
-
-Key items include pattern serialization/deserialization, DFA matching, callout support, and
-glob/POSIX pattern conversion.
-
-[See milestone](https://github.com/alexey-pelykh/pcre4j/milestone/3)
-
-## v2.0 — Platform
-
-**Focus**: Architecture evolution.
-
-Key items include a scoped backend API for multi-backend support, enabling applications to use
-different PCRE2 backends concurrently without relying on the global singleton.
-
-[See milestone](https://github.com/alexey-pelykh/pcre4j/milestone/4)
+Remaining work is tracked in the
+[v1.0 milestone](https://github.com/alexey-pelykh/pcre4j/milestone/5).
