@@ -52,4 +52,9 @@ tasks.withType<Test>().configureEach {
     if (pcre2FunctionSuffix != null) {
         systemProperty("pcre2.function.suffix", pcre2FunctionSuffix)
     }
+
+    val pcre4jTestBackends = providers.systemProperty("pcre4j.test.backends").orNull
+    if (pcre4jTestBackends != null) {
+        systemProperty("pcre4j.test.backends", pcre4jTestBackends)
+    }
 }
