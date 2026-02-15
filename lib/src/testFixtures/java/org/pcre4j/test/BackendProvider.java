@@ -18,6 +18,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.pcre4j.api.IPcre2;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
@@ -25,6 +27,10 @@ import java.util.stream.Stream;
  *
  * <p>This class centralizes backend discovery and instantiation logic shared across test classes in multiple modules.
  * Backends are loaded reflectively to avoid compile-time coupling with specific backend implementations.</p>
+ *
+ * <p>The set of backends can be controlled via the {@code pcre4j.test.backends} system property.
+ * When set, only the listed backends are included. Valid values are {@code jna} and {@code ffm},
+ * separated by commas. When not set, all backends are included.</p>
  *
  * <p>Usage in test classes:</p>
  * <pre>{@code
@@ -62,16 +68,40 @@ public final class BackendProvider {
     }
 
     /**
-     * Provides JNA and FFM backend instances as JUnit 5 parameterized test arguments.
+     * Provides backend instances as JUnit 5 parameterized test arguments.
      *
      * <p>Use with {@code @MethodSource("org.pcre4j.test.BackendProvider#parameters")}.</p>
+     *
+     * <p>The set of backends is controlled by the {@code pcre4j.test.backends} system property.
+     * When set to a comma-separated list (e.g., {@code "jna"} or {@code "jna,ffm"}), only the
+     * listed backends are included. When not set, all backends are included.</p>
      *
      * @return a stream of arguments, each containing an {@link IPcre2} backend instance
      */
     public static Stream<Arguments> parameters() {
-        return Stream.of(
-                Arguments.of(loadBackend(JNA_BACKEND)),
-                Arguments.of(loadBackend(FFM_BACKEND))
-        );
+        var enabledBackends = enabledBackends();
+        var args = new ArrayList<Arguments>(2);
+        if (enabledBackends.contains("jna")) {
+            args.add(Arguments.of(loadBackend(JNA_BACKEND)));
+        }
+        if (enabledBackends.contains("ffm")) {
+            args.add(Arguments.of(loadBackend(FFM_BACKEND)));
+        }
+        return args.stream();
+    }
+
+    private static Set<String> enabledBackends() {
+        var property = System.getProperty("pcre4j.test.backends");
+        if (property == null || property.isBlank()) {
+            return Set.of("jna", "ffm");
+        }
+        var backends = new java.util.HashSet<String>();
+        for (var part : property.split(",")) {
+            var trimmed = part.trim().toLowerCase();
+            if (!trimmed.isEmpty()) {
+                backends.add(trimmed);
+            }
+        }
+        return backends;
     }
 }
