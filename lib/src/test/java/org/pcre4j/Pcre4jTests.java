@@ -44,6 +44,10 @@ public class Pcre4jTests {
         Field apiField = Pcre4j.class.getDeclaredField("api");
         apiField.setAccessible(true);
         apiField.set(null, null);
+
+        Field scopedApiField = Pcre4j.class.getDeclaredField("scopedApi");
+        scopedApiField.setAccessible(true);
+        ((ThreadLocal<?>) scopedApiField.get(null)).remove();
     }
 
     @Test
@@ -127,6 +131,127 @@ public class Pcre4jTests {
                 error.getMessage().contains("UTF-8"),
                 "Error message should mention UTF-8, got: " + error.getMessage()
         );
+    }
+
+    @Test
+    void withBackend_nullApi_throwsIllegalArgumentException() {
+        var error = assertThrows(
+                IllegalArgumentException.class,
+                () -> Pcre4j.withBackend(null)
+        );
+        assertNotNull(error.getMessage(), "Error message must not be null");
+        assertTrue(
+                error.getMessage().contains("null"),
+                "Error message should indicate the null argument, got: " + error.getMessage()
+        );
+    }
+
+    @Test
+    void withBackend_apiWithoutUtf8Support_throwsIllegalArgumentException() {
+        var stubApi = new NoUtf8Api();
+        var error = assertThrows(
+                IllegalArgumentException.class,
+                () -> Pcre4j.withBackend(stubApi)
+        );
+        assertNotNull(error.getMessage(), "Error message must not be null");
+        assertTrue(
+                error.getMessage().contains("UTF-8"),
+                "Error message should mention UTF-8, got: " + error.getMessage()
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void withBackend_overridesGlobalApi(IPcre2 api) throws Exception {
+        // Set up a global backend via auto-discovery
+        var globalApi = Pcre4j.api();
+
+        // Scoped backend should override
+        try (var scope = Pcre4j.withBackend(api)) {
+            assertSame(api, Pcre4j.api(), "Scoped backend should override global backend");
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void withBackend_restoresAfterClose(IPcre2 api) throws Exception {
+        Pcre4j.setup(api);
+
+        var otherBackends = org.pcre4j.test.BackendProvider.parameters()
+                .map(args -> (IPcre2) args.get()[0])
+                .filter(other -> other != api)
+                .findFirst();
+        if (otherBackends.isEmpty()) {
+            return; // Need at least two backends for this test
+        }
+        var otherApi = otherBackends.get();
+
+        try (var scope = Pcre4j.withBackend(otherApi)) {
+            assertSame(otherApi, Pcre4j.api(), "Should use scoped backend");
+        }
+        assertSame(api, Pcre4j.api(), "Should restore global backend after scope closes");
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void withBackend_nestedScopes_restoreCorrectly(IPcre2 api) throws Exception {
+        var backends = org.pcre4j.test.BackendProvider.parameters()
+                .map(args -> (IPcre2) args.get()[0])
+                .toList();
+        if (backends.size() < 2) {
+            return; // Need at least two backends for this test
+        }
+        var first = backends.get(0);
+        var second = backends.get(1);
+
+        Pcre4j.setup(api);
+
+        try (var outer = Pcre4j.withBackend(first)) {
+            assertSame(first, Pcre4j.api(), "Outer scope should use first backend");
+
+            try (var inner = Pcre4j.withBackend(second)) {
+                assertSame(second, Pcre4j.api(), "Inner scope should use second backend");
+            }
+
+            assertSame(first, Pcre4j.api(), "After inner scope closes, should restore first backend");
+        }
+
+        assertSame(api, Pcre4j.api(), "After outer scope closes, should restore global backend");
+    }
+
+    @Test
+    void withBackend_threadIsolation() throws Exception {
+        var backends = org.pcre4j.test.BackendProvider.parameters()
+                .map(args -> (IPcre2) args.get()[0])
+                .toList();
+        if (backends.size() < 2) {
+            return; // Need at least two backends for this test
+        }
+        var first = backends.get(0);
+        var second = backends.get(1);
+
+        Pcre4j.setup(first);
+
+        try (var scope = Pcre4j.withBackend(second)) {
+            assertSame(second, Pcre4j.api(), "Main thread should see scoped backend");
+
+            // Other thread should NOT see the scoped backend
+            var otherThreadApi = new IPcre2[1];
+            var thread = new Thread(() -> otherThreadApi[0] = Pcre4j.api());
+            thread.start();
+            thread.join();
+
+            assertSame(first, otherThreadApi[0], "Other thread should see global backend, not scoped");
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void withBackend_withoutGlobalSetup_works(IPcre2 api) throws Exception {
+        // No global setup — scoped backend should still work
+        try (var scope = Pcre4j.withBackend(api)) {
+            assertSame(api, Pcre4j.api(), "Scoped backend should work without global setup");
+        }
     }
 
     /**
