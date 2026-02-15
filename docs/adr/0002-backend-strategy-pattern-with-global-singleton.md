@@ -45,3 +45,5 @@ The singleton validates at setup time that the backend supports UTF-8 via
   `Pcre4j` class and must call `setup()` independently.
 - The `api` module has no dependency on `lib` — backends implement `IPcre2` without knowing about
   the singleton.
+- [ADR-0009](0009-thread-scoped-backend-api.md) extends this pattern with a thread-scoped tier
+  between the global singleton and the explicit-API overloads.

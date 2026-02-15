@@ -21,18 +21,28 @@ import java.util.ServiceLoader;
 
 
 /**
- * Global singleton that holds the active {@link IPcre2} backend instance.
+ * Backend holder that provides three tiers of backend resolution for the PCRE4J library.
+ *
+ * <p>When {@link #api()} is called, the backend is resolved in the following order:</p>
+ *
+ * <ol>
+ *   <li><strong>Thread-scoped backend</strong> — set via {@link #withBackend(IPcre2)}, active only
+ *       for the current thread within a try-with-resources block. Scopes can be nested; closing a
+ *       scope restores the previous one.</li>
+ *   <li><strong>Global backend</strong> — set via {@link #setup(IPcre2)}, or auto-discovered on the
+ *       first call to {@link #api()} using {@link ServiceLoader}. When both the FFM and JNA
+ *       backends are present, the FFM backend is preferred for its better performance.</li>
+ * </ol>
  *
  * <h2>Initialization</h2>
  *
- * <p>The backend can be initialized in two ways:</p>
+ * <p>The global backend can be initialized in two ways:</p>
  *
  * <ol>
  *   <li><strong>Automatic discovery (recommended)</strong> — simply add a backend artifact
  *       ({@code pcre4j-jna} or {@code pcre4j-ffm}) to your classpath. The first call to
  *       {@link #api()} will use {@link ServiceLoader} to discover and initialize a backend
- *       automatically. When both backends are present, the FFM backend is preferred for its
- *       better performance.</li>
+ *       automatically.</li>
  *   <li><strong>Explicit setup</strong> — call {@link #setup(IPcre2)} with a backend instance
  *       before any other PCRE4J usage. This takes priority over auto-discovery.</li>
  * </ol>
@@ -45,12 +55,36 @@ import java.util.ServiceLoader;
  * }
  * }</pre>
  *
+ * <h2>Scoped Backend</h2>
+ *
+ * <p>Use {@link #withBackend(IPcre2)} to temporarily override the backend for the current thread.
+ * All PCRE4J operations within the scope will use the scoped backend instead of the global one.
+ * Scopes can be nested and are restored when closed:</p>
+ *
+ * <pre>{@code
+ * Pcre4j.setup(new org.pcre4j.jna.Pcre2());           // global default: JNA
+ *
+ * try (var scope = Pcre4j.withBackend(ffmBackend)) {
+ *     Pattern p = Pattern.compile("\\d+");             // uses FFM
+ *     try (var inner = Pcre4j.withBackend(jnaBackend)) {
+ *         Pattern q = Pattern.compile("\\w+");         // uses JNA
+ *     }
+ *     // back to FFM
+ * }
+ * // back to global JNA
+ * }</pre>
+ *
  * <h2>Thread Safety</h2>
  *
- * <p>Both {@link #setup(IPcre2)} and {@link #api()} are synchronized and safe to call from any
- * thread. The backend reference may be replaced by calling {@link #setup(IPcre2)} again; existing
+ * <p>{@link #setup(IPcre2)} and {@link #api()} are synchronized and safe to call from any thread.
+ * The global backend reference may be replaced by calling {@link #setup(IPcre2)} again; existing
  * {@link Pcre2Code} instances are unaffected because each instance captures the {@link IPcre2}
  * reference at construction time.</p>
+ *
+ * <p>Thread-scoped backends are inherently thread-safe because each thread has its own scope stack.
+ * Virtual threads (Java 21+) each have their own {@link ThreadLocal} state, so scoped backends work
+ * correctly with virtual threads. For structured concurrency scenarios where a backend must be
+ * inherited by child tasks, use the explicit-API overloads instead.</p>
  *
  * <h2>Multi-Classloader Environments</h2>
  *
@@ -79,6 +113,7 @@ public final class Pcre4j {
 
     private static final Object lock = new Object();
     private static IPcre2 api = null;
+    private static final ThreadLocal<IPcre2> scopedApi = new ThreadLocal<>();
 
     private Pcre4j() {
     }
@@ -108,18 +143,72 @@ public final class Pcre4j {
     }
 
     /**
-     * Return the global {@link IPcre2} backend.
+     * Set a thread-scoped backend override that takes precedence over the global backend.
      *
-     * <p>If no backend has been installed via {@link #setup(IPcre2)}, this method attempts
-     * automatic discovery using {@link ServiceLoader}. When both the FFM and JNA backends are
-     * present on the classpath, the FFM backend is preferred for its better performance. A
-     * discovered backend must support UTF-8; backends that fail to load or lack UTF-8 support
-     * are skipped.</p>
+     * <p>The returned {@link AutoCloseable} must be used in a try-with-resources block. When the
+     * scope is closed, the previous thread-scoped backend (or no thread-scoped backend) is restored.
+     * Scopes can be nested; each close restores exactly the state that existed before the
+     * corresponding {@code withBackend} call.</p>
+     *
+     * <p>The scoped backend is not inherited by child threads. For scenarios where a backend must be
+     * shared across threads (e.g. structured concurrency with virtual threads), use the explicit-API
+     * overloads such as {@link Pcre2Code#Pcre2Code(IPcre2, String)} instead.</p>
+     *
+     * <p>Example:</p>
+     * <pre>{@code
+     * try (var scope = Pcre4j.withBackend(ffmBackend)) {
+     *     Pattern p = Pattern.compile("\\d+");  // uses ffmBackend
+     * }
+     * // previous backend restored
+     * }</pre>
+     *
+     * @param api the PCRE2 backend to use within the scope; must not be {@code null} and must
+     *            support UTF-8
+     * @return an {@link AutoCloseable} that restores the previous backend when closed
+     * @throws IllegalArgumentException if {@code api} is {@code null} or does not support UTF-8
+     */
+    public static AutoCloseable withBackend(IPcre2 api) {
+        if (api == null) {
+            throw new IllegalArgumentException("api must not be null");
+        }
+
+        final var compiledWidths = Pcre4jUtils.getCompiledWidths(api);
+        if (!compiledWidths.contains(Pcre2UtfWidth.UTF8)) {
+            throw new IllegalArgumentException("api must support UTF-8, yet it only supports " + compiledWidths);
+        }
+
+        final var previous = scopedApi.get();
+        scopedApi.set(api);
+        return () -> {
+            if (previous == null) {
+                scopedApi.remove();
+            } else {
+                scopedApi.set(previous);
+            }
+        };
+    }
+
+    /**
+     * Return the active {@link IPcre2} backend for the current context.
+     *
+     * <p>Resolution order:</p>
+     * <ol>
+     *   <li>Thread-scoped backend set by {@link #withBackend(IPcre2)}, if any.</li>
+     *   <li>Global backend set by {@link #setup(IPcre2)}, or auto-discovered via
+     *       {@link ServiceLoader}. When both the FFM and JNA backends are present on the classpath,
+     *       the FFM backend is preferred for its better performance. A discovered backend must
+     *       support UTF-8; backends that fail to load or lack UTF-8 support are skipped.</li>
+     * </ol>
      *
      * @return the active backend instance
      * @throws IllegalStateException if no backend has been set up and none could be discovered
      */
     public static IPcre2 api() {
+        final var scoped = scopedApi.get();
+        if (scoped != null) {
+            return scoped;
+        }
+
         synchronized (lock) {
             if (api == null) {
                 api = discoverBackend();
