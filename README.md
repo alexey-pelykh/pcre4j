@@ -417,6 +417,10 @@ The `ffm` module is packaged as a Multi-Release JAR supporting both:
 
 > **Note:** Automatic library discovery can be disabled by setting `-Dpcre2.library.discovery=false`.
 
+## Roadmap
+
+See the [Roadmap](./ROADMAP.md) for planned features and project direction.
+
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
