@@ -12,18 +12,13 @@ The PCRE4J project's goal is to bring the power of the [PCRE](https://www.pcre.o
 
 PCRE4J provides **100% coverage of the PCRE2 API**, giving you access to every feature of the PCRE2 library from Java.
 
-This project is brought to you by [Alexey Pelykh](https://github.com/alexey-pelykh) with a great gratitude to the PCRE
-library author [Philip Hazel](https://github.com/PhilipHazel) and its contributors.
-
-The source code is hosted on [GitHub](https://github.com/alexey-pelykh/pcre4j).
-
 ## Why PCRE4J?
 
 Java's built-in `java.util.regex` covers many use cases, but PCRE2 offers capabilities that go
 beyond what the standard library provides:
 
 - **Richer regex syntax** — PCRE2 supports features absent from `java.util.regex`, including
-  atomic groups, `\K` (match reset), recursive patterns, callouts, and the DFA matching
+  `\K` (match reset), recursive patterns, callouts, and the DFA matching
   algorithm.
 - **JIT compilation** — PCRE2's JIT compiler translates patterns into native machine code,
   delivering significant speedups for pattern-heavy workloads.
@@ -36,6 +31,105 @@ beyond what the standard library provides:
   you can switch engines without rewriting application code.
 - **Full PCRE2 API access** — 100% of the PCRE2 C API is exposed, so advanced users are never
   limited by the binding layer.
+
+### Feature Comparison
+
+| Feature | `java.util.regex` | PCRE4J |
+|---------|-------------------|--------|
+| Recursive patterns (`(?R)`, `(?1)`) | No | Yes |
+| `\K` match reset | No | Yes |
+| Callouts | No | Yes |
+| DFA matching | No | Yes |
+| JIT compilation | No | Yes (default) |
+| ReDoS protection (match/depth/heap limits) | No | Yes |
+| Compiled pattern serialization to bytes | No | Yes |
+| Glob/POSIX pattern conversion | No | Yes |
+| Native library bundles (no system install) | N/A | Yes |
+| GraalVM native-image | Yes | Yes |
+
+## Quick Start
+
+Add the dependency and start matching — the API mirrors `java.util.regex`:
+
+```java
+import org.pcre4j.regex.Pattern;
+
+var matcher = Pattern.compile("(?<year>\\d{4})-(?<month>\\d{2})").matcher("2026-02");
+if (matcher.find()) {
+    System.out.println(matcher.group("year"));  // "2026"
+}
+```
+
+**Maven** (`pom.xml`):
+
+```xml
+<properties>
+    <pcre4j.version>1.0.0</pcre4j.version>
+</properties>
+
+<dependencies>
+    <dependency>
+        <groupId>org.pcre4j</groupId>
+        <artifactId>regex</artifactId>
+        <version>${pcre4j.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.pcre4j</groupId>
+        <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
+        <artifactId>jna</artifactId>
+        <!-- <artifactId>ffm</artifactId> -->
+        <version>${pcre4j.version}</version>
+    </dependency>
+</dependencies>
+```
+
+**Gradle** (`build.gradle.kts`):
+
+```kotlin
+val pcre4jVersion = "1.0.0"
+
+dependencies {
+    implementation("org.pcre4j:regex:$pcre4jVersion")
+    // TODO: Select one of the following artifacts corresponding to the backend you want to use
+    implementation("org.pcre4j:jna:$pcre4jVersion")
+    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+}
+```
+
+By default, the JIT compilation is used in cases the platform and the library support it. To override this behavior, you
+can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
+
+## Prerequisites
+
+- **Java 21 or later**
+- **PCRE2 native library** — choose one of these approaches:
+
+### Option A: Native Library Bundles (no system install)
+
+Add a platform-specific bundle to your dependencies and PCRE4J loads the library automatically:
+
+| Artifact | Platform |
+|----------|----------|
+| `org.pcre4j:pcre4j-native-linux-x86_64` | Linux x86_64 |
+| `org.pcre4j:pcre4j-native-linux-aarch64` | Linux aarch64 |
+| `org.pcre4j:pcre4j-native-macos-x86_64` | macOS x86_64 (Intel) |
+| `org.pcre4j:pcre4j-native-macos-aarch64` | macOS aarch64 (Apple Silicon) |
+| `org.pcre4j:pcre4j-native-windows-x86_64` | Windows x86_64 |
+| `org.pcre4j:pcre4j-native-all` | All supported platforms |
+
+Example (Gradle): `implementation("org.pcre4j:pcre4j-native-linux-x86_64:1.0.0")`
+
+### Option B: System-Installed PCRE2
+
+Install the PCRE2 library on your system:
+- **Ubuntu/Debian**: `sudo apt install libpcre2-8-0`
+- **macOS** (Homebrew): `brew install pcre2`
+- **Windows**: Download the PCRE2 DLL and add its location to `PATH`
+
+The library is located automatically via `pcre2-config`, `pkg-config`, or well-known platform
+paths. You can also set the path explicitly with `-Dpcre2.library.path=/path/to/lib`.
+
+> Automatic library discovery can be disabled with `-Dpcre2.library.discovery=false`.
 
 ## Module Architecture
 
@@ -69,26 +163,7 @@ upstream dependencies as transitive, so your dependency manager pulls them autom
 A backend (`jna` or `ffm`) is always required at runtime but is intentionally not a transitive
 dependency of `regex` or `lib`, letting consumers choose which native access mechanism to use.
 
-## Prerequisites
-
-- **Java 21 or later**
-- **PCRE2 native library** installed on your system:
-  - **Ubuntu/Debian**: `sudo apt install libpcre2-8-0`
-  - **macOS** (Homebrew): `brew install pcre2`
-  - **Windows**: Download the PCRE2 DLL and add its location to `PATH`
-
-The library is located automatically via `pcre2-config`, `pkg-config`, or well-known platform
-paths. You can also set the path explicitly with `-Dpcre2.library.path=/path/to/lib`.
-
-## Usage
-
-The PCRE4J library provides several APIs to interact with the PCRE library:
-
-- `java.util.regex`-compatible API via `org.pcre4j.regex.Pattern` and `org.pcre4j.regex.Matcher`
-- The PCRE4J API via `org.pcre4j.Pcre2Code` and related classes
-- The `libpcre2` direct API via backends that implement `org.pcre4j.api.IPcre2`
-
-### Library Initialization
+## Library Initialization
 
 The `regex` and `lib` convenience APIs use a global backend held by `Pcre4j`. The backend is
 initialized automatically — just add a backend artifact (`jna` or `ffm`) to your classpath and
@@ -121,94 +196,25 @@ directly, bypassing the global singleton entirely.
 > plugin frameworks, either place the PCRE4J JARs in a shared classloader, or use the
 > explicit-API overloads to avoid relying on the global state.
 
-### Quick Start with `java.util.regex`-compatible API
+## Advanced Usage via PCRE4J API
 
-Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
-[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
-
-**Maven** (`pom.xml`):
-
-```xml
-<properties>
-    <pcre4j.version><!-- latest version --></pcre4j.version>
-</properties>
-
-<dependencies>
-    <dependency>
-        <groupId>org.pcre4j</groupId>
-        <artifactId>regex</artifactId>
-        <version>${pcre4j.version}</version>
-    </dependency>
-    <dependency>
-        <groupId>org.pcre4j</groupId>
-        <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
-        <artifactId>jna</artifactId>
-        <!-- <artifactId>ffm</artifactId> -->
-        <version>${pcre4j.version}</version>
-    </dependency>
-</dependencies>
-```
-
-**Gradle** (`build.gradle.kts`):
-
-```kotlin
-val pcre4jVersion = "..." // latest version
-
-dependencies {
-    implementation("org.pcre4j:regex:$pcre4jVersion")
-    // TODO: Select one of the following artifacts corresponding to the backend you want to use
-    implementation("org.pcre4j:jna:$pcre4jVersion")
-    // implementation("org.pcre4j:ffm:$pcre4jVersion")
-}
-```
-
-Proceed using the PCRE4J library in your Java code similarly like if you were using the `java.util.regex` package:
-
-```java
-import org.pcre4j.regex.Pattern;
-
-public class Usage {
-    public static String[] example(String pattern, String subject) {
-        final var matcher = Pattern.compile(pattern).matcher(subject);
-        if (matcher.find()) {
-            final var groups = new String[matcher.groupCount() + 1];
-            for (var i = 0; i < groups.length; i++) {
-                groups[i] = matcher.group(i);
-            }
-            return groups;
-        }
-        return null;
-    }
-}
-```
-
-By default, the JIT compilation is used in cases the platform and the library support it. To override this behavior, you
-can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
-
-### Advanced Usage via PCRE4J API
-
-Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
-[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
+Add `lib` and a backend to your dependencies:
 
 **Maven** (`pom.xml`):
 
 ```xml
-<properties>
-    <pcre4j.version><!-- latest version --></pcre4j.version>
-</properties>
-
 <dependencies>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>lib</artifactId>
-        <version>${pcre4j.version}</version>
+        <version>1.0.0</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>${pcre4j.version}</version>
+        <version>1.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -216,17 +222,13 @@ Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` wi
 **Gradle** (`build.gradle.kts`):
 
 ```kotlin
-val pcre4jVersion = "..." // latest version
-
 dependencies {
-    implementation("org.pcre4j:lib:$pcre4jVersion")
+    implementation("org.pcre4j:lib:1.0.0")
     // TODO: Select one of the following artifacts corresponding to the backend you want to use
-    implementation("org.pcre4j:jna:$pcre4jVersion")
-    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+    implementation("org.pcre4j:jna:1.0.0")
+    // implementation("org.pcre4j:ffm:1.0.0")
 }
 ```
-
-Proceed using the PCRE4J library in your Java code:
 
 ```java
 import org.pcre4j.*;
@@ -264,25 +266,20 @@ public class Usage {
 }
 ```
 
-### Low-Level Usage
+## Low-Level Usage
 
-Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` with the
-[latest release version](https://mvnrepository.com/artifact/org.pcre4j/lib)):
+Add a backend artifact directly:
 
 **Maven** (`pom.xml`):
 
 ```xml
-<properties>
-    <pcre4j.version><!-- latest version --></pcre4j.version>
-</properties>
-
 <dependencies>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>${pcre4j.version}</version>
+        <version>1.0.0</version>
     </dependency>
 </dependencies>
 ```
@@ -290,16 +287,12 @@ Add the following dependencies (replace `${pcre4j.version}` / `pcre4jVersion` wi
 **Gradle** (`build.gradle.kts`):
 
 ```kotlin
-val pcre4jVersion = "..." // latest version
-
 dependencies {
     // TODO: Select one of the following artifacts corresponding to the backend you want to use
-    implementation("org.pcre4j:jna:$pcre4jVersion")
-    // implementation("org.pcre4j:ffm:$pcre4jVersion")
+    implementation("org.pcre4j:jna:1.0.0")
+    // implementation("org.pcre4j:ffm:1.0.0")
 }
 ```
-
-Proceed using the `libpcre2` API in your Java code:
 
 ```java
 // TODO: Select one of the following imports for the backend you want to use:
@@ -418,7 +411,32 @@ The `ffm` module is packaged as a Multi-Release JAR supporting both:
 > 21 due to a JVM bug in the preview FFM implementation that causes memory corruption assertions.
 > OpenJ9 Java 22+, where FFM is finalized, works correctly. Use the `jna` backend on OpenJ9 Java 21.
 
-> **Note:** Automatic library discovery can be disabled by setting `-Dpcre2.library.discovery=false`.
+## GraalVM Native Image
+
+PCRE4J supports GraalVM native-image compilation using the FFM backend. All modules ship with
+GraalVM reachability metadata, so no additional configuration is required.
+
+Requirements:
+- **GraalVM JDK 25** or later (for finalized FFM and `reachability-metadata.json` foreign section support)
+- **FFM backend** (`ffm` artifact) — the JNA backend is not supported for native-image
+- **PCRE2 native library** must be available at runtime (via system install or library path)
+
+## What's New in 1.0.0
+
+The 1.0.0 release marks PCRE4J's first stable API with a comprehensive set of new features:
+
+- **Platform-specific native library bundles** — add a dependency, skip the system install
+- **GraalVM native-image support** — compile PCRE4J applications to native executables
+- **ServiceLoader-based backend discovery** — zero-configuration setup
+- **Callout support** in the high-level API
+- **DFA matching** through the high-level API
+- **Pattern serialization** — serialize compiled patterns to bytes and back
+- **Glob and POSIX pattern conversion** through the high-level API
+- **Scoped backend API** for multi-backend support (`Pcre4j.withBackend()`)
+- **Unified exception hierarchy** with specific exception types
+- **JPMS module descriptors** across all modules
+
+See the [Changelog](./CHANGELOG.md) for the full list of changes.
 
 ## Roadmap
 
@@ -429,6 +447,11 @@ See the [Roadmap](./ROADMAP.md) for planned features and project direction.
 Contributions are welcome! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 All commits must be signed off to certify the [Developer Certificate of Origin (DCO)](https://developercertificate.org/). Use `git commit -s` to add the required `Signed-off-by` line.
+
+This project is brought to you by [Alexey Pelykh](https://github.com/alexey-pelykh) with a great gratitude to the PCRE
+library author [Philip Hazel](https://github.com/PhilipHazel) and its contributors.
+
+The source code is hosted on [GitHub](https://github.com/alexey-pelykh/pcre4j).
 
 ## Javadoc
 
