@@ -38,8 +38,9 @@ The singleton validates at setup time that the backend supports UTF-8 via
 
 - Applications call `Pcre4j.setup(new org.pcre4j.jna.Pcre2())` once at startup and then use the
   convenience API without passing backend references.
-- Calling `Pcre4j.api()` before `setup()` throws `IllegalStateException`, making misconfiguration
-  obvious.
+- Calling `Pcre4j.api()` before `setup()` throws `IllegalStateException` if no backend can be
+  auto-discovered via `ServiceLoader`, making misconfiguration obvious. When a backend artifact is
+  on the classpath, `api()` discovers it automatically and no explicit `setup()` call is needed.
 - Tests and multi-backend scenarios use the explicit-API overloads and never depend on global state.
 - In multi-classloader environments (application servers, OSGi), each classloader gets its own
   `Pcre4j` class and must call `setup()` independently.

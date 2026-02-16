@@ -157,7 +157,7 @@ public interface Pcre2MatchingContractTest<T extends IPcre2> {
 }
 ```
 
-There are 12 contract interfaces covering all PCRE2 functionality areas (configuration, matching, substitution, substrings, match context, DFA matching, compile context, serialization, JIT, pattern conversion, miscellaneous, and UTF width support).
+There are 13 contract interfaces covering all PCRE2 functionality areas (configuration, matching, substitution, substrings, match context, DFA matching, compile context, serialization, JIT, pattern conversion, callout, miscellaneous, and UTF width support).
 
 ### Base Test Class (`Pcre2Tests`)
 

@@ -230,6 +230,9 @@ Proceed using the PCRE4J library in your Java code:
 
 ```java
 import org.pcre4j.*;
+import org.pcre4j.option.*;
+
+import java.util.EnumSet;
 
 public class Usage {
     public static String[] example(String pattern, String subject) {
