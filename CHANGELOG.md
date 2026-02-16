@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-02-16
+
+### Added
+
+- lib: scoped backend API for multi-backend support ([#522](https://github.com/alexey-pelykh/pcre4j/pull/522))
+- regex: GraalVM native-image compilation support ([#517](https://github.com/alexey-pelykh/pcre4j/pull/517))
+- lib: callout support in high-level API ([#516](https://github.com/alexey-pelykh/pcre4j/pull/516))
+- dist: platform-specific PCRE2 native library bundles ([#515](https://github.com/alexey-pelykh/pcre4j/pull/515))
+- lib: glob and POSIX pattern conversion through high-level API ([#514](https://github.com/alexey-pelykh/pcre4j/pull/514))
+- lib: DFA matching through high-level API ([#512](https://github.com/alexey-pelykh/pcre4j/pull/512))
+- lib: high-level pattern serialization and deserialization API ([#511](https://github.com/alexey-pelykh/pcre4j/pull/511))
+- lib: ServiceLoader-based backend auto-discovery ([#510](https://github.com/alexey-pelykh/pcre4j/pull/510))
+- lib: unified exception hierarchy ([#507](https://github.com/alexey-pelykh/pcre4j/pull/507))
+- regex: per-pattern match limit configuration ([#505](https://github.com/alexey-pelykh/pcre4j/pull/505))
+- api: JPMS module-info.java descriptors ([#498](https://github.com/alexey-pelykh/pcre4j/pull/498))
+- lib: pattern info methods ([#491](https://github.com/alexey-pelykh/pcre4j/pull/491))
+- regex: lazy-initialize matching and lookingAt JIT codes ([#459](https://github.com/alexey-pelykh/pcre4j/pull/459))
+- api: validate native library discovery output ([#238](https://github.com/alexey-pelykh/pcre4j/pull/238))
+- regex: configurable ReDoS protection via match limits ([#237](https://github.com/alexey-pelykh/pcre4j/pull/237))
+- regex: Pattern.splitAsStream ([#207](https://github.com/alexey-pelykh/pcre4j/pull/207))
+
+### Fixed
+
+- lib: use CONFIG_NEVER_BACKSLASH_C in isBackslashCDisabled() ([#397](https://github.com/alexey-pelykh/pcre4j/pull/397))
+- lib: remove double-wrapping of exceptions in Pcre2CompileContext ([#386](https://github.com/alexey-pelykh/pcre4j/pull/386))
+- ffm: avoid catching Throwable and wrapping Error in RuntimeException ([#384](https://github.com/alexey-pelykh/pcre4j/pull/384))
+- api: catch IOException instead of Exception in Pcre2LibraryFinder.runCommand ([#383](https://github.com/alexey-pelykh/pcre4j/pull/383))
+- lib: rename misnamed Clean record parameter in Pcre2JitStack ([#382](https://github.com/alexey-pelykh/pcre4j/pull/382))
+- build: fix JNA transitive dependency leak in lib test scope ([#236](https://github.com/alexey-pelykh/pcre4j/pull/236))
+- build: replace hardcoded ':' with File.pathSeparator for Windows support ([#410](https://github.com/alexey-pelykh/pcre4j/pull/410))
+
 ## [0.7.0] - 2026-02-02
 
 ### Added
@@ -187,7 +218,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Minimum viable implementation with JNA and FFM backends ([#1](https://github.com/alexey-pelykh/pcre4j/pull/1))
 
-[Unreleased]: https://github.com/alexey-pelykh/pcre4j/compare/0.7.0...HEAD
+[Unreleased]: https://github.com/alexey-pelykh/pcre4j/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.7.0...1.0.0
 [0.7.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.6.0...0.7.0
 [0.6.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.5.0...0.6.0
 [0.5.0]: https://github.com/alexey-pelykh/pcre4j/compare/0.4.4...0.5.0
