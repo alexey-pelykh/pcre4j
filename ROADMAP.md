@@ -1,15 +1,13 @@
 # Roadmap
 
-PCRE4J is currently at **v0.7.x** (pre-1.0). This document describes what the project provides
-today and what remains for a stable 1.0 release.
+PCRE4J **v1.0** is the first stable release, with an API stability commitment.
 
-## Current State
-
-The 0.x release series has built out the core functionality:
+## What's Included
 
 - **Three API layers**: low-level (`api`), mid-level (`lib`), and `java.util.regex`-compatible
   (`regex`)
 - **Two backends**: JNA and FFM (Foreign Function & Memory API)
+- **100% PCRE2 API coverage** across both backends
 - **Platform-specific native library bundles** for Linux, macOS, and Windows
 - **GraalVM native-image** support
 - **ServiceLoader-based backend discovery** for zero-configuration setup
@@ -17,11 +15,9 @@ The 0.x release series has built out the core functionality:
   conversion
 - **Thread-scoped backend API** for multi-backend support (`Pcre4j.withBackend()`)
 - **JPMS module descriptors** across all modules
-- **Architecture Decision Records** documenting key design choices
+- **Built-in ReDoS protection** via configurable match, depth, and heap limits
 
-## v1.0
+## Future Direction
 
-The first stable release, with an API stability commitment.
-
-Remaining work is tracked in the
-[v1.0 milestone](https://github.com/alexey-pelykh/pcre4j/milestone/5).
+Post-1.0 work is tracked in the
+[GitHub Issues](https://github.com/alexey-pelykh/pcre4j/issues).
