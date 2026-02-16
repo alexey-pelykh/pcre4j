@@ -44,6 +44,7 @@ Intermediate classes group exceptions by PCRE2 operation phase:
 RuntimeException
 └── Pcre2Exception (common base)
     ├── Pcre2CompileException (compile-phase errors)
+    ├── Pcre2ConvertException (conversion-phase errors)
     ├── Pcre2MatchException (match-phase errors)
     │   └── Pcre2MatchLimitException (resource limit violations)
     ├── Pcre2SubstituteException (substitute-phase errors)

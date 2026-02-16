@@ -15,7 +15,7 @@ PCRE4J is a Java binding for the PCRE2 (Perl Compatible Regular Expressions 2) l
 ```
 pcre4j/
 ├── api/    → IPcre2 interface (backend contract, ~290 PCRE2 constants)
-├── lib/    → Core wrapper (Pcre2Code, contexts, enums, utilities, shared test fixtures)
+├── lib/    → Core wrapper (Pcre2Code, contexts, options (`option`), exceptions (`exception`), utilities, shared test fixtures)
 ├── jna/    → JNA backend (Java Native Access implementation)
 ├── ffm/    → FFM backend (Multi-Release JAR: Java 21 preview + Java 22+ GA)
 ├── regex/  → java.util.regex compatibility layer (Pattern, Matcher)
