@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+
+- dist: populate `pcre4j-native-*` JARs with the PCRE2 shared library at release time ([#556](https://github.com/alexey-pelykh/pcre4j/issues/556))
+
 ## [1.0.0] - 2026-02-16
 
 ### Added
