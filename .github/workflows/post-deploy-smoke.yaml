@@ -1,0 +1,277 @@
+name: Post-Deploy Smoke
+
+# Resolves the freshly-published org.pcre4j:pcre4j-native-<platform>:<version>
+# from Maven Central on a 3-OS matrix and exercises PCRE4J end-to-end with NO
+# pcre2.library.path set. This crosses every trust boundary that the build-time
+# checks (#557, #564) and runtime fixture test (#558) cannot reach: JReleaser
+# staging, Sonatype Central, and the CDN. See ADR-0010 Decision 4 and #559.
+
+on:
+  # Auto-trigger after a successful Release run.
+  workflow_run:
+    workflows: ["Release"]
+    types: [completed]
+  # Manual trigger to smoke-test any published version off-cycle.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'PCRE4J version to smoke test (e.g. 1.0.1)'
+        required: true
+        type: string
+
+# workflow_run subscribers receive a read-only token by default; jobs that need
+# write scopes opt in at the job level (see alert-on-failure below).
+permissions: {}
+
+concurrency:
+  group: post-deploy-smoke-${{ github.event.workflow_run.head_branch || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  determine-version:
+    # workflow_run fires for every Release completion; only smoke-test successful releases.
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+
+    runs-on: ubuntu-24.04
+
+    # No additional permissions: this job only resolves the version string from
+    # the event payload + inputs and does not touch the repo or any API.
+    permissions: {}
+
+    timeout-minutes: 5
+
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+
+    steps:
+      - name: Resolve version
+        id: resolve
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          RUN_HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            v="$INPUT_VERSION"
+          else
+            # Release runs are tag-pushed; head_branch carries the tag name.
+            v="$RUN_HEAD_BRANCH"
+          fi
+          if [[ -z "$v" ]]; then
+            echo "::error::Could not determine smoke-test version"
+            exit 1
+          fi
+          # Reject anything that does not match the release tag pattern from
+          # release.yaml so an accidentally-dispatched branch name cannot drive
+          # a smoke test.
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Refusing to smoke-test non-release version: '$v'"
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Smoke testing version: $v"
+
+  smoke:
+    needs: determine-version
+
+    permissions:
+      contents: read
+
+    # Generous to absorb Maven Central propagation delay (typically 5-30 min
+    # post-deploy) before the actual test runs.
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: macos-14
+            platform: macos-aarch64
+          - os: windows-2022
+            platform: windows-x86_64
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      PCRE4J_VERSION: ${{ needs.determine-version.outputs.version }}
+      NATIVE_PLATFORM: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Set up temurin-jdk-21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Wait for Maven Central propagation
+        # JReleaser deploy succeeds before the artifacts are reachable on
+        # repo1.maven.apache.org (Sonatype/CDN sync delay). Sonatype Central +
+        # the CDN do not guarantee same-instant visibility across all artifacts
+        # in a deploy batch, so poll all three the consumer needs (jna, regex,
+        # native bundle) and proceed only when ALL are visible. 30-minute cap.
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifacts=(
+            "pcre4j-jna"
+            "pcre4j-regex"
+            "pcre4j-native-${NATIVE_PLATFORM}"
+          )
+          deadline=$(( $(date +%s) + 1800 ))
+          attempt=0
+          while true; do
+            attempt=$((attempt + 1))
+            missing=""
+            for artifact in "${artifacts[@]}"; do
+              url="https://repo1.maven.apache.org/maven2/org/pcre4j/${artifact}/${PCRE4J_VERSION}/${artifact}-${PCRE4J_VERSION}.jar"
+              if ! curl -fsSI "$url" -o /dev/null; then
+                missing="$artifact"
+                break
+              fi
+            done
+            if [[ -z "$missing" ]]; then
+              echo "All artifacts visible after attempt $attempt"
+              exit 0
+            fi
+            if (( $(date +%s) >= deadline )); then
+              echo "::error::Artifacts not visible on Maven Central after 30 minutes (last missing: ${missing}-${PCRE4J_VERSION}.jar)"
+              exit 1
+            fi
+            echo "Attempt ${attempt}: ${missing}-${PCRE4J_VERSION}.jar not yet visible, sleeping 30s..."
+            sleep 30
+          done
+
+      - name: Render Maven project from template
+        shell: bash
+        working-directory: .github/post-deploy-smoke
+        run: |
+          set -euo pipefail
+          sed \
+            -e "s/@VERSION@/${PCRE4J_VERSION}/g" \
+            -e "s/@PLATFORM@/${NATIVE_PLATFORM}/g" \
+            pom.xml.template > pom.xml
+          echo "--- rendered pom.xml ---"
+          cat pom.xml
+
+      - name: Resolve dependencies from Maven Central
+        shell: bash
+        working-directory: .github/post-deploy-smoke
+        run: |
+          set -euo pipefail
+          mvn -B -ntp -q dependency:build-classpath -Dmdep.outputFile=cp.txt
+          # Sanity: the resolved classpath must include the native bundle.
+          if ! grep -q "pcre4j-native-${NATIVE_PLATFORM}-${PCRE4J_VERSION}\.jar" cp.txt; then
+            echo "::error::Resolved classpath does not include pcre4j-native-${NATIVE_PLATFORM}-${PCRE4J_VERSION}.jar"
+            cat cp.txt
+            exit 1
+          fi
+          echo "Classpath includes the native bundle"
+
+      - name: Compile smoke test
+        shell: bash
+        working-directory: .github/post-deploy-smoke
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          javac -cp "$(cat cp.txt)" -d build SmokeTest.java
+
+      - name: Run smoke test (no pcre2.library.path; system discovery disabled)
+        shell: bash
+        working-directory: .github/post-deploy-smoke
+        run: |
+          set -euo pipefail
+          # Windows runners with shell:bash still need ';' for Java classpath.
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            sep=";"
+          else
+            sep=":"
+          fi
+          cp_str=$(cat cp.txt)
+          # Explicitly DO NOT pass: -Dpcre2.library.path, -Djna.library.path,
+          # -Djava.library.path. AND disable Pcre2LibraryFinder so a
+          # system-installed pcre2 cannot mask an empty bundle on macOS or Linux.
+          # shellcheck disable=SC2016  # %4$s/%5$s are SimpleFormatter placeholders, not shell vars
+          java \
+            -Dpcre2.library.discovery=false \
+            -Djava.util.logging.SimpleFormatter.format='%4$s: %5$s%n' \
+            -cp "build${sep}${cp_str}" \
+            SmokeTest
+
+  alert-on-failure:
+    # Only auto-open issues when the upstream Release run drove this run.
+    # Manual workflow_dispatch failures stay as a CI failure only — the
+    # operator who dispatched can read the run output.
+    if: |
+      always()
+      && github.event_name == 'workflow_run'
+      && needs.determine-version.result == 'success'
+      && needs.smoke.result == 'failure'
+
+    needs:
+      - determine-version
+      - smoke
+
+    runs-on: ubuntu-24.04
+
+    permissions:
+      issues: write
+
+    timeout-minutes: 5
+
+    steps:
+      - name: Open or update tracking issue
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v7
+        env:
+          PCRE4J_VERSION: ${{ needs.determine-version.outputs.version }}
+        with:
+          script: |
+            const version = process.env.PCRE4J_VERSION;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const titlePrefix = 'Post-deploy smoke test failed';
+            const body = [
+              `Post-deploy smoke test for **${version}** failed on at least one runner.`,
+              ``,
+              `Failing run: ${runUrl}`,
+              ``,
+              `This is the post-publish gate that resolves`,
+              `\`org.pcre4j:pcre4j-native-<platform>:${version}\` from Maven Central and`,
+              `exercises PCRE4J end-to-end with no \`-Dpcre2.library.path\` set`,
+              `(see ADR-0010 Decision 4 and #559).`,
+              ``,
+              `Likely causes:`,
+              `- the native bundle JAR is empty/undersized for one or more platforms`,
+              `- Sonatype Central or the CDN transformed the artifact during publish`,
+              `- the bundled native does not load on the target platform at runtime`,
+            ].join('\n');
+            const existing = await github.paginate(github.rest.issues.listForRepo, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ci/cd,bug',
+              per_page: 100,
+            });
+            const match = existing.find((i) => i.title.startsWith(titlePrefix));
+            if (match) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: match.number,
+                body: `Another failure detected for **${version}**.\n\nFailing run: ${runUrl}`,
+              });
+              core.info(`Updated existing issue #${match.number}`);
+            } else {
+              const created = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `${titlePrefix} for ${version}`,
+                body: body,
+                labels: ['bug', 'ci/cd'],
+              });
+              core.info(`Opened new issue #${created.data.number}`);
+            }

@@ -1,0 +1,6 @@
+# Ephemeral artifacts produced by local reproduction of the workflow steps
+# (see README.md § Local validation). These are all regeneratable.
+pom.xml
+cp.txt
+build/
+target/
