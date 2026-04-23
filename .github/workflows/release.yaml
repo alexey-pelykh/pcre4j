@@ -63,6 +63,12 @@ jobs:
       - name: Build artifacts
         run: ./gradlew build jacocoAggregatedTestReport -Dpcre2.library.path=/opt/pcre2/lib
 
+      # Safety net: fail the release if any pcre4j-native-* JAR was staged without
+      # the expected PCRE2 shared library (>= 10 KB). Guards against a recurrence
+      # of the 1.0.0 empty-native regression. See #557.
+      - name: Verify native bundles
+        run: ./gradlew verifyNativeBundles -Ppcre4j.version=${{ github.ref_name }}
+
       - name: Stage artifacts
         run: ./gradlew publishAllPublicationsToStagingDeployRepository -Ppcre4j.version=${{ github.ref_name }}
 
