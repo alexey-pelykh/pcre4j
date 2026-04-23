@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -54,8 +54,9 @@ so that recovery of the native bundle does not depend on any single point of cor
 
 ## Decision
 
-The release procedure for native bundles is codified as **five compounding checks**, each
-independently capable of catching a regression that the others missed:
+The release procedure for native bundles is codified as **five compounding decisions**, each
+independently capable of catching a regression that the others missed (Decision 2 implements two
+distinct verification checks, so the relationship table below enumerates six rows):
 
 ### 1. Matrix-build natives within `release.yaml`
 
@@ -69,9 +70,11 @@ same workflow run that publishes to Maven Central**. Each matrix job:
 - Uploads the populated directory as a workflow artifact.
 
 A downstream `package` job downloads all five artifacts into the expected resource directories
-before running Gradle publish. The `build-natives.yaml` workflow retains its `workflow_dispatch`
-entry point for on-demand diagnostic builds but is no longer the source of truth for release
-artifacts — the matrix-build-then-publish path in `release.yaml` is.
+before running Gradle publish. `release.yaml` invokes `build-natives.yaml` as a reusable workflow
+via `workflow_call`, so `build-natives.yaml` houses the canonical 5-platform matrix logic;
+`release.yaml` adds only the artifact download + placement steps around the existing publish
+chain. `build-natives.yaml` retains its `workflow_dispatch` entry point for on-demand diagnostic
+builds off-cycle.
 
 ### 2. Build-time verification task (`verifyNativeBundles`)
 
@@ -83,6 +86,17 @@ library is ~500 KB to ~1 MB depending on platform, so 10 KB is a generous lower 
 catches empty placeholders, zero-size files, and manifest-only JARs). The task runs **before**
 `publishAllPublicationsToStagingDeployRepository` in `release.yaml`, so a missing native on any
 of the five platforms fails the release before anything is staged.
+
+A complementary post-publish, pre-deploy inspection script
+(`.github/scripts/verify-staged-natives.sh`, per [#564](https://github.com/alexey-pelykh/pcre4j/issues/564))
+runs between `publishAllPublicationsToStagingDeployRepository` and `jreleaserDeploy`. It walks
+every `{module}/build/staging-deploy/**/pcre4j-native-*-<version>.jar` (ignoring `-sources`,
+`-javadoc`, and the POM-only `pcre4j-native-all` aggregator), asserts each main JAR is at least
+10 KB on disk, and asserts each contains an entry at least 10 KB under
+`META-INF/native/<platform>/`. It is the last gate before Maven Central staging and guards
+against regressions that slip past the in-Gradle verification (e.g., a staged JAR being emptied
+by a downstream Gradle plugin, or an artifact name drifting out of the `verifyNativeBundles`
+coverage).
 
 ### 3. Fixture-based `Pcre2NativeLoader` integration test
 
@@ -119,7 +133,7 @@ the following policy:
 The combination ensures that a developer clone has the directory structure preserved without
 making `.gitkeep` load-bearing for the release pipeline or runtime behaviour.
 
-### Relationship between the five checks
+### Relationship between the six checks
 
 Each check guards a different failure surface:
 
@@ -127,6 +141,7 @@ Each check guards a different failure surface:
 |-------|---------|-------------------------|
 | Matrix-build in `release.yaml` | Missing cross-platform build step | Yes (by construction) |
 | `verifyNativeBundles` | Missing library in the local JAR | Yes |
+| `verify-staged-natives.sh` (post-publish) | Staging-deploy regression that bypasses the Gradle task | Yes |
 | Fixture-based loader test | Logic bugs in extraction / placeholder handling | Yes (via placeholder scenario) |
 | Post-deploy smoke test | Artifact corruption across the publish pipeline | Yes |
 | `.gitkeep` policy | Placeholder leaking into final JAR | Yes (flagged by loader test) |
@@ -151,20 +166,21 @@ one of them alone would have caught #556.
   before it runs. An artifact upload failure on any platform fails the release — which is the
   desired safety behaviour (better a failed release than a partial publish) but requires release
   engineers to debug upload failures as a first-class concern. Artifact retention for the
-  populated `META-INF/native/` directories is set to the default 90 days, shared across the
-  matrix; this is sufficient for post-release forensics.
+  populated `META-INF/native/` directories is set to 7 days (see `build-natives.yaml`), which
+  covers the same-run hand-off to the `package` job plus a short post-release forensics window.
 - **Platform coverage is frozen at 5 platforms.** Adding a new platform (e.g., linux-riscv64,
   freebsd-x86_64) requires adding a row to the matrix, a corresponding `native-<platform>` Gradle
   module, and a new fixture for the loader test. Platform additions become a schema change, not a
   configuration tweak.
-- **`build-natives.yaml` becomes secondary.** Its ongoing purpose is diagnostic — reproducing a
-  single-platform build off-cycle without triggering a full release. It remains
-  `workflow_dispatch`-only to avoid being mistaken for a release path.
-- **Release engineers need not manually verify bundle contents.** The five checks guarantee that
+- **`build-natives.yaml` becomes a reusable workflow.** `release.yaml` invokes it via
+  `workflow_call` for the matrix build, so it houses the canonical 5-platform matrix logic. Its
+  `workflow_dispatch` entry point is retained for on-demand diagnostic builds — reproducing a
+  single-platform build off-cycle without triggering a full release.
+- **Release engineers need not manually verify bundle contents.** The six checks guarantee that
   any empty, undersized, or misnamed bundle fails the release before Maven Central staging. A
   release that completes successfully is a release where all five platforms have verified native
   bundles in Maven Central.
 - **Downstream consumers gain two guarantees that 1.0.0 lacked**: (1) every future release has
   populated native bundles for each supported platform, and (2) regressions introduced in the
-  release pipeline are caught by at least one of the five independent checks rather than
+  release pipeline are caught by at least one of the six independent checks rather than
   discovered by consumers in production.

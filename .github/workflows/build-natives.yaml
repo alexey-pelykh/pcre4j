@@ -1,6 +1,24 @@
 name: Build Natives
 
+# This workflow is the single source of truth for the 5-platform PCRE2 native
+# library matrix build. It is invoked in two modes:
+#
+#   - workflow_call: from .github/workflows/release.yaml during a tagged release,
+#     where each matrix job's populated native/<platform>/src/main/resources/...
+#     directory is uploaded as an artifact and downloaded by the release's
+#     `package` job before Gradle publish. This is the canonical release path.
+#
+#   - workflow_dispatch: for on-demand diagnostic builds (reproducing a
+#     single-platform build off-cycle without triggering a full release).
+#     See ADR-0010 (docs/adr/0010-native-bundle-release-procedure.md).
+
 on:
+  workflow_call:
+    inputs:
+      pcre2-version:
+        description: 'PCRE2 version to build'
+        required: true
+        type: string
   workflow_dispatch:
     inputs:
       pcre2-version:
@@ -82,4 +100,5 @@ jobs:
         with:
           name: native-${{ matrix.platform }}
           path: native/${{ matrix.platform }}/src/main/resources/META-INF/native/${{ matrix.platform }}/${{ matrix.lib-name }}
+          if-no-files-found: error
           retention-days: 7
