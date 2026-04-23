@@ -54,9 +54,10 @@ so that recovery of the native bundle does not depend on any single point of cor
 
 ## Decision
 
-The release procedure for native bundles is codified as **five compounding decisions**, each
-independently capable of catching a regression that the others missed (Decision 2 implements two
-distinct verification checks, so the relationship table below enumerates six rows):
+The release procedure for native bundles is codified as **five compounding checks**, each
+independently capable of catching a regression that the others missed. Check 2 combines a
+build-time Gradle task with a post-publish staging inspector, so the relationship table below
+enumerates six rows — one per independent assertion, not per numbered section:
 
 ### 1. Matrix-build natives within `release.yaml`
 
@@ -67,7 +68,7 @@ same workflow run that publishes to Maven Central**. Each matrix job:
 - Builds PCRE2 from source using the shared `.github/actions/build-pcre2` composite action.
 - Copies the produced `libpcre2-8.{so|dylib|dll}` into
   `native/<platform>/src/main/resources/META-INF/native/<platform>/`.
-- Uploads the populated directory as a workflow artifact.
+- Uploads the produced `libpcre2-8.{so|dylib|dll}` file as a workflow artifact.
 
 A downstream `package` job downloads all five artifacts into the expected resource directories
 before running Gradle publish. `release.yaml` invokes `build-natives.yaml` as a reusable workflow
