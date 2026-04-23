@@ -66,6 +66,9 @@ jobs:
       - name: Stage artifacts
         run: ./gradlew publishAllPublicationsToStagingDeployRepository -Ppcre4j.version=${{ github.ref_name }}
 
+      - name: Inspect staged native bundles
+        run: .github/scripts/verify-staged-natives.sh .
+
       - name: Release to Maven Central
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
