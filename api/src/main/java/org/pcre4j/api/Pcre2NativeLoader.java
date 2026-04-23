@@ -267,16 +267,7 @@ public final class Pcre2NativeLoader {
      */
     private static boolean isPlaceholderPresent(String platform) {
         var placeholderPath = RESOURCE_PREFIX + platform + "/.gitkeep";
-        var placeholder = Pcre2NativeLoader.class.getClassLoader().getResourceAsStream(placeholderPath);
-        if (placeholder == null) {
-            return false;
-        }
-        try {
-            placeholder.close();
-        } catch (IOException ignored) {
-            // Best effort
-        }
-        return true;
+        return Pcre2NativeLoader.class.getClassLoader().getResource(placeholderPath) != null;
     }
 
     /**
