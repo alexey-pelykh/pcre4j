@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven project template for the post-deploy smoke test.
+
+  The workflow renders this template by replacing:
+    @VERSION@   - the published PCRE4J version under test (e.g. 1.0.1)
+    @PLATFORM@  - the runner-mapped native platform (linux-x86_64,
+                  macos-aarch64, windows-x86_64)
+
+  All three pcre4j-* dependencies are resolved from Maven Central; nothing
+  from the local build is consumed. Maven Central is declared explicitly so
+  the smoke test does not depend on the runner's ~/.m2/settings.xml content.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.pcre4j.smoke</groupId>
+    <artifactId>post-deploy-smoke</artifactId>
+    <version>1</version>
+    <packaging>jar</packaging>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <repositories>
+        <repository>
+            <id>central</id>
+            <name>Maven Central</name>
+            <url>https://repo1.maven.apache.org/maven2/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.pcre4j</groupId>
+            <artifactId>pcre4j-jna</artifactId>
+            <version>@VERSION@</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pcre4j</groupId>
+            <artifactId>pcre4j-regex</artifactId>
+            <version>@VERSION@</version>
+        </dependency>
+        <dependency>
+            <groupId>org.pcre4j</groupId>
+            <artifactId>pcre4j-native-@PLATFORM@</artifactId>
+            <version>@VERSION@</version>
+        </dependency>
+    </dependencies>
+</project>
