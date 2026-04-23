@@ -109,11 +109,12 @@ can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
 Add a platform-specific bundle to your dependencies and PCRE4J loads the library automatically:
 
 > [!WARNING]
-> **Known issue in 1.0.0:** The `pcre4j-native-*:1.0.0` artifacts on Maven Central are empty
-> and will cause `UnsatisfiedLinkError` at runtime (see
-> [#556](https://github.com/alexey-pelykh/pcre4j/issues/556)).
-> Upgrade to **1.0.1+** once released, or use **Option B** (system-installed PCRE2) below as
-> the workaround for 1.0.0.
+> **Known issue:** The published `pcre4j-native-*` artifacts are empty and will cause
+> `UnsatisfiedLinkError` at runtime. This affects both the **1.0.0** release on Maven Central
+> (see [#556](https://github.com/alexey-pelykh/pcre4j/issues/556)) and the **`main-SNAPSHOT`**
+> builds on Maven Central Snapshots (see
+> [#573](https://github.com/alexey-pelykh/pcre4j/issues/573)). Use **Option B** (system-installed
+> PCRE2) below as the workaround until both issues are fixed.
 
 | Artifact | Platform |
 |----------|----------|
