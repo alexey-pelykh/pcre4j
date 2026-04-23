@@ -71,8 +71,32 @@ public final class Pcre2NativeLoader {
      */
     private static volatile Path extractedDir;
 
+    /**
+     * Test-only override for {@link #detectPlatform()}. Package-private to scope access to same-package tests.
+     * {@code null} means use real detection.
+     */
+    private static volatile String platformForTesting;
+
     private Pcre2NativeLoader() {
         // Utility class
+    }
+
+    /**
+     * Test hook: overrides the platform returned by {@link #detectPlatform()}. Use {@code null} to clear
+     * and return to real detection. Package-private to restrict access to tests in the same package.
+     *
+     * @param platform synthetic platform identifier (e.g. {@code "test-platform"}), or {@code null} to clear
+     */
+    static void setPlatformForTesting(String platform) {
+        platformForTesting = platform;
+    }
+
+    /**
+     * Test hook: clears the extraction cache so the next {@link #load(String)} performs a fresh extraction.
+     * Package-private to restrict access to tests in the same package.
+     */
+    static void resetCacheForTesting() {
+        extractedDir = null;
     }
 
     /**
@@ -117,7 +141,7 @@ public final class Pcre2NativeLoader {
         var mappedName = System.mapLibraryName(libraryName);
         var resourcePath = RESOURCE_PREFIX + platform + "/" + mappedName;
 
-        return extractResource(resourcePath, mappedName);
+        return extractResource(platform, resourcePath, mappedName);
     }
 
     /**
@@ -126,6 +150,10 @@ public final class Pcre2NativeLoader {
      * @return the platform identifier (e.g. {@code "linux-x86_64"}), or {@code null} if unsupported
      */
     static String detectPlatform() {
+        var override = platformForTesting;
+        if (override != null) {
+            return override;
+        }
         var os = detectOS();
         var arch = detectArch();
         if (os == null || arch == null) {
@@ -169,11 +197,12 @@ public final class Pcre2NativeLoader {
     /**
      * Extract the resource to a temporary directory and return the directory path.
      *
+     * @param platform     the current platform identifier, used to locate a sibling placeholder
      * @param resourcePath the classpath resource path
      * @param fileName     the file name for the extracted library
      * @return the directory containing the extracted library, or empty
      */
-    private static Optional<Path> extractResource(String resourcePath, String fileName) {
+    private static Optional<Path> extractResource(String platform, String resourcePath, String fileName) {
         synchronized (LOCK) {
             // Double-check after acquiring lock
             var cached = extractedDir;
@@ -186,7 +215,19 @@ public final class Pcre2NativeLoader {
 
             InputStream in = Pcre2NativeLoader.class.getClassLoader().getResourceAsStream(resourcePath);
             if (in == null) {
-                LOG.log(Level.FINE, "No bundled native library found at: {0}", resourcePath);
+                // A .gitkeep without a sibling library means the native bundle JAR was published empty
+                // (regression scenario from issue #556). Escalate visibility from FINE to WARNING so it
+                // would be caught at runtime on end-user machines instead of only at release inspection.
+                if (isPlaceholderPresent(platform)) {
+                    LOG.log(Level.WARNING,
+                            "Native bundle placeholder found at {0}{1}/.gitkeep but no library file "
+                                    + "({2}) is present - the pcre4j-native-{1} JAR appears to be empty "
+                                    + "(see issue #556). Install PCRE2 system-wide or set "
+                                    + "-Dpcre2.library.path=<dir> to work around.",
+                            new Object[]{RESOURCE_PREFIX, platform, fileName});
+                } else {
+                    LOG.log(Level.FINE, "No bundled native library found at: {0}", resourcePath);
+                }
                 return Optional.empty();
             }
 
@@ -214,6 +255,28 @@ public final class Pcre2NativeLoader {
                 return Optional.empty();
             }
         }
+    }
+
+    /**
+     * Check whether a placeholder ({@code .gitkeep}) is present in the resource directory for the given
+     * platform. A placeholder without a sibling library file is the telltale signal that a native bundle
+     * JAR was published empty (see issue #556).
+     *
+     * @param platform the current platform identifier
+     * @return {@code true} if a {@code .gitkeep} placeholder is present for that platform
+     */
+    private static boolean isPlaceholderPresent(String platform) {
+        var placeholderPath = RESOURCE_PREFIX + platform + "/.gitkeep";
+        var placeholder = Pcre2NativeLoader.class.getClassLoader().getResourceAsStream(placeholderPath);
+        if (placeholder == null) {
+            return false;
+        }
+        try {
+            placeholder.close();
+        } catch (IOException ignored) {
+            // Best effort
+        }
+        return true;
     }
 
     /**
