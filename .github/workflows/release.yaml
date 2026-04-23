@@ -22,9 +22,10 @@ env:
 
 jobs:
   # Build platform-specific PCRE2 native libraries on a 5-platform matrix and
-  # upload each populated native/<platform>/src/main/resources/META-INF/native/
-  # directory as a workflow artifact. The `package` job downloads these before
-  # running Gradle publish so every pcre4j-native-<platform>-<version>.jar on
+  # upload each built libpcre2-8.{so|dylib|dll} file as a workflow artifact.
+  # The `package` job downloads the 5 artifacts and places each library into
+  # native/<platform>/src/main/resources/META-INF/native/<platform>/ before
+  # running Gradle publish, so every pcre4j-native-<platform>-<version>.jar on
   # Maven Central carries its expected libpcre2-8.{so|dylib|dll}.
   #
   # See ADR-0010 (docs/adr/0010-native-bundle-release-procedure.md, Decision 1)

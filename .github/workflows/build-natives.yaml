@@ -4,9 +4,11 @@ name: Build Natives
 # library matrix build. It is invoked in two modes:
 #
 #   - workflow_call: from .github/workflows/release.yaml during a tagged release,
-#     where each matrix job's populated native/<platform>/src/main/resources/...
-#     directory is uploaded as an artifact and downloaded by the release's
-#     `package` job before Gradle publish. This is the canonical release path.
+#     where each matrix job uploads the built libpcre2-8.{so|dylib|dll} file for
+#     its platform as an artifact, and the release's `package` job downloads
+#     those artifacts and places them into
+#     native/<platform>/src/main/resources/META-INF/native/<platform>/ before
+#     running Gradle publish. This is the canonical release path.
 #
 #   - workflow_dispatch: for on-demand diagnostic builds (reproducing a
 #     single-platform build off-cycle without triggering a full release).
