@@ -1,0 +1,69 @@
+name: Place native artifacts
+description: >
+  Download the 5 per-platform native library artifacts produced by
+  build-natives.yaml and place each libpcre2-8.{so|dylib|dll} into its
+  matching Gradle module's resources, so that java-library resource
+  processing bundles it into the corresponding
+  pcre4j-native-<platform>-<version>.jar.
+
+  The platform-to-library mapping mirrors
+  buildSrc/src/main/kotlin/pcre4j-native-lib.gradle.kts.
+
+  This action is the single source of truth for the download+place
+  aggregator step shared by release.yaml (tagged release deploy) and
+  ci.yaml's package job (main/PR snapshot stage). See ADR-0010
+  (docs/adr/0010-native-bundle-release-procedure.md) and umbrella
+  issue #556.
+
+inputs:
+  download-path:
+    description: Directory to download per-platform native-* artifacts into
+    required: false
+    default: .tmp/natives
+
+runs:
+  using: composite
+  steps:
+    # Download the 5 per-platform native libraries produced by the build-natives
+    # matrix. Each artifact name is `native-<platform>` and contains the
+    # platform's libpcre2-8.{so|dylib|dll} at the archive root (per
+    # build-natives.yaml's upload step).
+    - name: Download native library artifacts
+      uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+      with:
+        pattern: native-*
+        path: ${{ inputs.download-path }}
+
+    # Place each downloaded library into the matching Gradle module's resources
+    # so that Gradle's java-library resource processing bundles it into the
+    # corresponding pcre4j-native-<platform>-<version>.jar. The per-platform
+    # native/<platform>/src/main/resources/META-INF/native/<platform>/ directories
+    # already exist (with .gitkeep placeholders); this step populates them.
+    - name: Place native libraries into module resources
+      shell: bash
+      env:
+        DOWNLOAD_PATH: ${{ inputs.download-path }}
+      run: |
+        set -euo pipefail
+        for platform in linux-x86_64 linux-aarch64 macos-x86_64 macos-aarch64 windows-x86_64; do
+          case "$platform" in
+            linux-*)   lib=libpcre2-8.so ;;
+            macos-*)   lib=libpcre2-8.dylib ;;
+            windows-*) lib=pcre2-8.dll ;;
+            *)
+              echo "::error::Unknown native platform '$platform'"
+              exit 1
+              ;;
+          esac
+          src="$DOWNLOAD_PATH/native-$platform/$lib"
+          dst_dir="native/$platform/src/main/resources/META-INF/native/$platform"
+          if [[ ! -f "$src" ]]; then
+            echo "::error::Expected native library missing for $platform: $src"
+            ls -laR "$DOWNLOAD_PATH/native-$platform" 2>/dev/null || true
+            exit 1
+          fi
+          mkdir -p "$dst_dir"
+          cp "$src" "$dst_dir/$lib"
+          size=$(stat -c '%s' "$dst_dir/$lib")
+          echo "Placed $platform: $dst_dir/$lib ($size bytes)"
+        done
