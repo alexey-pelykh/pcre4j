@@ -7,7 +7,7 @@
     @PLATFORM@  - the runner-mapped native platform (linux-x86_64,
                   macos-aarch64, windows-x86_64)
 
-  All three pcre4j-* dependencies are resolved from Maven Central; nothing
+  All three org.pcre4j dependencies are resolved from Maven Central; nothing
   from the local build is consumed. Maven Central is declared explicitly so
   the smoke test does not depend on the runner's ~/.m2/settings.xml content.
 -->
@@ -32,7 +32,7 @@
         <repository>
             <id>central</id>
             <name>Maven Central</name>
-            <url>https://repo1.maven.apache.org/maven2/</url>
+            <url>https://repo1.maven.org/maven2/</url>
             <releases>
                 <enabled>true</enabled>
             </releases>
@@ -45,12 +45,12 @@
     <dependencies>
         <dependency>
             <groupId>org.pcre4j</groupId>
-            <artifactId>pcre4j-jna</artifactId>
+            <artifactId>jna</artifactId>
             <version>@VERSION@</version>
         </dependency>
         <dependency>
             <groupId>org.pcre4j</groupId>
-            <artifactId>pcre4j-regex</artifactId>
+            <artifactId>regex</artifactId>
             <version>@VERSION@</version>
         </dependency>
         <dependency>

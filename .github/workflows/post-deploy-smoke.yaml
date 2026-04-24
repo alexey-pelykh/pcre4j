@@ -111,7 +111,7 @@ jobs:
 
       - name: Wait for Maven Central propagation
         # JReleaser deploy succeeds before the artifacts are reachable on
-        # repo1.maven.apache.org (Sonatype/CDN sync delay). Sonatype Central +
+        # repo1.maven.org (Sonatype/CDN sync delay). Sonatype Central +
         # the CDN do not guarantee same-instant visibility across all artifacts
         # in a deploy batch, so poll all three the consumer needs (jna, regex,
         # native bundle) and proceed only when ALL are visible. 30-minute cap.
@@ -119,8 +119,8 @@ jobs:
         run: |
           set -euo pipefail
           artifacts=(
-            "pcre4j-jna"
-            "pcre4j-regex"
+            "jna"
+            "regex"
             "pcre4j-native-${NATIVE_PLATFORM}"
           )
           deadline=$(( $(date +%s) + 1800 ))
@@ -129,7 +129,7 @@ jobs:
             attempt=$((attempt + 1))
             missing=""
             for artifact in "${artifacts[@]}"; do
-              url="https://repo1.maven.apache.org/maven2/org/pcre4j/${artifact}/${PCRE4J_VERSION}/${artifact}-${PCRE4J_VERSION}.jar"
+              url="https://repo1.maven.org/maven2/org/pcre4j/${artifact}/${PCRE4J_VERSION}/${artifact}-${PCRE4J_VERSION}.jar"
               if ! curl -fsSI "$url" -o /dev/null; then
                 missing="$artifact"
                 break
