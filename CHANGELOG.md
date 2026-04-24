@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-04-24
+
 ### Fixed
 
-- dist: populate `pcre4j-native-*` JARs with the PCRE2 shared library at release time ([#556](https://github.com/alexey-pelykh/pcre4j/issues/556))
+- dist: populate `pcre4j-native-*` JARs with the PCRE2 shared library on both release and snapshot publish paths ([#556](https://github.com/alexey-pelykh/pcre4j/issues/556), [#573](https://github.com/alexey-pelykh/pcre4j/issues/573))
+- ci: refresh build-natives matrix to current-GA runner images (`macos-13` EOL → `macos-15-intel`, `macos-14` → `macos-15`, `windows-2022` → `windows-2025`) ([#584](https://github.com/alexey-pelykh/pcre4j/issues/584))
 
 ## [1.0.0] - 2026-02-16
 
