@@ -40,7 +40,7 @@ import java.util.ServiceLoader;
  *
  * <ol>
  *   <li><strong>Automatic discovery (recommended)</strong> — simply add a backend artifact
- *       ({@code pcre4j-jna} or {@code pcre4j-ffm}) to your classpath. The first call to
+ *       ({@code org.pcre4j:jna} or {@code org.pcre4j:ffm}) to your classpath. The first call to
  *       {@link #api()} will use {@link ServiceLoader} to discover and initialize a backend
  *       automatically.</li>
  *   <li><strong>Explicit setup</strong> — call {@link #setup(IPcre2)} with a backend instance
@@ -214,7 +214,7 @@ public final class Pcre4j {
                 api = discoverBackend();
                 if (api == null) {
                     throw new IllegalStateException(
-                            "No PCRE2 backend found. Add pcre4j-jna or pcre4j-ffm to your classpath, "
+                            "No PCRE2 backend found. Add org.pcre4j:jna or org.pcre4j:ffm to your classpath, "
                                     + "or call Pcre4j.setup() explicitly."
                     );
                 }
