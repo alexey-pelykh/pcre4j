@@ -9,9 +9,8 @@ PCRE4J **v1.0** is the first stable release, with an API stability commitment.
 - **Two backends**: JNA and FFM (Foreign Function & Memory API)
 - **100% PCRE2 API coverage** across both backends
 - **Platform-specific native library bundles** for Linux, macOS, and Windows
-  (**WARNING:** non-functional in 1.0.0 release and main-SNAPSHOT; release fix in 1.0.1,
-  snapshot fix tracked in [#573](https://github.com/alexey-pelykh/pcre4j/issues/573) —
-  see umbrella [#556](https://github.com/alexey-pelykh/pcre4j/issues/556))
+  (non-functional in 1.0.0 — fixed in 1.0.1; see
+  [#556](https://github.com/alexey-pelykh/pcre4j/issues/556))
 - **GraalVM native-image** support
 - **ServiceLoader-based backend discovery** for zero-configuration setup
 - **High-level API coverage**: pattern serialization, DFA matching, callout support, glob/POSIX

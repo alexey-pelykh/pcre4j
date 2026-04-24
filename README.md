@@ -64,7 +64,7 @@ if (matcher.find()) {
 
 ```xml
 <properties>
-    <pcre4j.version>1.0.0</pcre4j.version>
+    <pcre4j.version>1.0.1</pcre4j.version>
 </properties>
 
 <dependencies>
@@ -86,7 +86,7 @@ if (matcher.find()) {
 **Gradle** (`build.gradle.kts`):
 
 ```kotlin
-val pcre4jVersion = "1.0.0"
+val pcre4jVersion = "1.0.1"
 
 dependencies {
     implementation("org.pcre4j:regex:$pcre4jVersion")
@@ -109,12 +109,10 @@ can set the `pcre2.regex.jit` system property with the value `false` to the JVM.
 Add a platform-specific bundle to your dependencies and PCRE4J loads the library automatically:
 
 > [!WARNING]
-> **Known issue:** The published `pcre4j-native-*` artifacts are empty and will cause
-> `UnsatisfiedLinkError` at runtime. This affects both the **1.0.0** release on Maven Central
-> (see [#556](https://github.com/alexey-pelykh/pcre4j/issues/556)) and the **`main-SNAPSHOT`**
-> builds on Maven Central Snapshots (see
-> [#573](https://github.com/alexey-pelykh/pcre4j/issues/573)). Use **Option B** (system-installed
-> PCRE2) below as the workaround until both issues are fixed.
+> **Known issue in 1.0.0**: The `pcre4j-native-*:1.0.0` artifacts on Maven Central were
+> published empty and cause `UnsatisfiedLinkError` at runtime (see
+> [#556](https://github.com/alexey-pelykh/pcre4j/issues/556)). **Fixed in 1.0.1+** — use
+> `1.0.1` or later, or fall back to Option B (system-installed PCRE2) if you must pin 1.0.0.
 
 | Artifact | Platform |
 |----------|----------|
@@ -125,7 +123,7 @@ Add a platform-specific bundle to your dependencies and PCRE4J loads the library
 | `org.pcre4j:pcre4j-native-windows-x86_64` | Windows x86_64 |
 | `org.pcre4j:pcre4j-native-all` | All supported platforms |
 
-Example (Gradle): `implementation("org.pcre4j:pcre4j-native-linux-x86_64:1.0.0")`
+Example (Gradle): `implementation("org.pcre4j:pcre4j-native-linux-x86_64:1.0.1")`
 
 ### Option B: System-Installed PCRE2
 
@@ -215,14 +213,14 @@ Add `lib` and a backend to your dependencies:
     <dependency>
         <groupId>org.pcre4j</groupId>
         <artifactId>lib</artifactId>
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </dependency>
     <dependency>
         <groupId>org.pcre4j</groupId>
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </dependency>
 </dependencies>
 ```
@@ -231,10 +229,10 @@ Add `lib` and a backend to your dependencies:
 
 ```kotlin
 dependencies {
-    implementation("org.pcre4j:lib:1.0.0")
+    implementation("org.pcre4j:lib:1.0.1")
     // TODO: Select one of the following artifacts corresponding to the backend you want to use
-    implementation("org.pcre4j:jna:1.0.0")
-    // implementation("org.pcre4j:ffm:1.0.0")
+    implementation("org.pcre4j:jna:1.0.1")
+    // implementation("org.pcre4j:ffm:1.0.1")
 }
 ```
 
@@ -287,7 +285,7 @@ Add a backend artifact directly:
         <!-- TODO: Select one of the following artifacts corresponding to the backend you want to use -->
         <artifactId>jna</artifactId>
         <!-- <artifactId>ffm</artifactId> -->
-        <version>1.0.0</version>
+        <version>1.0.1</version>
     </dependency>
 </dependencies>
 ```
@@ -297,8 +295,8 @@ Add a backend artifact directly:
 ```kotlin
 dependencies {
     // TODO: Select one of the following artifacts corresponding to the backend you want to use
-    implementation("org.pcre4j:jna:1.0.0")
-    // implementation("org.pcre4j:ffm:1.0.0")
+    implementation("org.pcre4j:jna:1.0.1")
+    // implementation("org.pcre4j:ffm:1.0.1")
 }
 ```
 
