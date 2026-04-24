@@ -274,7 +274,7 @@ jobs:
       # GraalVM JDK 25 for native-image (full FFM + reachability-metadata.json foreign section)
       # Installed AFTER Gradle build to avoid toolchain auto-detection conflicts
       - name: Set up GraalVM JDK 25 (native-image + FFM GA)
-        uses: graalvm/setup-graalvm@54b4f5a65c1a84b2fdfdc2078fe43df32819e4b1 # v1.4.5
+        uses: graalvm/setup-graalvm@60c26726de13f8b90771df4bc1641a52a3159994 # v1.5.2
         with:
           java-version: '25'
           distribution: 'graalvm'
