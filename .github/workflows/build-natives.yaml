@@ -44,13 +44,19 @@ jobs:
           - os: ubuntu-24.04-arm
             platform: linux-aarch64
             lib-name: libpcre2-8.so
-          - os: macos-13
-            platform: macos-x86_64
-            lib-name: libpcre2-8.dylib
-          - os: macos-14
+          - os: macos-15
             platform: macos-aarch64
             lib-name: libpcre2-8.dylib
-          - os: windows-2022
+          # macos-15-intel is the last remaining x86_64 macOS runner.
+          # macos-13 was deprecated 2025-09-22 and fully unsupported
+          # 2025-12-08 (https://github.blog/changelog/2025-09-19-github-actions-macos-13-runner-image-is-closing-down/);
+          # macos-14-intel does not exist as a label (actions/runner-images#13164).
+          # macos-15-intel itself retires in Fall 2027 when Apple's x86_64
+          # architecture is removed from GitHub-hosted runners entirely.
+          - os: macos-15-intel
+            platform: macos-x86_64
+            lib-name: libpcre2-8.dylib
+          - os: windows-2025
             platform: windows-x86_64
             lib-name: pcre2-8.dll
 
