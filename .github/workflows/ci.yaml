@@ -470,6 +470,16 @@ jobs:
           ./gradlew publishAllPublicationsToStagingDeployRepository
           -Ppcre4j.version=${{ github.event_name == 'pull_request' && format('PR-{0}-SNAPSHOT', github.event.pull_request.number) || 'main-SNAPSHOT' }}
 
+      # Pre-deploy staging inspection: walk **/build/staging-deploy/**/*.jar and
+      # fail if any pcre4j-native-* main artifact is empty or missing its
+      # platform library entry. Mirrors release.yaml's `Inspect staged native
+      # bundles` step (added by #564) for the snapshot path. Condition matches
+      # `Stage snapshot artifacts` above so inspection runs whenever staging
+      # produced artifacts to inspect (push/main + same-repo PRs).
+      - name: Inspect staged native bundles
+        if: ${{ (github.event_name == 'push' && github.ref_name == 'main') || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) }}
+        run: .github/scripts/verify-staged-natives.sh .
+
       - name: Publish snapshots to Maven Central
         if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         env:
