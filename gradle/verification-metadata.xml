@@ -9,6 +9,7 @@
          <ignored-key id="3D5839A2262CBBFB" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="64A16FAAEC16A4BE" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="7E738F7E2A355AAE" reason="Key couldn't be downloaded from any key server"/>
+         <ignored-key id="793FD5751A0F0780" reason="Key couldn't be downloaded from any key server (okhttp-bom 5.3.2 signer)"/>
          <ignored-key id="F5C81DE10A0B8ECC" reason="Key couldn't be downloaded from any key server"/>
       </ignored-keys>
       <trusted-keys>
