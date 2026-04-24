@@ -1,9 +1,24 @@
 name: Release
 
+# Two entry points:
+#   1. tag push matching `[0-9]+.[0-9]+.[0-9]+` — full release: builds, stages,
+#      and deploys artifacts to Maven Central via JReleaser.
+#   2. `workflow_dispatch` — dry run: exercises the full matrix build + native
+#      placement + verifyNativeBundles + publishAllPublicationsToStagingDeployRepository
+#      pipeline but SKIPS the Maven Central deploy step. Use this to validate
+#      the release pipeline produces non-empty native JARs before cutting a real
+#      version. See #575.
 on:
   push:
     tags:
       - '[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version for the dry-run build (passed to Gradle as -Ppcre4j.version). Maven Central deploy is skipped regardless of this value.'
+        required: false
+        default: '0.0.0-dryrun'
+        type: string
 
 concurrency:
   group: release-${{ github.ref }}
@@ -19,6 +34,10 @@ env:
   # workflow-level `env` context inside reusable-workflow `with:` expressions,
   # so the two sites must be kept in lockstep by hand on any PCRE2 bump.
   PCRE2_VERSION: '10.47'
+  # Version string passed to Gradle as `-Ppcre4j.version`. On tag push this is
+  # the tag (e.g., `1.0.0`); on workflow_dispatch this is the dispatch input
+  # (default `0.0.0-dryrun`).
+  RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
 
 jobs:
   # Build platform-specific PCRE2 native libraries on a 5-platform matrix and
@@ -100,15 +119,23 @@ jobs:
       # the expected PCRE2 shared library (>= 10 KB). Guards against a recurrence
       # of the 1.0.0 empty-native regression. See #557.
       - name: Verify native bundles
-        run: ./gradlew verifyNativeBundles -Ppcre4j.version=${{ github.ref_name }}
+        run: ./gradlew verifyNativeBundles -Ppcre4j.version=${{ env.RELEASE_VERSION }}
 
       - name: Stage artifacts
-        run: ./gradlew publishAllPublicationsToStagingDeployRepository -Ppcre4j.version=${{ github.ref_name }}
+        run: ./gradlew publishAllPublicationsToStagingDeployRepository -Ppcre4j.version=${{ env.RELEASE_VERSION }}
 
       - name: Inspect staged native bundles
         run: .github/scripts/verify-staged-natives.sh .
 
+      # Deploy to Maven Central ONLY on real tag-push releases. The compound
+      # guard is deliberate belt-and-suspenders: the `push` trigger above is
+      # already restricted to tag refs matching `[0-9]+.[0-9]+.[0-9]+`, but
+      # checking `github.event_name == 'push' && github.ref_type == 'tag'`
+      # structurally excludes any future `workflow_dispatch`, `pull_request`,
+      # or other triggers from ever reaching the irreversible
+      # publish-to-Maven-Central path. See #575 for the dry-run rationale.
       - name: Release to Maven Central
+        if: ${{ github.event_name == 'push' && github.ref_type == 'tag' }}
         env:
           JRELEASER_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           JRELEASER_MAVENCENTRAL_SONATYPE_USERNAME: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
@@ -116,4 +143,4 @@ jobs:
           JRELEASER_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
           JRELEASER_GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
           JRELEASER_GPG_SECRET_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-        run: ./gradlew jreleaserDeploy --no-configuration-cache -Ppcre4j.version=${{ github.ref_name }}
+        run: ./gradlew jreleaserDeploy --no-configuration-cache -Ppcre4j.version=${{ env.RELEASE_VERSION }}

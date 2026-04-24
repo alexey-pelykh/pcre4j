@@ -111,6 +111,8 @@ gh release create <version> --title <version> --generate-notes
 
 **Note**: `skipRelease: true` in jreleaser.yml exists because the GitHub Release is already created by `gh release create` before JReleaser runs.
 
+**Dry run**: `release.yaml` also accepts a `workflow_dispatch` trigger (Actions UI → "Run workflow") that exercises the full matrix build + stage + verify pipeline but skips the Maven Central deploy step. Use this to validate the release pipeline produces non-empty native JARs without committing to a public release. The `Release to Maven Central` step is guarded by `if: github.event_name == 'push' && github.ref_type == 'tag'`, so only real tag pushes deploy.
+
 ## Snapshot Publishing
 
 Snapshots are published to Maven Central Snapshots repository (not GitHub Packages).
