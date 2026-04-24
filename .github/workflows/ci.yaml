@@ -85,7 +85,7 @@ jobs:
           java-version: 21
 
       - name: Cache Gradle packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.gradle/caches
@@ -156,7 +156,7 @@ jobs:
         run: echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
 
       - name: Cache Gradle packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.gradle/caches
@@ -255,7 +255,7 @@ jobs:
         run: echo "JAVA_HOME=$JAVA_HOME_21_X64" >> $GITHUB_ENV
 
       - name: Cache Gradle packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.gradle/caches
@@ -363,7 +363,7 @@ jobs:
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
 
       - name: Cache Gradle packages
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5
         with:
           path: |
             ~/.gradle/caches
