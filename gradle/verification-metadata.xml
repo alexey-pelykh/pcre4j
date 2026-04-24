@@ -10,6 +10,7 @@
          <ignored-key id="64A16FAAEC16A4BE" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="7E738F7E2A355AAE" reason="Key couldn't be downloaded from any key server"/>
          <ignored-key id="793FD5751A0F0780" reason="Key couldn't be downloaded from any key server (okhttp-bom 5.3.2 signer)"/>
+         <ignored-key id="55C7E5E701832382" reason="Key couldn't be downloaded from any key server (snakeyaml 2.2 signer)"/>
          <ignored-key id="F5C81DE10A0B8ECC" reason="Key couldn't be downloaded from any key server"/>
       </ignored-keys>
       <trusted-keys>
@@ -2757,7 +2758,7 @@
       </component>
       <component group="org.yaml" name="snakeyaml" version="2.2">
          <artifact name="snakeyaml-2.2.pom">
-            <pgp value="120D6F34E627ED3A772EBBFE55C7E5E701832382"/>
+            <sha256 value="e982eadc788c69cf2e4de50a9f632b182c31dba50612830d348fc4b4ba8dd7d6" origin="Manual sha256 for pre-#595 regression"/>
          </artifact>
       </component>
       <component group="org.yaml" name="snakeyaml" version="2.4">
