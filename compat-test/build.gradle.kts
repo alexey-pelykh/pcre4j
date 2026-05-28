@@ -59,7 +59,7 @@ tasks.test {
     jvmArgs("--enable-preview")
     val backend = (project.findProperty("compat.backend") as String?) ?: "ffm"
     systemProperty("pcre4j.test.backends", backend)
-    maxHeapSize = "2g"
+    maxHeapSize = (project.findProperty("compat.test.heapSize") as String?) ?: "4g"
 }
 
 tasks.withType<Checkstyle>().configureEach {

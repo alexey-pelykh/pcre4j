@@ -52,13 +52,18 @@ public final class TxtCaseRunner {
 
     /**
      * Parses the full content of a {@code .txt} test-case file and returns the list of cases.
-     * Cases whose expected result is {@code error} are omitted from the output.
+     * Cases whose result is {@code error} are included with {@code expectedMatch=false};
+     * cases with unrecognized result format (e.g. GraphemeTestCases.txt data lines) are skipped.
      *
      * @param body the entire file content as a string
      * @return parsed cases in file order
      */
     public static List<Case> parse(String body) {
         // Collect all non-blank, non-comment lines and apply grabLine escape processing.
+        // Note: '#' is NOT a comment prefix in the test case files (it appears in regex patterns).
+        // Only '//' is used as a comment prefix.
+        // GraphemeTestCases.txt has a different format entirely; its data lines don't start
+        // with 'true'/'false'/'error' so they are filtered out at the result-parsing step.
         List<String> lines = new ArrayList<>();
         for (String raw : body.split("\\R", -1)) {
             if (raw.isBlank() || raw.startsWith("//")) {
@@ -76,8 +81,9 @@ public final class TxtCaseRunner {
             String resultLine = lines.get(i + 2);
             i += 3;
 
-            // Skip error cases (pattern expected to throw PatternSyntaxException).
-            if (resultLine.equals("error")) {
+            // Skip lines that are neither true/false/error (e.g. GraphemeTestCases.txt).
+            if (!resultLine.startsWith("true") && !resultLine.startsWith("false")
+                    && !resultLine.equals("error")) {
                 continue;
             }
 
@@ -94,14 +100,18 @@ public final class TxtCaseRunner {
             }
 
             // Parse result line.
+            // "error" means the pattern is expected to throw PatternSyntaxException.
+            boolean expectedError = resultLine.equals("error");
             boolean match = resultLine.startsWith("true");
             List<String> groups = new ArrayList<>();
-            String tail = match
-                    ? resultLine.substring("true".length()).trim()
-                    : resultLine.substring("false".length()).trim();
-            if (!tail.isEmpty()) {
-                for (String token : tail.split("\\s+")) {
-                    groups.add(token);
+            if (!expectedError) {
+                String tail = match
+                        ? resultLine.substring("true".length()).trim()
+                        : resultLine.substring("false".length()).trim();
+                if (!tail.isEmpty()) {
+                    for (String token : tail.split("\\s+")) {
+                        groups.add(token);
+                    }
                 }
             }
 

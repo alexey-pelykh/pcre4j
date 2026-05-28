@@ -104,8 +104,11 @@ public final class ComparisonRecorder implements AutoCloseable {
                 case '\b' -> sb.append("\\b");
                 case '\f' -> sb.append("\\f");
                 default -> {
-                    if (c < 0x20) sb.append(String.format("\\u%04x", (int) c));
-                    else sb.append(c);
+                    if (c < 0x20 || Character.isSurrogate(c)) {
+                        sb.append(String.format("\\u%04x", (int) c));
+                    } else {
+                        sb.append(c);
+                    }
                 }
             }
         }
