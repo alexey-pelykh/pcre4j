@@ -25,6 +25,16 @@ package org.pcre4j.regex.translate;
  * resolve intersections ({@code [a-c&&b-d]}), and escape {@code -} after multi-char escapes
  * like {@code [\w-#]} so PCRE2 does not misinterpret them as range operators.
  *
+ * <p>Phase 3: translate Java inline mode-modifier groups ({@code (?flags)},
+ * {@code (?flags:...)}, {@code (?flags-flags2)}, {@code (?flags-flags2:...)}).
+ * Java flags {@code u} (UNICODE_CASE) and {@code U} (UNICODE_CHARACTER_CLASS) are dropped
+ * because PCRE2's UTF mode (always enabled) already provides Unicode-aware case folding, and
+ * because PCRE2 repurposes {@code (?U)} to mean "ungreedy" — semantically incompatible.
+ * Java flag {@code d} (UNIX_LINES) is also dropped as it has no PCRE2 inline equivalent
+ * (the newline mode is set at compile time via the compile context).
+ * If both sides of a mode modifier become empty after filtering, the whole modifier is dropped
+ * (for {@code (?)}) or collapsed to a plain non-capturing group (for {@code (?:)}).
+ *
  * <p>The translator correctly skips tokens that appear inside {@code \Q...\E} literal
  * sections and does not match {@code \\p{...}} (escaped backslash followed by {@code p}).
  */
@@ -169,12 +179,136 @@ public final class JavaRegexTranslator {
                 }
             }
 
+            // --- Phase 3: inline mode-flag translator ---
+            // Intercept (?flags) / (?flags:) / (?flags-flags2) / (?flags-flags2:) groups.
+            // Must not be inside a quotation (checked above) or class (handled by Phase 2 branch).
+            if (c == '(' && i + 1 < len && javaPattern.charAt(i + 1) == '?'
+                    && !hasOddTrailingBackslashes(out)) {
+                final int modeResult = tryTranslateModeModifier(javaPattern, i, len, out);
+                if (modeResult > i) {
+                    i = modeResult;
+                    continue;
+                }
+            }
+
             // Normal character — copy verbatim
             out.append(c);
             i++;
         }
 
         return out.toString();
+    }
+
+    /**
+     * If the substring starting at {@code start} (which must be {@code '('}) is a Java inline
+     * mode-modifier group, translates it — filtering out {@code u}, {@code U}, {@code d} flags —
+     * appends the result to {@code out}, and returns the index just past the modifier's terminator
+     * character ({@code ')'} or {@code ':'}).
+     *
+     * <p>Returns {@code start} (unchanged) if the substring is not a mode-modifier group, so the
+     * caller can fall through to normal character handling.
+     *
+     * @param s     the full pattern string
+     * @param start index of {@code '('}
+     * @param len   {@code s.length()}
+     * @param out   the output buffer
+     * @return index just past the terminator, or {@code start} if not a mode modifier
+     */
+    private static int tryTranslateModeModifier(
+            final String s, final int start, final int len, final StringBuilder out) {
+        // s[start] == '(', s[start+1] == '?'
+        int j = start + 2;
+
+        // Scan on-flags: [idmsuxU]*
+        final int onStart = j;
+        while (j < len && isJavaModeFlag(s.charAt(j))) {
+            j++;
+        }
+        final int onEnd = j;
+
+        // Optional off-flags: -[idmsuxU]*
+        int offStart = -1;
+        int offEnd = -1;
+        if (j < len && s.charAt(j) == '-') {
+            j++; // skip '-'
+            offStart = j;
+            while (j < len && isJavaModeFlag(s.charAt(j))) {
+                j++;
+            }
+            offEnd = j;
+        }
+
+        // Terminator must be ')' or ':'
+        if (j >= len) {
+            return start;
+        }
+        final char term = s.charAt(j);
+        if (term != ')' && term != ':') {
+            return start;
+        }
+
+        // It IS a mode-modifier group — apply flag filtering
+        final String filteredOn = filterModeFlags(s, onStart, onEnd);
+        final String filteredOff = (offStart >= 0) ? filterModeFlags(s, offStart, offEnd) : null;
+        final boolean hasOn = !filteredOn.isEmpty();
+        final boolean hasOff = filteredOff != null && !filteredOff.isEmpty();
+        final boolean hasDash = offStart >= 0;
+
+        if (term == ')') {
+            if (!hasOn && !hasOff) {
+                // (?u), (?u-U), etc. — drop entirely
+            } else {
+                out.append("(?").append(filteredOn);
+                if (hasDash) {
+                    out.append('-');
+                    if (hasOff) {
+                        out.append(filteredOff);
+                    }
+                }
+                out.append(')');
+            }
+        } else { // ':'
+            if (!hasOn && !hasOff) {
+                // (?u:...) or (?u-U:...) — collapse to plain non-capturing group
+                out.append("(?:");
+            } else {
+                out.append("(?").append(filteredOn);
+                if (hasDash) {
+                    out.append('-');
+                    if (hasOff) {
+                        out.append(filteredOff);
+                    }
+                }
+                out.append(':');
+            }
+        }
+        return j + 1; // advance past terminator
+    }
+
+    /**
+     * Returns {@code true} if {@code c} is a Java inline mode flag character
+     * ({@code i}, {@code d}, {@code m}, {@code s}, {@code u}, {@code x}, or {@code U}).
+     */
+    private static boolean isJavaModeFlag(final char c) {
+        return c == 'i' || c == 'd' || c == 'm' || c == 's' || c == 'u' || c == 'x' || c == 'U';
+    }
+
+    /**
+     * Returns the substring {@code s[from, to)} with Java-only mode flags ({@code u}, {@code U},
+     * {@code d}) removed, preserving the order of the remaining flag characters.
+     */
+    private static String filterModeFlags(final String s, final int from, final int to) {
+        if (from >= to) {
+            return "";
+        }
+        final StringBuilder sb = new StringBuilder(to - from);
+        for (int k = from; k < to; k++) {
+            final char f = s.charAt(k);
+            if (f != 'u' && f != 'U' && f != 'd') {
+                sb.append(f);
+            }
+        }
+        return sb.toString();
     }
 
     /**

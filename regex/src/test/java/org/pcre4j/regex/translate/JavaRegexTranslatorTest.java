@@ -134,4 +134,60 @@ class JavaRegexTranslatorTest {
         final String result = JavaRegexTranslator.translate("[\\d&&[0-3]]", 0);
         assertFalse(result.contains("&&"), "Should not contain &&: " + result);
     }
+
+    // --- Phase 3: inline mode-flag translator ---
+
+    @Test
+    void dropsUFlagInModeModifier() {
+        assertEquals("(?i)foo", JavaRegexTranslator.translate("(?iu)foo", 0));
+        assertEquals("(?i)foo", JavaRegexTranslator.translate("(?ui)foo", 0));
+        assertEquals("(?im)foo", JavaRegexTranslator.translate("(?ium)foo", 0));
+    }
+
+    @Test
+    void dropsUInScopedGroup() {
+        assertEquals("(?i:foo)", JavaRegexTranslator.translate("(?iu:foo)", 0));
+    }
+
+    @Test
+    void dropsDFlag() {
+        assertEquals("(?m)foo", JavaRegexTranslator.translate("(?dm)foo", 0));
+    }
+
+    @Test
+    void emptyFlagsRemovedEntirely() {
+        assertEquals("foo", JavaRegexTranslator.translate("(?u)foo", 0));
+        assertEquals("(?:foo)", JavaRegexTranslator.translate("(?u:foo)", 0));
+    }
+
+    @Test
+    void preservesNonModeGroups() {
+        assertEquals("(?:foo)", JavaRegexTranslator.translate("(?:foo)", 0));
+        assertEquals("(?=foo)", JavaRegexTranslator.translate("(?=foo)", 0));
+        assertEquals("(?<name>foo)", JavaRegexTranslator.translate("(?<name>foo)", 0));
+        assertEquals("(?#comment)foo", JavaRegexTranslator.translate("(?#comment)foo", 0));
+    }
+
+    @Test
+    void handlesOnOffFlagGroup() {
+        // (?iu-mU)foo — u dropped from on, U dropped from off → (?i-m)foo
+        assertEquals("(?i-m)foo", JavaRegexTranslator.translate("(?iu-mU)foo", 0));
+    }
+
+    @Test
+    void allFlagsDroppedFromOnOff() {
+        // (?u-U)foo — both sides empty after filtering → drop entire token
+        assertEquals("foo", JavaRegexTranslator.translate("(?u-U)foo", 0));
+    }
+
+    @Test
+    void doesNotTouchInsideClass() {
+        // `(?i)` inside `[…]` is literal chars — Phase 2 handles the class body
+        assertEquals("[(?i)]", JavaRegexTranslator.translate("[(?i)]", 0));
+    }
+
+    @Test
+    void doesNotTouchInsideQuotation() {
+        assertEquals("\\Q(?iu)\\E", JavaRegexTranslator.translate("\\Q(?iu)\\E", 0));
+    }
 }
