@@ -173,6 +173,40 @@ public final class JavaRegexTranslator {
                     continue;
                 }
 
+                // Java \1..\9 (and greedy \NN forms): JDK accepts these unconditionally at parse
+                // time, with the digits greedily consumed up to the number of capturing groups.
+                // Leftover digits become literal characters. References to non-existent groups
+                // are accepted and never match (group(n)==null fails the literal compare).
+                //
+                // PCRE2 disagrees in two ways: (1) \10+ may be octal instead of a backref, and
+                // (2) PCRE2 rejects a backref to a non-existent group at compile time. Rewrite
+                // explicitly to \g{N} for the chosen backref, append leftover digits as literals,
+                // and use (*F) to express "never match" when the referenced group doesn't exist.
+                if (next >= '1' && next <= '9') {
+                    int k = i + 2;
+                    while (k < len && Character.isDigit(javaPattern.charAt(k))) {
+                        k++;
+                    }
+                    final int groupCount = countCapturingGroups(javaPattern);
+                    int useDigits = k - (i + 1);
+                    int backrefN = Integer.parseInt(javaPattern.substring(i + 1, i + 1 + useDigits));
+                    while (useDigits > 1 && backrefN > groupCount) {
+                        useDigits--;
+                        backrefN = Integer.parseInt(javaPattern.substring(i + 1, i + 1 + useDigits));
+                    }
+                    if (backrefN > groupCount) {
+                        out.append("(*F)");
+                    } else {
+                        out.append("\\g{").append(backrefN).append('}');
+                    }
+                    // Emit remaining digits as literal characters.
+                    for (int p = i + 1 + useDigits; p < k; p++) {
+                        out.append(javaPattern.charAt(p));
+                    }
+                    i = k;
+                    continue;
+                }
+
                 // Any other backslash sequence: copy backslash and advance.
                 out.append(c);
                 i++;
@@ -300,6 +334,72 @@ public final class JavaRegexTranslator {
 
     private static boolean isOctalDigit(final char ch) {
         return ch >= '0' && ch <= '7';
+    }
+
+    /**
+     * Counts top-level capturing groups in a Java regex pattern: any {@code (} that is not
+     * preceded by an odd number of backslashes, not inside {@code [...]} or {@code \Q...\E}, and
+     * not immediately followed by {@code ?} unless it opens a named-capture group
+     * ({@code (?<name>...)} or {@code (?P<name>...)}). Used to determine which {@code \N} digit
+     * sequences are valid backrefs vs. literal digits.
+     */
+    private static int countCapturingGroups(final String pattern) {
+        int count = 0;
+        final int n = pattern.length();
+        boolean inClass = false;
+        boolean inQuote = false;
+        int classDepth = 0;
+        for (int i = 0; i < n; i++) {
+            final char c = pattern.charAt(i);
+            if (c == '\\' && i + 1 < n) {
+                final char next = pattern.charAt(i + 1);
+                if (!inQuote && next == 'Q') {
+                    inQuote = true;
+                    i++;
+                    continue;
+                }
+                if (inQuote && next == 'E') {
+                    inQuote = false;
+                    i++;
+                    continue;
+                }
+                i++; // skip escaped char
+                continue;
+            }
+            if (inQuote) {
+                continue;
+            }
+            if (c == '[') {
+                if (!inClass) {
+                    inClass = true;
+                    classDepth = 1;
+                } else {
+                    classDepth++;
+                }
+                continue;
+            }
+            if (c == ']' && inClass) {
+                classDepth--;
+                if (classDepth == 0) {
+                    inClass = false;
+                }
+                continue;
+            }
+            if (inClass) {
+                continue;
+            }
+            if (c == '(') {
+                if (i + 1 >= n || pattern.charAt(i + 1) != '?') {
+                    count++;
+                } else if (i + 2 < n && pattern.charAt(i + 2) == '<'
+                        && i + 3 < n && pattern.charAt(i + 3) != '=' && pattern.charAt(i + 3) != '!') {
+                    count++; // (?<name>...)
+                } else if (i + 3 < n && pattern.charAt(i + 2) == 'P' && pattern.charAt(i + 3) == '<') {
+                    count++; // (?P<name>...)
+                }
+            }
+        }
+        return count;
     }
 
     /**
