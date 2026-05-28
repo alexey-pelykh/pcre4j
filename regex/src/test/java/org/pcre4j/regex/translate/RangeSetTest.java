@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class RangeSetTest {
@@ -156,5 +157,56 @@ class RangeSetTest {
         final String body = u.toPcre2ClassBody();
         // Should contain both ranges in some order
         assertTrue(body.contains("A-Z") || body.contains("a-z"));
+    }
+
+    // ---- Boundary contract for single/range ----
+
+    @Test
+    void singleRejectsNegative() {
+        assertThrows(IllegalArgumentException.class, () -> RangeSet.single(-1));
+    }
+
+    @Test
+    void singleRejectsAboveMax() {
+        assertThrows(IllegalArgumentException.class, () -> RangeSet.single(0x110000));
+    }
+
+    @Test
+    void singleAcceptsBoundaries() {
+        assertEquals(1, RangeSet.single(0).rangeCount());
+        assertEquals(1, RangeSet.single(0x10FFFF).rangeCount());
+    }
+
+    @Test
+    void rangeRejectsNegativeLo() {
+        assertThrows(IllegalArgumentException.class, () -> RangeSet.range(-1, 5));
+    }
+
+    @Test
+    void rangeRejectsHiAboveMax() {
+        assertThrows(IllegalArgumentException.class, () -> RangeSet.range(0, 0x110000));
+    }
+
+    @Test
+    void rangeRejectsInverted() {
+        assertThrows(IllegalArgumentException.class, () -> RangeSet.range(5, 4));
+    }
+
+    // ---- Adjacent-range merge in union ----
+
+    @Test
+    void unionMergesAdjacentRanges() {
+        // [a-c] ∪ [d-f] should collapse into a single contiguous [a-f] range.
+        final RangeSet merged = RangeSet.range('a', 'c').union(RangeSet.range('d', 'f'));
+        assertEquals(1, merged.rangeCount(),
+                "adjacent ranges must be merged; got: " + merged.toPcre2ClassBody());
+        assertEquals("a-f", merged.toPcre2ClassBody());
+    }
+
+    @Test
+    void unionMergesOverlappingRanges() {
+        final RangeSet merged = RangeSet.range('a', 'e').union(RangeSet.range('c', 'g'));
+        assertEquals(1, merged.rangeCount());
+        assertEquals("a-g", merged.toPcre2ClassBody());
     }
 }

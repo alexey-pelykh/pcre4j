@@ -1123,4 +1123,16 @@ public class PatternTests {
         assertFalse(asMatchPredicate.test("abc"));
     }
 
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void compileFailurePreservesPcre2CompileExceptionCause(IPcre2 api) {
+        // An invalid pattern (unclosed group) must bubble up as PatternSyntaxException whose
+        // cause is the underlying Pcre2CompileException so support can diagnose root causes.
+        var ex = assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> Pattern.compile(api, "(abc"));
+        assertEquals("(abc", ex.getPattern());
+        assertTrue(ex.getCause() instanceof org.pcre4j.exception.Pcre2CompileException,
+                "expected cause to be Pcre2CompileException, got: " + ex.getCause());
+    }
+
 }

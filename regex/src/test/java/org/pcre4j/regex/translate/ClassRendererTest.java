@@ -143,4 +143,16 @@ class ClassRendererTest {
         final String result = render("[a-m&&m-z&&a-c]");
         assertEquals("[^\\x{0}-\\x{10FFFF}]", result);
     }
+
+    @Test
+    void nestedNegatedWithUnknownPropertyPreservesNegation() {
+        // [abc[^\p{UnknownXyz}]] — the inner Negated wraps an un-evaluable property leaf.
+        // emitFlat must surface this through the fallback so the resulting class still contains
+        // a "[^...]" sub-class (the negation must not be silently dropped).
+        final String result = render("[abc[^\\p{UnknownXyz}]]");
+        assertTrue(result.contains("[^"),
+                "nested negation must be preserved in rendered class: " + result);
+        assertTrue(result.contains("\\p{UnknownXyz}"),
+                "unknown property must be passed through verbatim: " + result);
+    }
 }
