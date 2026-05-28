@@ -15,11 +15,11 @@ under GPLv2 + Classpath Exception.
 | `BMPTestCases.txt` | none |
 | `SupplementaryTestCases.txt` | none |
 | `GraphemeTestCases.txt` | none |
-| `RegExTest.java` | import switched from `java.util.regex` to `org.pcre4j.regex` (see RegExTestRunner.java); methods reflecting on JDK private API marked `@Disabled` |
-| `NamedGroupsTests.java` | same as RegExTest |
-| `SplitWithDelimitersTest.java` | same |
-| `POSIX_ASCII.java` / `POSIX_Unicode.java` | unmodified (helper truth tables) |
-| `ImmutableMatchResultTest.java` | replaced `jdk.test.lib.RandomFactory` with `new Random(0xC0FFEEL)`; import switch |
-| `NegativeArraySize.java` | import switch |
+| `RegExTest.java` | Package + import switch (`Pattern`/`Matcher` → `org.pcre4j.regex`; `MatchResult`/`PatternSyntaxException` kept as JDK); `import jdk.test.lib.RandomFactory` removed, usage replaced with `new java.util.Random(0xC0FFEEL)`; TestNG imports replaced with JUnit 5 + local `Assert.java` shim; method bodies of `grapheme()` (needs UCDFiles / Scanner type incompatibility), `patternAsPredicate()` and `patternAsMatchPredicate()` (Predicate&lt;CharSequence&gt; vs Predicate&lt;String&gt;) replaced with `throw new RuntimeException`; `serializeTest` skipped via `RegExTestRunner.SKIP` |
+| `NamedGroupsTests.java` | Package + import switch (`Pattern`/`Matcher` → `org.pcre4j.regex`; `MatchResult` kept as JDK) |
+| `SplitWithDelimitersTest.java` | Package + import switch (`Pattern` → `org.pcre4j.regex`) |
+| `POSIX_ASCII.java` / `POSIX_Unicode.java` | Package declaration added; no other modifications |
+| `ImmutableMatchResultTest.java` | Package + import switch (`Pattern`/`Matcher` → `org.pcre4j.regex`; `MatchResult` kept as JDK); `import jdk.test.lib.RandomFactory` removed, usage replaced with `new java.util.Random(0xC0FFEEL)` |
+| `NegativeArraySize.java` | Package + import switch (`Pattern` → `org.pcre4j.regex`); TestNG `@Test`/`assertThrows` replaced with JUnit 5 equivalents |
 
 See `../../../../../../LICENSE.NOTICE` for the full license notice.
