@@ -18,7 +18,6 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClassRendererTest {
@@ -109,9 +108,22 @@ class ClassRendererTest {
     void intersectionWithJdkExpandableProperty() {
         // [\p{L}&&[a-z]] — \p{L} is expanded via JdkPropertyExpander; intersection = [a-z]
         final String result = render("[\\p{L}&&[a-z]]");
-        // After expansion the && is gone and the result is a flat class
-        assertNotNull(result);
-        assertFalse(result.contains("&&"), "Should not contain && after evaluation: " + result);
+        // Should evaluate to exactly the ASCII lowercase letters range.
+        assertEquals("[a-z]", result);
+    }
+
+    @Test
+    void pureIntersectionFallbackWithUnknownProperty() {
+        // [\p{UnknownXyz}&&[a-z]] — Evaluator.toRangeSet fails on the unknown property in any
+        // strategy, so renderWithIntersection must reach Strategy 3 (original-style fallback)
+        // and emit a class that preserves both operands and the && separator verbatim.
+        final String result = render("[\\p{UnknownXyz}&&[a-z]]");
+        assertTrue(result.contains("\\p{UnknownXyz}"),
+                "unknown property must be passed through verbatim: " + result);
+        assertTrue(result.contains("&&"),
+                "intersection operator must be preserved in fallback: " + result);
+        assertTrue(result.contains("a-z") || result.contains("a") && result.contains("z"),
+                "second operand must be preserved: " + result);
     }
 
     @Test

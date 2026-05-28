@@ -1135,4 +1135,16 @@ public class PatternTests {
                 "expected cause to be Pcre2CompileException, got: " + ex.getCause());
     }
 
+    @ParameterizedTest
+    @MethodSource("org.pcre4j.test.BackendProvider#parameters")
+    void translatorThrownPatternSyntaxExceptionPreservesOriginalPattern(IPcre2 api) {
+        // The translator surfaces JDK-compatible diagnostics for invalid quantifier positions
+        // (e.g. "\\{x}" is "literal backslash" + "{x}" which is a bad quantifier).
+        // The thrown PatternSyntaxException must carry the *original* Java pattern through
+        // getPattern() so support tooling sees what the user passed in, not the translator output.
+        var ex = assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> Pattern.compile(api, "\\\\{x}"));
+        assertEquals("\\\\{x}", ex.getPattern());
+    }
+
 }

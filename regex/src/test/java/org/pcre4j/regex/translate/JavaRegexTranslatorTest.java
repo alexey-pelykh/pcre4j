@@ -217,6 +217,15 @@ class JavaRegexTranslatorTest {
         final String out = JavaRegexTranslator.translate("[\\p{L}&&[\\P{InGreek}]]", 0);
         assertFalse(out.contains("&&"), "Should not contain && after evaluation: " + out);
         assertFalse(out.contains("[["), "Should not have nested [[ after evaluation: " + out);
+        // Positive content checks: the ASCII Latin letter ranges must survive the intersection
+        // (they are Letters and not Greek), while the Greek block U+0370..U+03FF must be excluded
+        // — no range may span any Greek code point.
+        assertTrue(out.contains("A-Z"),
+                "Latin uppercase range A-Z must be retained: " + out);
+        assertTrue(out.contains("a-z"),
+                "Latin lowercase range a-z must be retained: " + out);
+        assertFalse(out.contains("\\x{3B1}") || out.contains("\\x{3A9}"),
+                "Greek letters (α/Ω) must not appear as standalone code points: " + out);
     }
 
     // --- Escaped quantifier-brace must not be rejected (review critical #1) ---
