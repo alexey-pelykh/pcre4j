@@ -153,27 +153,19 @@ public final class ClassRenderer {
                 return EMPTY_CLASS;
             }
             return "[" + rs.toPcre2ClassBody() + "]";
-        } catch (EvaluationFailedException e) {
-            // Fall through to strategy 2
+        } catch (EvaluationFailedException strategy1Failure) {
+            // Strategy 2 below
         }
 
         // Strategy 2: If the top node is Intersection, try each operand individually
         if (inner instanceof ClassNode.Intersection inter) {
-            final String result = tryEvaluateIntersection(inter);
-            if (result != null) {
-                if (negated) {
-                    // Negate the whole intersection result
-                    try {
-                        final RangeSet rs = Evaluator.toRangeSet(inner).complement();
-                        if (rs.isEmpty()) {
-                            return EMPTY_CLASS;
-                        }
-                        return "[" + rs.toPcre2ClassBody() + "]";
-                    } catch (EvaluationFailedException e2) {
-                        // Should not happen since tryEvaluateIntersection succeeded
-                    }
+            final RangeSet rs = tryEvaluateIntersectionRangeSet(inter);
+            if (rs != null) {
+                final RangeSet effective = negated ? rs.complement() : rs;
+                if (effective.isEmpty()) {
+                    return EMPTY_CLASS;
                 }
-                return result;
+                return "[" + effective.toPcre2ClassBody() + "]";
             }
         }
 
@@ -190,10 +182,10 @@ public final class ClassRenderer {
     }
 
     /**
-     * Tries to evaluate each operand of the intersection independently, then intersect results.
-     * Returns the rendered class string, or {@code null} if any operand cannot be evaluated.
+     * Tries to evaluate each operand of the intersection independently and intersects them.
+     * Returns the intersected {@link RangeSet}, or {@code null} if any operand cannot be evaluated.
      */
-    private static String tryEvaluateIntersection(final ClassNode.Intersection inter) {
+    private static RangeSet tryEvaluateIntersectionRangeSet(final ClassNode.Intersection inter) {
         final List<ClassNode> operands = inter.operands();
         final List<RangeSet> sets = new ArrayList<>(operands.size());
         for (final ClassNode op : operands) {
@@ -207,10 +199,7 @@ public final class ClassRenderer {
         for (final RangeSet rs : sets) {
             result = result.intersect(rs);
         }
-        if (result.isEmpty()) {
-            return EMPTY_CLASS;
-        }
-        return "[" + result.toPcre2ClassBody() + "]";
+        return result;
     }
 
     /** Emits the intersection's operands with {@code &&} separators (PCRE2 fallback). */

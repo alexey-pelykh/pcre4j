@@ -79,12 +79,9 @@ class ClassRendererTest {
 
     @Test
     void intersectionDisjoint() {
-        // [a-c&&d-f] = empty set
+        // [a-c&&d-f] = empty set → empty-class sentinel
         final String result = render("[a-c&&d-f]");
-        // Should be the empty-class representation
-        assertNotNull(result);
-        assertFalse(result.isEmpty());
-        // The class should match nothing
+        assertEquals("[^\\x{0}-\\x{10FFFF}]", result);
     }
 
     @Test
@@ -119,9 +116,18 @@ class ClassRendererTest {
 
     @Test
     void nestedNegatedIntersection() {
-        // [^[a-c]&&[d-f]] negated intersection of disjoint = negated empty = everything
+        // [^[a-c]&&[d-f]] — disjoint intersection is empty; negated empty = match anything.
+        // Critical regression: previous code dropped the '^' silently in some fallback paths.
         final String result = render("[^[a-c]&&[d-f]]");
-        assertNotNull(result);
+        assertEquals("[\\x{0}-\\x{10FFFF}]", result);
+    }
+
+    @Test
+    void negatedIntersectionOfRanges() {
+        // [^a-c&&b-d] = ^[b-c] — strategy 1 evaluates+complements, producing a positive
+        // class covering all code points except b,c.  Exact rendered form: [\x{0}-ad-\x{10FFFF}].
+        final String result = render("[^a-c&&b-d]");
+        assertEquals("[\\x{0}-ad-\\x{10FFFF}]", result);
     }
 
     @Test
@@ -133,9 +139,8 @@ class ClassRendererTest {
 
     @Test
     void multipleIntersectionOperands() {
-        // [a-m&&m-z&&a-c] = {m} ∩ [a-c] = {m} but m > c, so empty
+        // [a-m&&m-z&&a-c] = {m} ∩ [a-c] = empty since 'm' > 'c'
         final String result = render("[a-m&&m-z&&a-c]");
-        // {m} ∩ [a-c] = empty since 'm' > 'c'
-        assertNotNull(result);
+        assertEquals("[^\\x{0}-\\x{10FFFF}]", result);
     }
 }
