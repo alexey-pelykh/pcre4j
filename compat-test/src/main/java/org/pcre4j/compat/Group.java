@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2026 Oleksii PELYKH
+ * Copyright (C) 2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -12,18 +12,6 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-rootProject.name = "pcre4j"
+package org.pcre4j.compat;
 
-include(":api")
-include(":lib")
-include(":compat-test")
-include(":jna")
-include(":ffm")
-include(":regex")
-include(":benchmark")
-include(":native:linux-x86_64")
-include(":native:linux-aarch64")
-include(":native:macos-x86_64")
-include(":native:macos-aarch64")
-include(":native:windows-x86_64")
-include(":native:all")
+public record Group(String name, int start, int end, String text) {}

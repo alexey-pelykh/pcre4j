@@ -40,9 +40,12 @@ dependencies {
     testImplementation(project(":jna"))
 }
 
-configurations.all {
-    resolutionStrategy {
-        failOnVersionConflict()
+configurations {
+    implementation {
+        resolutionStrategy.failOnVersionConflict()
+    }
+    testImplementation {
+        resolutionStrategy.failOnVersionConflict()
     }
 }
 
