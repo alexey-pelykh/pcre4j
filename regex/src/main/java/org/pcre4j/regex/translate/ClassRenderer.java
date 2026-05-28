@@ -106,12 +106,16 @@ public final class ClassRenderer {
             case ClassNode.PropertyLeaf leaf -> sb.append(leaf.pcre2Token());
             case ClassNode.Negated neg -> {
                 // A negated subtree inside a non-negated flat class.
-                // Evaluate + complement so we can inline the ranges. If evaluation fails the
-                // exception propagates and render() falls back to original-style emission.
-                final RangeSet rs = Evaluator.tryToRangeSet(neg.child());
-                if (rs == null) {
+                // Evaluate + complement so we can inline the ranges. Use toRangeSet directly so
+                // the underlying EvaluationFailedException propagates with its full cause chain
+                // (root cause preserved for support/diagnostics); render() falls back to
+                // original-style emission on failure.
+                final RangeSet rs;
+                try {
+                    rs = Evaluator.toRangeSet(neg.child());
+                } catch (EvaluationFailedException e) {
                     throw new EvaluationFailedException(
-                            "Cannot flatten nested [^...]; caller must fall back");
+                            "Cannot flatten nested [^...]; caller must fall back", e);
                 }
                 sb.append(rs.complement().toPcre2ClassBody());
             }
@@ -131,7 +135,9 @@ public final class ClassRenderer {
     /**
      * Emits the body of {@code node} in "original style" — keeping nested {@code [^...]} sub-classes
      * intact (not expanding them) so that PCRE2 parses the result the same way the pre-Phase-2
-     * output was parsed.  Used exclusively in the intersection fallback path.
+     * output was parsed. Called by both the intersection fallback path
+     * ({@link #renderWithIntersection}) and the simple-path catch in {@link #render} when a nested
+     * negated subtree cannot be evaluated.
      */
     private static void emitOriginalStyle(final ClassNode node, final StringBuilder sb) {
         switch (node) {

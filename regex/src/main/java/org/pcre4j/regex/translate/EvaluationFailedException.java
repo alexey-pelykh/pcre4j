@@ -24,4 +24,8 @@ public final class EvaluationFailedException extends Exception {
     public EvaluationFailedException(final String message) {
         super(message);
     }
+
+    public EvaluationFailedException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
 }
