@@ -199,4 +199,57 @@ class ClassBodyParserTest {
         assertThrows(IllegalArgumentException.class, () -> parse("[\\u00]"));
         assertThrows(IllegalArgumentException.class, () -> parse("[\\u00A]"));
     }
+
+    // ---- Escape sequence coverage ----
+
+    @Test
+    void octalEscapeAcceptsThreeDigits() {
+        // \0101 should decode to 'A' (0o101 = 0x41) — Java spec allows 3 octal digits
+        final ClassNode node = parse("[\\0101]");
+        assertEquals(new ClassNode.Literal(0x41), node);
+    }
+
+    @Test
+    void octalEscapeStopsAtNonOctalChar() {
+        // \08 → \0 then literal '8' (8 is not octal)
+        final ClassNode node = parse("[\\08]");
+        assertInstanceOf(ClassNode.Union.class, node);
+        final ClassNode.Union u = (ClassNode.Union) node;
+        assertEquals(2, u.children().size());
+        assertEquals(new ClassNode.Literal(0), u.children().get(0));
+        assertEquals(new ClassNode.Literal('8'), u.children().get(1));
+    }
+
+    @Test
+    void octalEscapeCappedAtFF() {
+        // \0400 — third digit would make value 0x100, which exceeds 0xFF.
+        // Java rejects this whole syntactic form, but the parser stops at 2 digits ⇒ value 0o40 = 0x20
+        // and leaves '0' as a literal.
+        final ClassNode node = parse("[\\0400]");
+        assertInstanceOf(ClassNode.Union.class, node);
+        final ClassNode.Union u = (ClassNode.Union) node;
+        assertEquals(2, u.children().size());
+        assertEquals(new ClassNode.Literal(0x20), u.children().get(0));
+        assertEquals(new ClassNode.Literal('0'), u.children().get(1));
+    }
+
+    @Test
+    void controlCharacterEscape() {
+        // \cA should yield 0x01
+        final ClassNode node = parse("[\\cA]");
+        assertEquals(new ClassNode.Literal(0x01), node);
+    }
+
+    @Test
+    void simpleEscapesProduceLiterals() {
+        assertEquals(new ClassNode.Literal(0x07), parse("[\\a]"));
+        assertEquals(new ClassNode.Literal(0x1B), parse("[\\e]"));
+        assertEquals(new ClassNode.Literal('\n'), parse("[\\n]"));
+        assertEquals(new ClassNode.Literal('\t'), parse("[\\t]"));
+    }
+
+    @Test
+    void trailingBackslashThrows() {
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\"));
+    }
 }

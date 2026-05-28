@@ -241,18 +241,21 @@ public final class ClassBodyParser {
             case 'a': return new ClassNode.Literal(0x07);  // BEL
             case 'e': return new ClassNode.Literal(0x1B);  // ESC
             case '0': {
-                // Octal: \0dd (Java allows \0 followed by up to 2 more octal digits)
+                // Java octal escape: \0n, \0nn, \0mnn where m∈[0-3], n∈[0-7] (max value 0xFF)
                 int val = 0;
                 int count = 0;
-                while (pos[0] < len && count < 2) {
+                while (pos[0] < len && count < 3) {
                     final char d = s.charAt(pos[0]);
-                    if (d >= '0' && d <= '7') {
-                        val = val * 8 + (d - '0');
-                        pos[0]++;
-                        count++;
-                    } else {
+                    if (d < '0' || d > '7') {
                         break;
                     }
+                    final int next = val * 8 + (d - '0');
+                    if (next > 0xFF) {
+                        break;
+                    }
+                    val = next;
+                    pos[0]++;
+                    count++;
                 }
                 return new ClassNode.Literal(val);
             }
