@@ -22,6 +22,7 @@
 module org.pcre4j.regex {
     requires transitive org.pcre4j.api;
     requires transitive org.pcre4j;
+    requires java.logging;
 
     exports org.pcre4j.regex;
 }

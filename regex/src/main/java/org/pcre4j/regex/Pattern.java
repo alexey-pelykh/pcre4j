@@ -32,6 +32,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
@@ -55,6 +57,35 @@ import java.util.stream.Stream;
  * may observe higher native memory usage until the garbage collector runs.</p>
  */
 public class Pattern {
+
+    private static final Logger LOG = Logger.getLogger(Pattern.class.getName());
+
+    /** Tracks whether we've already logged that the translator is disabled, to avoid spam. */
+    private static volatile boolean translatorDisabledLogged = false;
+
+    /** Whether the Java→PCRE2 syntax translator is active (see {@code pcre4j.regex.translate}). */
+    private static boolean translatorEnabled() {
+        final String prop = System.getProperty("pcre4j.regex.translate");
+        if (prop == null) {
+            return true;
+        }
+        // Accept "true"/"false" case-insensitively; anything else is logged and treated as "true"
+        // so that typos like "flase" or "0" don't silently turn the translator off.
+        if (prop.equalsIgnoreCase("true")) {
+            return true;
+        }
+        if (prop.equalsIgnoreCase("false")) {
+            if (!translatorDisabledLogged) {
+                translatorDisabledLogged = true;
+                LOG.info("pcre4j: Java->PCRE2 syntax translator disabled "
+                        + "via -Dpcre4j.regex.translate=false");
+            }
+            return false;
+        }
+        LOG.warning("pcre4j: unrecognised value for pcre4j.regex.translate="
+                + prop + "; defaulting to true");
+        return true;
+    }
 
     /**
      * A {@link java.util.regex.Pattern#CASE_INSENSITIVE}-compatible flag implemented via
@@ -203,8 +234,23 @@ public class Pattern {
         // The original regex is preserved in this.regex for pattern() method.
         // Translation can be disabled via -Dpcre4j.regex.translate=false.
         String translated = regex;
-        if (Boolean.parseBoolean(System.getProperty("pcre4j.regex.translate", "true"))) {
-            translated = org.pcre4j.regex.translate.JavaRegexTranslator.translate(regex, flags);
+        if (translatorEnabled()) {
+            try {
+                translated = org.pcre4j.regex.translate.JavaRegexTranslator.translate(regex, flags);
+            } catch (PatternSyntaxException e) {
+                // Translator deliberately surfaced a JDK-compatible diagnostic (e.g. "Illegal
+                // repetition"); pass it through unchanged.
+                throw e;
+            } catch (RuntimeException e) {
+                // Unexpected translator bug — wrap so support can tell it apart from a PCRE2 error
+                // and the original cause is preserved.
+                LOG.log(Level.WARNING,
+                        "pcre4j: translator failed for pattern; rethrowing", e);
+                final PatternSyntaxException pse = new PatternSyntaxException(
+                        "translator: " + e.getMessage(), regex, 0);
+                pse.initCause(e);
+                throw pse;
+            }
         }
 
         // When CANON_EQ is set, normalize the (already translated) pattern to NFD form for compilation
@@ -271,7 +317,9 @@ public class Pattern {
             if (offset < 0 || offset > regex.length()) {
                 offset = Math.max(0, Math.min(regex.length(), offset));
             }
-            throw new PatternSyntaxException(e.message(), regex, offset);
+            final PatternSyntaxException pse = new PatternSyntaxException(e.message(), regex, offset);
+            pse.initCause(e);
+            throw pse;
         }
 
         namedGroups = new HashMap<>();
