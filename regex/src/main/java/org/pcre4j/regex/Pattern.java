@@ -265,7 +265,13 @@ public class Pattern {
             }
         } catch (Pcre2CompileException e) {
             // Surface the original (untranslated) pattern in the exception, per JDK contract.
-            throw new PatternSyntaxException(e.message(), regex, (int) e.offset());
+            // The offset reported by PCRE2 is into the translated pattern and can exceed
+            // regex.length() when translation inserted characters; clamp into the original range.
+            int offset = (int) e.offset();
+            if (offset < 0 || offset > regex.length()) {
+                offset = Math.max(0, Math.min(regex.length(), offset));
+            }
+            throw new PatternSyntaxException(e.message(), regex, offset);
         }
 
         namedGroups = new HashMap<>();
