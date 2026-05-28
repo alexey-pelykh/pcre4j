@@ -191,12 +191,52 @@ public final class JavaRegexTranslator {
                 }
             }
 
+            // --- Quantifier-brace validation (JDK parity) ---
+            // At this point '{' is in quantifier position: not escaped, not inside a class,
+            // not inside Q...E, and not consumed as part of property/hex escapes.
+            // JDK rejects any {body} where body is not /\d+(,\d*)?/ with "Illegal repetition".
+            if (c == '{') {
+                final int close = javaPattern.indexOf('}', i + 1);
+                if (close > i) {
+                    final String body = javaPattern.substring(i + 1, close);
+                    if (!isValidQuantifierBody(body)) {
+                        throw new java.util.regex.PatternSyntaxException(
+                                "Illegal repetition", javaPattern, i);
+                    }
+                }
+            }
+
             // Normal character — copy verbatim
             out.append(c);
             i++;
         }
 
         return out.toString();
+    }
+
+    private static boolean isValidQuantifierBody(final String body) {
+        if (body.isEmpty()) {
+            return false;
+        }
+        final int n = body.length();
+        int k = 0;
+        while (k < n && body.charAt(k) >= '0' && body.charAt(k) <= '9') {
+            k++;
+        }
+        if (k == 0) {
+            return false;
+        }
+        if (k == n) {
+            return true;
+        }
+        if (body.charAt(k) != ',') {
+            return false;
+        }
+        k++;
+        while (k < n && body.charAt(k) >= '0' && body.charAt(k) <= '9') {
+            k++;
+        }
+        return k == n;
     }
 
     /**

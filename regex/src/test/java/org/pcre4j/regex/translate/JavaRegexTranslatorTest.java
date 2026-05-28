@@ -59,8 +59,29 @@ class JavaRegexTranslatorTest {
 
     @Test
     void doesNotRewriteEscapedBackslashFollowedByP() {
-        // \\p{X} is "literal backslash" + "p{X}", not a property token
-        assertEquals("\\\\p{InGreek}", JavaRegexTranslator.translate("\\\\p{InGreek}", 0));
+        // \\p{X} is "literal backslash" + "p" + "{X}" — JDK itself rejects this with
+        // "Illegal repetition" because {X} after the literal 'p' is not a valid quantifier.
+        // Our translator must match JDK by throwing PatternSyntaxException.
+        assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> JavaRegexTranslator.translate("\\\\p{InGreek}", 0));
+    }
+
+    @Test
+    void rejectsIllegalQuantifierBody() {
+        // a{^InGreek} — JDK rejects, PCRE2 accepts. Translator pre-rejects for JDK parity.
+        assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> JavaRegexTranslator.translate("a{^InGreek}", 0));
+        assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> JavaRegexTranslator.translate("a{}", 0));
+        assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> JavaRegexTranslator.translate("a{,3}", 0));
+    }
+
+    @Test
+    void acceptsValidQuantifiers() {
+        assertEquals("a{3}", JavaRegexTranslator.translate("a{3}", 0));
+        assertEquals("a{3,}", JavaRegexTranslator.translate("a{3,}", 0));
+        assertEquals("a{3,5}", JavaRegexTranslator.translate("a{3,5}", 0));
     }
 
     @Test
