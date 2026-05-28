@@ -193,12 +193,10 @@ final class JdkPropertyExpander {
                 }
             }
 
-            try {
-                final String sname = Character.UnicodeScript.of(cp).name();
-                scriptBuilders.computeIfAbsent(sname, k -> new SpanBuilder()).add(cp);
-            } catch (final IllegalArgumentException ignored) {
-                // Skipped; shouldn't happen for valid code points
-            }
+            // Note: Character.UnicodeScript.of(int) only throws IllegalArgumentException for
+            // codePoints outside [0, MAX_CODE_POINT] — by construction we never pass such a value.
+            final String sname = Character.UnicodeScript.of(cp).name();
+            scriptBuilders.computeIfAbsent(sname, k -> new SpanBuilder()).add(cp);
         }
 
         final Map<String, RangeSet> map = new HashMap<>();
