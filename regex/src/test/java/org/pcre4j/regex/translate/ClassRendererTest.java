@@ -106,12 +106,12 @@ class ClassRendererTest {
     }
 
     @Test
-    void intersectionWithUnknownProperty() {
-        // [\p{L}&&[a-z]] — \p{L} cannot be expanded to ranges, should fall back
+    void intersectionWithJdkExpandableProperty() {
+        // [\p{L}&&[a-z]] — \p{L} is expanded via JdkPropertyExpander; intersection = [a-z]
         final String result = render("[\\p{L}&&[a-z]]");
-        // Fallback: emit with && (PCRE2 will reject, but that's acceptable for unknown properties)
-        // Or if evaluation partially works, might get [a-z] out
+        // After expansion the && is gone and the result is a flat class
         assertNotNull(result);
+        assertFalse(result.contains("&&"), "Should not contain && after evaluation: " + result);
     }
 
     @Test

@@ -95,7 +95,13 @@ public final class Evaluator {
             case "\\p{Graph}" -> GRAPH;
             case "\\p{Print}" -> PRINT;
             case "\\p{Punct}" -> PUNCT;
-            default -> throw new EvaluationFailedException("Cannot expand property: " + token);
+            default -> {
+                final RangeSet jdk = JdkPropertyExpander.expand(token);
+                if (jdk != null) {
+                    yield jdk;
+                }
+                throw new EvaluationFailedException("Cannot expand property: " + token);
+            }
         };
     }
 

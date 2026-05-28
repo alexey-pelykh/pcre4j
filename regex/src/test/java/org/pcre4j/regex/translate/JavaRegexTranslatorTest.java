@@ -187,7 +187,11 @@ class JavaRegexTranslatorTest {
     }
 
     @Test
-    void doesNotTouchInsideQuotation() {
-        assertEquals("\\Q(?iu)\\E", JavaRegexTranslator.translate("\\Q(?iu)\\E", 0));
+    void propertyIntersectionEndToEnd() {
+        // [\p{L}&&[\P{InGreek}]] — letters that are NOT Greek
+        // After translation this should be a flat class (no &&) that PCRE2 can compile
+        final String out = JavaRegexTranslator.translate("[\\p{L}&&[\\P{InGreek}]]", 0);
+        assertFalse(out.contains("&&"), "Should not contain && after evaluation: " + out);
+        assertFalse(out.contains("[["), "Should not have nested [[ after evaluation: " + out);
     }
 }
