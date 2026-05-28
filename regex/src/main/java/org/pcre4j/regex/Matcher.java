@@ -1731,6 +1731,11 @@ public class Matcher implements java.util.regex.MatchResult {
                 } else if (MatcherPatternAnalysis.patternCanConsumeMoreAtEnd(pattern.pattern())) {
                     // Pattern has constructs that could consume more input at the end
                     hitEnd = true;
+                } else if (probePartialHardWouldExtend(regionSubject, matchOptions)) {
+                    // Use PCRE2 PARTIAL_HARD to detect cases where a longer subject could have
+                    // extended the match (e.g. ...\R consumed \r at end-of-input but could
+                    // have consumed \r\n if more input were available).
+                    hitEnd = true;
                 }
             }
         } else {
@@ -1758,19 +1763,55 @@ public class Matcher implements java.util.regex.MatchResult {
             if (partialResult == IPcre2.ERROR_PARTIAL) {
                 // Partial match exists - more input could lead to a match
                 hitEnd = true;
+            } else if (MatcherPatternAnalysis.patternIsAnchoredAtStart(pattern.pattern())) {
+                // Pattern is anchored at start (^ or \A): the search only tried the start
+                // position, and since the partial-match probe also failed there, the engine
+                // gave up on a hard mismatch before reaching end-of-input. Java reports
+                // hitEnd=false in this case.
+                hitEnd = false;
             } else {
-                // No partial match - but the search still needed to examine the input.
-                // In Java's implementation, hitEnd is typically true when no match is found
-                // because the search engine had to look through the entire input.
-                // Set hitEnd=true unless we can prove the search ended early.
-                //
-                // For a pattern like "xyz" against "abc", Java returns hitEnd=true because
-                // the search engine had to examine all positions to determine there's no match.
+                // Unanchored pattern: the search engine had to examine every position to
+                // determine no match, so by JDK convention hitEnd is true.
                 hitEnd = true;
             }
         }
     }
 
+
+    /**
+     * Probes whether the current match (which ended at end-of-input) could have been extended
+     * if more input were available, by re-running PCRE2 with {@link Pcre2MatchOption#PARTIAL_HARD}
+     * at the same start offset. PARTIAL_HARD treats end-of-input as "may have more later", so
+     * constructs like {@code \R} that matched a single {@code \r} will report a partial match
+     * instead of a successful complete match. This catches the JDK quirk where, e.g., matching
+     * {@code ...\R} against {@code "cat\r"} should set {@code hitEnd=true} because a trailing
+     * {@code \n} could turn the 1-char {@code \r} match into a 2-char {@code \r\n} match.
+     *
+     * @param regionSubject the region subject used for the original match
+     * @param matchOptions  the match options used for the original match
+     * @return {@code true} if PARTIAL_HARD reports a partial match (more input could extend)
+     */
+    private boolean probePartialHardWouldExtend(RegionSubject regionSubject,
+            EnumSet<Pcre2MatchOption> matchOptions) {
+        final var partialOptions = EnumSet.copyOf(matchOptions);
+        partialOptions.remove(Pcre2MatchOption.PARTIAL_SOFT);
+        partialOptions.add(Pcre2MatchOption.PARTIAL_HARD);
+        final var partialMatchData = new Pcre2MatchData(pattern.code);
+        final int result;
+        try {
+            result = pattern.code.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    partialOptions,
+                    partialMatchData,
+                    matchContext
+            );
+        } catch (RuntimeException e) {
+            // Backend doesn't support PARTIAL_HARD here — be conservative and don't claim hitEnd.
+            return false;
+        }
+        return result == IPcre2.ERROR_PARTIAL;
+    }
 
     /**
      * Process match results: convert ovector to string indices and adjust for region offset.

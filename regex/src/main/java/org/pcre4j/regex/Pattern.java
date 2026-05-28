@@ -261,23 +261,34 @@ public class Pattern {
         }
 
         this.compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
+        final boolean literal = (flags & LITERAL) != 0;
         if ((flags & CASE_INSENSITIVE) != 0) {
             compileOptions.add(Pcre2CompileOption.CASELESS);
+            // JDK \p{Lu} under CASE_INSENSITIVE matches both cases; PCRE2 needs UCP for this.
+            // UCP is incompatible with PCRE2_LITERAL, so skip it when literal mode is active
+            // (LITERAL strips all regex semantics anyway, so case-folding behaviour is unaffected).
+            if (!literal) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
         }
-        if ((flags & DOTALL) != 0) {
-            compileOptions.add(Pcre2CompileOption.DOTALL);
-        }
-        if ((flags & LITERAL) != 0) {
+        if (literal) {
             compileOptions.add(Pcre2CompileOption.LITERAL);
         }
-        if ((flags & MULTILINE) != 0) {
-            compileOptions.add(Pcre2CompileOption.MULTILINE);
-        }
-        if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
-            compileOptions.add(Pcre2CompileOption.UCP);
-        }
-        if ((flags & COMMENTS) != 0) {
-            compileOptions.add(Pcre2CompileOption.EXTENDED);
+        // PCRE2_LITERAL is incompatible with DOTALL/MULTILINE/EXTENDED/UCP.
+        // JDK Pattern semantics: LITERAL makes all other regex flags "superfluous".
+        if (!literal) {
+            if ((flags & DOTALL) != 0) {
+                compileOptions.add(Pcre2CompileOption.DOTALL);
+            }
+            if ((flags & MULTILINE) != 0) {
+                compileOptions.add(Pcre2CompileOption.MULTILINE);
+            }
+            if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
+            if ((flags & COMMENTS) != 0) {
+                compileOptions.add(Pcre2CompileOption.EXTENDED);
+            }
         }
         // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
         // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
@@ -298,7 +309,7 @@ public class Pattern {
                         api,
                         compiledRegex,
                         compileOptions,
-                        EnumSet.of(Pcre2JitOption.COMPLETE),
+                        EnumSet.of(Pcre2JitOption.COMPLETE, Pcre2JitOption.PARTIAL_SOFT, Pcre2JitOption.PARTIAL_HARD),
                         compileContext
                 );
             } else {

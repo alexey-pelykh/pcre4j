@@ -254,4 +254,52 @@ package org.pcre4j.regex;
 
         return false;
     }
+
+    /**
+     * Checks whether a pattern is anchored at the start (i.e. it can only match at the start of
+     * the search region/input). This is used by {@link Matcher} to decide whether the
+     * {@code hitEnd} flag must be inferred from a partial-match probe (anchored) or defaulted to
+     * {@code true} because an unanchored search engine must have scanned to end-of-input.
+     * <p>
+     * The check is intentionally conservative: only the leading construct of the pattern is
+     * examined, with leading inline-flag groups like {@code (?i)} skipped. Recognised anchors
+     * are {@code ^} and {@code \A}.
+     *
+     * @param pattern the pattern to inspect
+     * @return {@code true} if the pattern can only match at start of region/input
+     */
+    static boolean patternIsAnchoredAtStart(String pattern) {
+        int i = 0;
+        final int n = pattern.length();
+        // Skip leading inline flag groups like (?i), (?m), (?-x) — they don't change anchoring.
+        while (i + 1 < n && pattern.charAt(i) == '(' && pattern.charAt(i + 1) == '?') {
+            final int close = pattern.indexOf(')', i);
+            if (close < 0) {
+                return false;
+            }
+            boolean isFlagsOnly = true;
+            for (int j = i + 2; j < close; j++) {
+                final char c = pattern.charAt(j);
+                if (!(Character.isLetter(c) || c == '-')) {
+                    isFlagsOnly = false;
+                    break;
+                }
+            }
+            if (!isFlagsOnly) {
+                break;
+            }
+            i = close + 1;
+        }
+        if (i >= n) {
+            return false;
+        }
+        final char c = pattern.charAt(i);
+        if (c == '^') {
+            return true;
+        }
+        if (c == '\\' && i + 1 < n && pattern.charAt(i + 1) == 'A') {
+            return true;
+        }
+        return false;
+    }
 }
