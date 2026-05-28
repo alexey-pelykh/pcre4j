@@ -646,8 +646,8 @@ public class Pattern {
                     i = (end < 0) ? n - 1 : end + 1;
                     continue;
                 }
-                // Skip \p{...}, \P{...}, \N{...} so the inner braces are not parsed as repetition.
-                if ((esc == 'p' || esc == 'P' || esc == 'N') && i + 2 < n && regex.charAt(i + 2) == '{') {
+                // Skip \p{...}, \P{...}, \N{...}, \x{...} so the inner braces are not parsed as repetition.
+                if ((esc == 'p' || esc == 'P' || esc == 'N' || esc == 'x') && i + 2 < n && regex.charAt(i + 2) == '{') {
                     final int end = regex.indexOf('}', i + 3);
                     i = (end < 0) ? n - 1 : end;
                     continue;

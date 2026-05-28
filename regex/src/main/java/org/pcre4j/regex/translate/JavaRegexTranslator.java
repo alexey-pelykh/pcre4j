@@ -151,6 +151,27 @@ public final class JavaRegexTranslator {
                     }
                 }
 
+                // Java \0n, \0nn, \0mnn (m in 0-3) octal escape → PCRE2 \o{...}.
+                // PCRE2 treats \0dd differently (max 2 octal digits after \0), so we rewrite.
+                if (next == '0' && i + 2 < len && isOctalDigit(javaPattern.charAt(i + 2))) {
+                    int k = i + 2;
+                    int last = Math.min(k + 3, len);
+                    while (k < last && isOctalDigit(javaPattern.charAt(k))) {
+                        k++;
+                    }
+                    // 3-digit form requires first digit 0-3.
+                    if (k - (i + 2) == 3 && javaPattern.charAt(i + 2) > '3') {
+                        k--;
+                    }
+                    int value = 0;
+                    for (int p = i + 2; p < k; p++) {
+                        value = value * 8 + (javaPattern.charAt(p) - '0');
+                    }
+                    out.append("\\o{").append(Integer.toOctalString(value)).append('}');
+                    i = k;
+                    continue;
+                }
+
                 // Any other backslash sequence: copy backslash and advance.
                 out.append(c);
                 i++;
@@ -268,6 +289,10 @@ public final class JavaRegexTranslator {
 
     private static boolean isHexDigit(final char ch) {
         return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+    }
+
+    private static boolean isOctalDigit(final char ch) {
+        return ch >= '0' && ch <= '7';
     }
 
     /**
