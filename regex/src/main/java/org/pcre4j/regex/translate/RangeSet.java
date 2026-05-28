@@ -14,8 +14,7 @@
  */
 package org.pcre4j.regex.translate;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 /**
  * Immutable, sorted, disjoint set of Unicode code-point ranges over [0, 0x10FFFF].
@@ -71,32 +70,34 @@ public final class RangeSet {
         if (other.isEmpty()) {
             return this;
         }
-        // Merge two sorted range lists
-        final List<Integer> merged = new ArrayList<>(this.ranges.length + other.ranges.length);
+        final int[] a = this.ranges;
+        final int[] b = other.ranges;
+        final int[] merged = new int[a.length + b.length];
         int i = 0;
         int j = 0;
-        while (i < this.ranges.length && j < other.ranges.length) {
-            if (this.ranges[i] <= other.ranges[j]) {
-                merged.add(this.ranges[i]);
-                merged.add(this.ranges[i + 1]);
+        int k = 0;
+        while (i < a.length && j < b.length) {
+            if (a[i] <= b[j]) {
+                merged[k++] = a[i];
+                merged[k++] = a[i + 1];
                 i += 2;
             } else {
-                merged.add(other.ranges[j]);
-                merged.add(other.ranges[j + 1]);
+                merged[k++] = b[j];
+                merged[k++] = b[j + 1];
                 j += 2;
             }
         }
-        while (i < this.ranges.length) {
-            merged.add(this.ranges[i]);
-            merged.add(this.ranges[i + 1]);
+        while (i < a.length) {
+            merged[k++] = a[i];
+            merged[k++] = a[i + 1];
             i += 2;
         }
-        while (j < other.ranges.length) {
-            merged.add(other.ranges[j]);
-            merged.add(other.ranges[j + 1]);
+        while (j < b.length) {
+            merged[k++] = b[j];
+            merged[k++] = b[j + 1];
             j += 2;
         }
-        return normalise(merged);
+        return normalise(merged, k);
     }
 
     /** Returns the intersection of this set and {@code other}. */
@@ -104,24 +105,26 @@ public final class RangeSet {
         if (this.isEmpty() || other.isEmpty()) {
             return EMPTY;
         }
-        final List<Integer> result = new ArrayList<>();
+        final int[] a = this.ranges;
+        final int[] b = other.ranges;
+        final int[] tmp = new int[a.length + b.length];
         int i = 0;
         int j = 0;
-        while (i < this.ranges.length && j < other.ranges.length) {
-            final int lo = Math.max(this.ranges[i], other.ranges[j]);
-            final int hi = Math.min(this.ranges[i + 1], other.ranges[j + 1]);
+        int k = 0;
+        while (i < a.length && j < b.length) {
+            final int lo = Math.max(a[i], b[j]);
+            final int hi = Math.min(a[i + 1], b[j + 1]);
             if (lo <= hi) {
-                result.add(lo);
-                result.add(hi);
+                tmp[k++] = lo;
+                tmp[k++] = hi;
             }
-            // advance the one that ends first
-            if (this.ranges[i + 1] < other.ranges[j + 1]) {
+            if (a[i + 1] < b[j + 1]) {
                 i += 2;
             } else {
                 j += 2;
             }
         }
-        return fromList(result);
+        return finish(tmp, k);
     }
 
     /** Returns the complement of this set within [0, MAX_CP]. */
@@ -129,22 +132,21 @@ public final class RangeSet {
         if (this.isEmpty()) {
             return ALL;
         }
-        final List<Integer> result = new ArrayList<>();
+        final int[] tmp = new int[ranges.length + 2];
+        int k = 0;
         int prev = 0;
         for (int i = 0; i < ranges.length; i += 2) {
-            final int lo = ranges[i];
-            final int hi = ranges[i + 1];
-            if (prev < lo) {
-                result.add(prev);
-                result.add(lo - 1);
+            if (prev < ranges[i]) {
+                tmp[k++] = prev;
+                tmp[k++] = ranges[i] - 1;
             }
-            prev = hi + 1;
+            prev = ranges[i + 1] + 1;
         }
         if (prev <= MAX_CP) {
-            result.add(prev);
-            result.add(MAX_CP);
+            tmp[k++] = prev;
+            tmp[k++] = MAX_CP;
         }
-        return fromList(result);
+        return finish(tmp, k);
     }
 
     /** Returns {@code this - other} (set difference). */
@@ -185,12 +187,10 @@ public final class RangeSet {
         for (int i = 0; i < ranges.length; i += 2) {
             final int lo = ranges[i];
             final int hi = ranges[i + 1];
-            if (lo == hi) {
-                appendCp(sb, lo);
-            } else {
-                appendCp(sb, lo);
+            ClassRenderer.emitLiteralInClass(lo, sb);
+            if (lo != hi) {
                 sb.append('-');
-                appendCp(sb, hi);
+                ClassRenderer.emitLiteralInClass(hi, sb);
             }
         }
         return sb.toString();
@@ -221,66 +221,37 @@ public final class RangeSet {
     // private helpers
     // -----------------------------------------------------------------------
 
-    /** Emits a single code point in the class-body representation. */
-    private static void appendCp(final StringBuilder sb, final int cp) {
-        if (cp >= 0x20 && cp <= 0x7E) {
-            // Printable ASCII — emit raw except for chars with special meaning inside [...]
-            switch ((char) cp) {
-                case '\\':
-                    sb.append("\\\\");
-                    break;
-                case ']':
-                    sb.append("\\]");
-                    break;
-                case '^':
-                    sb.append("\\^");
-                    break;
-                case '-':
-                    sb.append("\\-");
-                    break;
-                default:
-                    sb.append((char) cp);
-                    break;
-            }
-        } else if (cp >= 0xD800 && cp <= 0xDFFF) {
-            // Lone surrogate — emit as raw char (same reason as in ClassRenderer)
-            sb.append((char) cp);
-        } else {
-            sb.append(String.format("\\x{%X}", cp));
-        }
-    }
-
-    /** Normalises a list of [lo, hi] pairs by merging overlapping/adjacent ranges. */
-    private static RangeSet normalise(final List<Integer> raw) {
-        if (raw.isEmpty()) {
+    /** Merges overlapping/adjacent ranges in {@code raw[0..len)} (pairs). */
+    private static RangeSet normalise(final int[] raw, final int len) {
+        if (len == 0) {
             return EMPTY;
         }
-        final List<Integer> result = new ArrayList<>(raw.size());
-        int curLo = raw.get(0);
-        int curHi = raw.get(1);
-        for (int i = 2; i < raw.size(); i += 2) {
-            final int lo = raw.get(i);
-            final int hi = raw.get(i + 1);
+        final int[] out = new int[len];
+        int n = 0;
+        int curLo = raw[0];
+        int curHi = raw[1];
+        for (int i = 2; i < len; i += 2) {
+            final int lo = raw[i];
+            final int hi = raw[i + 1];
             if (lo <= curHi + 1) {
-                // Overlap or adjacent — merge
                 curHi = Math.max(curHi, hi);
             } else {
-                result.add(curLo);
-                result.add(curHi);
+                out[n++] = curLo;
+                out[n++] = curHi;
                 curLo = lo;
                 curHi = hi;
             }
         }
-        result.add(curLo);
-        result.add(curHi);
-        return fromList(result);
+        out[n++] = curLo;
+        out[n++] = curHi;
+        return finish(out, n);
     }
 
-    private static RangeSet fromList(final List<Integer> list) {
-        final int[] arr = new int[list.size()];
-        for (int i = 0; i < arr.length; i++) {
-            arr[i] = list.get(i);
+    /** Wraps the prefix {@code tmp[0..len)} (already normalised, possibly empty) as a {@code RangeSet}. */
+    private static RangeSet finish(final int[] tmp, final int len) {
+        if (len == 0) {
+            return EMPTY;
         }
-        return new RangeSet(arr);
+        return new RangeSet(len == tmp.length ? tmp : Arrays.copyOf(tmp, len));
     }
 }

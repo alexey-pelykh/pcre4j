@@ -98,38 +98,8 @@ public final class JavaRegexTranslator {
                 // Outside quotation: check for a property token \p{...} or \P{...}
                 if (next == 'p' || next == 'P') {
                     if (!hasOddTrailingBackslashes(out)) {
-                        final int tokenEnd = findPropertyTokenEnd(javaPattern, i);
+                        final int tokenEnd = tryAppendPropertyToken(javaPattern, i, next, out);
                         if (tokenEnd > i) {
-                            final int braceOpen = javaPattern.indexOf('{', i + 2);
-                            final String name = javaPattern.substring(braceOpen + 1, tokenEnd - 1);
-                            final String replacement = PropertyMap.apply(name);
-
-                            if (replacement != null) {
-                                if (replacement.startsWith("[")) {
-                                    if (next == 'P') {
-                                        out.append("[^");
-                                        out.append(replacement, 1, replacement.length());
-                                    } else {
-                                        out.append(replacement);
-                                    }
-                                } else if (replacement.startsWith("\\P{")) {
-                                    if (next == 'P') {
-                                        out.append("\\p{");
-                                        out.append(replacement, 3, replacement.length());
-                                    } else {
-                                        out.append(replacement);
-                                    }
-                                } else {
-                                    out.append('\\');
-                                    out.append(next);
-                                    out.append('{');
-                                    out.append(replacement);
-                                    out.append('}');
-                                }
-                                i = tokenEnd;
-                                continue;
-                            }
-                            out.append(javaPattern, i, tokenEnd);
                             i = tokenEnd;
                             continue;
                         }
@@ -388,6 +358,40 @@ public final class JavaRegexTranslator {
     }
 
     /**
+     * Detects a {@code \p{...}}/{@code \P{...}} token at {@code start} and, if found, appends its
+     * PropertyMap-rewritten form (or the original text when unmapped) to {@code out}. Returns the
+     * index just past the token, or {@code start} if no valid token was present.
+     */
+    private static int tryAppendPropertyToken(
+            final String s, final int start, final char pOrP, final StringBuilder out) {
+        final int tokenEnd = findPropertyTokenEnd(s, start);
+        if (tokenEnd <= start) {
+            return start;
+        }
+        final int braceOpen = s.indexOf('{', start + 2);
+        final String name = s.substring(braceOpen + 1, tokenEnd - 1);
+        final String replacement = PropertyMap.apply(name);
+        if (replacement == null) {
+            out.append(s, start, tokenEnd);
+        } else if (replacement.startsWith("[")) {
+            if (pOrP == 'P') {
+                out.append("[^").append(replacement, 1, replacement.length());
+            } else {
+                out.append(replacement);
+            }
+        } else if (replacement.startsWith("\\P{")) {
+            if (pOrP == 'P') {
+                out.append("\\p{").append(replacement, 3, replacement.length());
+            } else {
+                out.append(replacement);
+            }
+        } else {
+            out.append('\\').append(pOrP).append('{').append(replacement).append('}');
+        }
+        return tokenEnd;
+    }
+
+    /**
      * Returns {@code true} if the current end of {@code sb} has an odd number of consecutive
      * backslashes, meaning the next character would be escaped (i.e. the backslash is literal).
      */
@@ -433,34 +437,8 @@ public final class JavaRegexTranslator {
                     continue;
                 }
                 if (!inQuote && (next == 'p' || next == 'P') && !hasOddTrailingBackslashes(sb)) {
-                    final int tokenEnd = findPropertyTokenEnd(s, i);
+                    final int tokenEnd = tryAppendPropertyToken(s, i, next, sb);
                     if (tokenEnd > i) {
-                        final int braceOpen = s.indexOf('{', i + 2);
-                        final String name = s.substring(braceOpen + 1, tokenEnd - 1);
-                        final String replacement = PropertyMap.apply(name);
-                        if (replacement != null) {
-                            if (replacement.startsWith("[")) {
-                                if (next == 'P') {
-                                    sb.append("[^");
-                                    sb.append(replacement, 1, replacement.length());
-                                } else {
-                                    sb.append(replacement);
-                                }
-                            } else if (replacement.startsWith("\\P{")) {
-                                if (next == 'P') {
-                                    sb.append("\\p{");
-                                    sb.append(replacement, 3, replacement.length());
-                                } else {
-                                    sb.append(replacement);
-                                }
-                            } else {
-                                sb.append('\\').append(next).append('{')
-                                  .append(replacement).append('}');
-                            }
-                            i = tokenEnd;
-                            continue;
-                        }
-                        sb.append(s, i, tokenEnd);
                         i = tokenEnd;
                         continue;
                     }
