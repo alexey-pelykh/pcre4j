@@ -297,9 +297,43 @@ package org.pcre4j.regex;
         if (c == '^') {
             return true;
         }
-        if (c == '\\' && i + 1 < n && pattern.charAt(i + 1) == 'A') {
-            return true;
+        if (c == '\\' && i + 1 < n) {
+            final char next = pattern.charAt(i + 1);
+            if (next == 'A' || next == 'G') {
+                return true;
+            }
         }
         return false;
+    }
+
+    /**
+     * Returns true if the pattern starts with the {@code \G} previous-match-end anchor (skipping
+     * leading inline-flag groups). Patterns using {@code \G} require special handling in
+     * {@link Matcher#find()}: PCRE2 by itself does not honour {@code \G} as "match must start at
+     * exactly {@code lastMatchEnd}" across separate match calls, so the matcher must enforce that
+     * the search start equals the previous match end (otherwise return false immediately).
+     */
+    static boolean patternStartsWithG(String pattern) {
+        int i = 0;
+        final int n = pattern.length();
+        while (i + 1 < n && pattern.charAt(i) == '(' && pattern.charAt(i + 1) == '?') {
+            final int close = pattern.indexOf(')', i);
+            if (close < 0) {
+                return false;
+            }
+            boolean isFlagsOnly = true;
+            for (int j = i + 2; j < close; j++) {
+                final char c = pattern.charAt(j);
+                if (!(Character.isLetter(c) || c == '-')) {
+                    isFlagsOnly = false;
+                    break;
+                }
+            }
+            if (!isFlagsOnly) {
+                break;
+            }
+            i = close + 1;
+        }
+        return i + 1 < n && pattern.charAt(i) == '\\' && pattern.charAt(i + 1) == 'G';
     }
 }

@@ -561,6 +561,18 @@ public class Matcher implements java.util.regex.MatchResult {
             return false;
         }
 
+        // \G anchors: PCRE2 does not retain "previous match end" state across separate match calls.
+        // Enforce JDK's semantic that find() with \G can only succeed when the search start equals
+        // the previous match end (in particular, an empty previous match invalidates \G after the
+        // empty-match advance above).
+        if (MatcherPatternAnalysis.patternStartsWithG(pattern.pattern())
+                && lastMatchIndices != null
+                && start != lastMatchIndices[1]) {
+            lastMatchData = null;
+            lastMatchIndices = null;
+            return false;
+        }
+
         return search(start);
     }
 
@@ -1477,6 +1489,13 @@ public class Matcher implements java.util.regex.MatchResult {
             if (regionEnd < input.length()) {
                 options.add(Pcre2MatchOption.NOTEOL);
             }
+        }
+        // When the pattern starts with \G (previous-match-end anchor), find() must only attempt to
+        // match at exactly startOffset — never advance — because PCRE2 does not track the previous
+        // match end across separate match calls and would otherwise treat \G as "matches anywhere
+        // at startOffset" and then advance past failures.
+        if (MatcherPatternAnalysis.patternStartsWithG(pattern.pattern())) {
+            options.add(Pcre2MatchOption.ANCHORED);
         }
         return options;
     }
