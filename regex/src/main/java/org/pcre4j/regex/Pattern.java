@@ -199,12 +199,19 @@ public class Pattern {
         this.depthLimit = depthLimit;
         this.heapLimit = heapLimit;
 
-        // When CANON_EQ is set, normalize the pattern to NFD form for compilation
-        // The original regex is preserved in this.regex for pattern() method
+        // Translate Java regex syntax to PCRE2-compatible syntax.
+        // The original regex is preserved in this.regex for pattern() method.
+        // Translation can be disabled via -Dpcre4j.regex.translate=false.
+        String translated = regex;
+        if (Boolean.parseBoolean(System.getProperty("pcre4j.regex.translate", "true"))) {
+            translated = org.pcre4j.regex.translate.JavaRegexTranslator.translate(regex, flags);
+        }
+
+        // When CANON_EQ is set, normalize the (already translated) pattern to NFD form for compilation
         if ((flags & CANON_EQ) != 0) {
-            this.compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
+            this.compiledRegex = Normalizer.normalize(translated, Normalizer.Form.NFD);
         } else {
-            this.compiledRegex = regex;
+            this.compiledRegex = translated;
         }
 
         this.compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
@@ -257,7 +264,7 @@ public class Pattern {
                 );
             }
         } catch (Pcre2CompileException e) {
-            throw new PatternSyntaxException(e.message(), e.pattern(), (int) e.offset());
+            throw new PatternSyntaxException(e.message(), regex /* original pattern, not translated */, (int) e.offset());
         }
 
         namedGroups = new HashMap<>();
