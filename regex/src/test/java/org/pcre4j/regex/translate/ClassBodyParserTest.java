@@ -18,6 +18,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ClassBodyParserTest {
 
@@ -154,5 +155,48 @@ class ClassBodyParserTest {
         // handles this gracefully
         final ClassNode node = parse("[a\\-]");
         assertInstanceOf(ClassNode.Union.class, node);
+    }
+
+    // ---- Malformed input: must throw IllegalArgumentException (caught upstream by translator) ----
+
+    @Test
+    void unterminatedClassThrows() {
+        assertThrows(IllegalArgumentException.class, () -> parse("[abc"));
+    }
+
+    @Test
+    void unterminatedNegatedClassThrows() {
+        assertThrows(IllegalArgumentException.class, () -> parse("[^abc"));
+    }
+
+    @Test
+    void unterminatedNestedClassThrows() {
+        assertThrows(IllegalArgumentException.class, () -> parse("[a[b-c]"));
+    }
+
+    @Test
+    void incompleteHexEscapeThrows() {
+        // \x followed by fewer than 2 hex digits at EOF
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\x]"));
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\xA]"));
+    }
+
+    @Test
+    void unterminatedHexBraceEscapeThrows() {
+        // \x{ABC without closing }
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\x{ABC]"));
+    }
+
+    @Test
+    void emptyHexBraceEscapeThrows() {
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\x{}]"));
+    }
+
+    @Test
+    void incompleteUnicodeEscapeThrows() {
+        // backslash-u with fewer than 4 hex digits at EOF
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\u]"));
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\u00]"));
+        assertThrows(IllegalArgumentException.class, () -> parse("[\\u00A]"));
     }
 }

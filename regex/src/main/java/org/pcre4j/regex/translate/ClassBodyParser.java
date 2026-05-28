@@ -73,10 +73,12 @@ public final class ClassBodyParser {
         // Parse the intersection (which itself contains union operands)
         final ClassNode body = parseIntersection(s, pos);
 
-        // Consume the closing ]
-        if (pos[0] < len && s.charAt(pos[0]) == ']') {
-            pos[0]++;
+        // Consume the closing ]; absence is a parse error
+        if (pos[0] >= len || s.charAt(pos[0]) != ']') {
+            throw new IllegalArgumentException(
+                    "Unterminated character class starting at " + s);
         }
+        pos[0]++;
 
         if (negated) {
             return new ClassNode.Negated(body);
@@ -265,27 +267,41 @@ public final class ClassBodyParser {
                 return new ClassNode.Literal(ctrl);
             }
 
-            // \xHH — hex escape (2 digits)
+            // \xHH — hex escape (2 digits), or \x{HH...} form
             case 'x': {
                 if (pos[0] < len && s.charAt(pos[0]) == '{') {
-                    // \x{HH...} form
+                    // \x{HH...} form — requires closing '}'
                     pos[0]++; // skip '{'
                     int val = 0;
+                    boolean any = false;
                     while (pos[0] < len && s.charAt(pos[0]) != '}') {
                         val = val * 16 + hexDigit(s.charAt(pos[0]));
                         pos[0]++;
+                        any = true;
                     }
-                    if (pos[0] < len) pos[0]++; // skip '}'
+                    if (pos[0] >= len || s.charAt(pos[0]) != '}') {
+                        throw new IllegalArgumentException("Unterminated \\x{...} escape");
+                    }
+                    if (!any) {
+                        throw new IllegalArgumentException("Empty \\x{} escape");
+                    }
+                    pos[0]++; // skip '}'
                     return new ClassNode.Literal(val);
                 }
-                // Plain \xHH
+                // Plain \xHH — requires exactly 2 hex digits
+                if (pos[0] + 1 >= len) {
+                    throw new IllegalArgumentException("Incomplete \\x escape (need 2 hex digits)");
+                }
                 final int hi = hexDigit(s.charAt(pos[0]++));
                 final int lo = hexDigit(s.charAt(pos[0]++));
                 return new ClassNode.Literal(hi * 16 + lo);
             }
 
-            // \\uHHHH — Unicode escape
+            // \\uHHHH — Unicode escape (exactly 4 hex digits)
             case 'u': {
+                if (pos[0] + 3 >= len) {
+                    throw new IllegalArgumentException("Incomplete \\u escape (need 4 hex digits)");
+                }
                 int val = 0;
                 for (int i = 0; i < 4; i++) {
                     val = val * 16 + hexDigit(s.charAt(pos[0]++));
