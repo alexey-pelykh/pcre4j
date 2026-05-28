@@ -12,8 +12,22 @@ import java.util.stream.Stream;
 
 class RegExTestRunner {
 
+    static {
+        // Trigger Probes static init so Pcre4j.setup(...) runs with the configured backend
+        // before any RegExTest method calls org.pcre4j.regex.Pattern.compile().
+        try {
+            Class.forName(org.pcre4j.compat.Probes.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private static final Set<String> SKIP = Set.of(
-            "serializeTest"
+            "serializeTest",
+            // Data-driven; already run by TxtCompatTest. Excluded here to avoid double-counting.
+            "processTestCases",
+            "processBMPTestCases",
+            "processSupplementaryTestCases"
     );
 
     @TestFactory
@@ -23,7 +37,7 @@ class RegExTestRunner {
             if (!Modifier.isStatic(m.getModifiers())) continue;
             if (m.getParameterCount() != 0) continue;
             if (m.getReturnType() != void.class) continue;
-            if (!m.getName().endsWith("Test")) continue;
+            if (!m.isAnnotationPresent(org.junit.jupiter.api.Test.class)) continue;
             methods.add(m);
         }
         methods.sort(Comparator.comparing(Method::getName));
@@ -45,6 +59,9 @@ class RegExTestRunner {
             m.invoke(null);
         } catch (Throwable t) {
             Throwable c = t.getCause() != null ? t.getCause() : t;
+            if (c instanceof org.opentest4j.TestAbortedException tae) {
+                throw tae;
+            }
             String captured = buf.toString();
             throw new AssertionError(m.getName() + " failed: " + c + "\nCaptured output:\n" + captured, c);
         } finally {
