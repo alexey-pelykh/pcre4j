@@ -250,6 +250,16 @@ public class Pattern {
                     "Unescaped trailing backslash", regex, regex.length() - 1);
         }
 
+        // JDK contract: capturing group names ((?<name>…)) and back-references (\k<name>) must
+        // start with a Latin letter and may only contain Latin letters and digits. The diagnostic
+        // text matches OpenJDK exactly so JDK-style tests can match-prefix on it.
+        validateGroupNames(regex);
+
+        // JDK contract: bounded-repetition quantifiers {n}, {n,}, {n,m} must contain only digits,
+        // be non-negative, fit in int, and satisfy n <= m. Surface JDK-style "Illegal repetition"
+        // diagnostics before PCRE2 (whose validation differs or treats malformed forms as literal).
+        validateRepetitionRanges(regex);
+
         // Translate Java regex syntax to PCRE2-compatible syntax.
         // The original regex is preserved in this.regex for pattern() method.
         // Translation can be disabled via -Dpcre4j.regex.translate=false.
@@ -511,6 +521,224 @@ public class Pattern {
      */
     public String pattern() {
         return regex;
+    }
+
+    /**
+     * Pre-validates JDK-style named group declarations ({@code (?<name>…)}) and back-references
+     * ({@code \k<name>}) so that callers see JDK-equivalent diagnostics instead of PCRE2-flavoured
+     * errors. The name must start with a Latin letter ([A-Za-z]) and contain only Latin letters
+     * and digits ([A-Za-z0-9]).
+     * <p>
+     * Names are skipped inside character classes and inside {@code \Q…\E} quoted spans; lookbehind
+     * groups {@code (?<=…)} and {@code (?<!…)} are recognised and skipped. Unbalanced or unknown
+     * forms are left to the translator/PCRE2 to report.
+     *
+     * @param regex the original pattern
+     * @throws PatternSyntaxException if a named group declaration or back-reference is invalid
+     */
+    private static void validateGroupNames(String regex) {
+        final int n = regex.length();
+        int charClassDepth = 0;
+        for (int i = 0; i < n; i++) {
+            final char c = regex.charAt(i);
+            if (c == '\\') {
+                if (i + 1 >= n) {
+                    return; // trailing backslash already handled
+                }
+                final char next = regex.charAt(i + 1);
+                if (next == 'Q') {
+                    final int end = regex.indexOf("\\E", i + 2);
+                    i = (end < 0) ? n - 1 : end + 1;
+                    continue;
+                }
+                if (next == 'k' && charClassDepth == 0
+                        && i + 2 < n && regex.charAt(i + 2) == '<') {
+                    final int close = regex.indexOf('>', i + 3);
+                    if (close < 0) {
+                        throw new PatternSyntaxException(
+                                "named capturing group is missing trailing '>'",
+                                regex, i + 3);
+                    }
+                    validateName(regex, i + 3, close);
+                    i = close;
+                    continue;
+                }
+                i++; // skip escaped char
+                continue;
+            }
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+            if (charClassDepth > 0) {
+                continue;
+            }
+            if (c == '(' && i + 2 < n
+                    && regex.charAt(i + 1) == '?' && regex.charAt(i + 2) == '<') {
+                // Distinguish (?<= and (?<! lookbehind from (?<name> capturing group
+                if (i + 3 < n) {
+                    final char after = regex.charAt(i + 3);
+                    if (after == '=' || after == '!') {
+                        continue;
+                    }
+                }
+                final int close = regex.indexOf('>', i + 3);
+                if (close < 0) {
+                    throw new PatternSyntaxException(
+                            "named capturing group is missing trailing '>'",
+                            regex, i + 3);
+                }
+                validateName(regex, i + 3, close);
+                i = close;
+            }
+        }
+    }
+
+    private static void validateName(String regex, int start, int end) {
+        if (start >= end) {
+            throw new PatternSyntaxException(
+                    "capturing group name does not start with a Latin letter",
+                    regex, start);
+        }
+        final char first = regex.charAt(start);
+        if (!((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z'))) {
+            throw new PatternSyntaxException(
+                    "capturing group name does not start with a Latin letter",
+                    regex, start);
+        }
+        for (int k = start + 1; k < end; k++) {
+            final char ch = regex.charAt(k);
+            final boolean ok = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+                    || (ch >= '0' && ch <= '9');
+            if (!ok) {
+                throw new PatternSyntaxException(
+                        "named capturing group is missing trailing '>'",
+                        regex, k);
+            }
+        }
+    }
+
+    /**
+     * Scans for bounded-repetition quantifiers {@code {n}}, {@code {n,}}, {@code {n,m}} outside
+     * of character classes and {@code \Q…\E} spans and validates them: digits-only, non-negative,
+     * fitting in a signed 32-bit int, and {@code n <= m}. Anything else triggers a
+     * {@link PatternSyntaxException} whose detail message starts with "Illegal repetition", to
+     * match the JDK contract checked by {@code RegExTest.illegalRepetitionRange}.
+     *
+     * @param regex the original pattern
+     */
+    private static void validateRepetitionRanges(String regex) {
+        final int n = regex.length();
+        int charClassDepth = 0;
+        for (int i = 0; i < n; i++) {
+            final char c = regex.charAt(i);
+            if (c == '\\') {
+                if (i + 1 >= n) {
+                    return;
+                }
+                final char esc = regex.charAt(i + 1);
+                if (esc == 'Q') {
+                    final int end = regex.indexOf("\\E", i + 2);
+                    i = (end < 0) ? n - 1 : end + 1;
+                    continue;
+                }
+                // Skip \p{...}, \P{...}, \N{...} so the inner braces are not parsed as repetition.
+                if ((esc == 'p' || esc == 'P' || esc == 'N') && i + 2 < n && regex.charAt(i + 2) == '{') {
+                    final int end = regex.indexOf('}', i + 3);
+                    i = (end < 0) ? n - 1 : end;
+                    continue;
+                }
+                i++; // skip escaped char
+                continue;
+            }
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+            if (charClassDepth > 0) {
+                continue;
+            }
+            if (c != '{') {
+                continue;
+            }
+            // Only treat as a repetition range if it follows a quantifier-able token.
+            // Approximation: a preceding character that's not ( | ^ start-of-string. False
+            // positives are bounded — anything malformed is going to error anyway.
+            if (i == 0) {
+                continue;
+            }
+            final char prev = regex.charAt(i - 1);
+            if (prev == '(' || prev == '|') {
+                continue;
+            }
+            final int close = regex.indexOf('}', i + 1);
+            if (close < 0) {
+                continue; // let PCRE2 surface the error
+            }
+            final String body = regex.substring(i + 1, close);
+            if (!isValidRepetitionBody(body)) {
+                throw new PatternSyntaxException(
+                        "Illegal repetition", regex, i);
+            }
+            i = close;
+        }
+    }
+
+    private static boolean isValidRepetitionBody(String body) {
+        if (body.isEmpty()) {
+            return false;
+        }
+        final int comma = body.indexOf(',');
+        if (comma < 0) {
+            return parsePositiveInt(body) >= 0;
+        }
+        if (body.indexOf(',', comma + 1) >= 0) {
+            return false; // more than one comma
+        }
+        final String lo = body.substring(0, comma);
+        final String hi = body.substring(comma + 1);
+        if (lo.isEmpty()) {
+            return false; // JDK rejects {,m}
+        }
+        final int loVal = parsePositiveInt(lo);
+        if (loVal < 0) {
+            return false;
+        }
+        if (hi.isEmpty()) {
+            return true; // {n,} is valid
+        }
+        final int hiVal = parsePositiveInt(hi);
+        if (hiVal < 0) {
+            return false;
+        }
+        return loVal <= hiVal;
+    }
+
+    /** Returns the parsed non-negative int, or -1 if not a digit-only string or overflow. */
+    private static int parsePositiveInt(String s) {
+        if (s.isEmpty()) {
+            return -1;
+        }
+        long acc = 0;
+        for (int k = 0; k < s.length(); k++) {
+            final char ch = s.charAt(k);
+            if (ch < '0' || ch > '9') {
+                return -1;
+            }
+            acc = acc * 10 + (ch - '0');
+            if (acc > Integer.MAX_VALUE) {
+                return -1;
+            }
+        }
+        return (int) acc;
     }
 
     /**
