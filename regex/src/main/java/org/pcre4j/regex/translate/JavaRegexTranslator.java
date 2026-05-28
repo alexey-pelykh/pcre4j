@@ -148,18 +148,16 @@ public final class JavaRegexTranslator {
                 final int classStart = i;
                 final int[] pos = {i};
                 try {
-                    // If the class body contains raw surrogate code units, preserve Phase-1
-                    // behaviour to avoid undefined interactions with PCRE2's UTF mode.
-                    if (containsRawSurrogate(javaPattern, classStart)) {
-                        // Scan ahead to find the end of this class (Phase 1 pass handles nesting)
-                        final ClassNode classNode = ClassBodyParser.parseClass(javaPattern, pos);
-                        final int classEnd = pos[0];
+                    final ClassNode classNode = ClassBodyParser.parseClass(javaPattern, pos);
+                    final int classEnd = pos[0];
+                    // If the class body contains raw lone surrogates, preserve Phase-1 behaviour
+                    // to avoid undefined interactions with PCRE2's UTF mode. Scan the entire
+                    // (now-known) class extent so very large classes are handled correctly.
+                    if (containsRawSurrogate(javaPattern, classStart, classEnd)) {
                         out.append(rewritePropertiesOnly(javaPattern, classStart, classEnd));
                         i = classEnd;
                         continue;
                     }
-                    final ClassNode classNode = ClassBodyParser.parseClass(javaPattern, pos);
-                    final int classEnd = pos[0];
                     final String rendered = ClassRenderer.render(classNode);
                     if (rendered.contains("&&")) {
                         // Fallback: intersection could not be evaluated.
@@ -474,8 +472,8 @@ public final class JavaRegexTranslator {
      * <p>Valid supplementary characters stored as surrogate pairs are NOT considered lone
      * surrogates and will be handled normally.
      */
-    private static boolean containsRawSurrogate(final String s, final int from) {
-        final int limit = Math.min(from + 4096, s.length());
+    private static boolean containsRawSurrogate(final String s, final int from, final int to) {
+        final int limit = Math.min(to, s.length());
         for (int k = from; k < limit; k++) {
             final char ch = s.charAt(k);
             if (ch >= 0xD800 && ch <= 0xDFFF) {
