@@ -383,7 +383,7 @@ public final class ClassBodyParser {
                 return new ClassNode.PropertyLeaf("\\" + esc, neg);
             }
 
-            // \N{name} (named character) — pass through
+            // \N{name} (named character) — resolve to literal codepoint when possible
             case 'N': {
                 if (pos[0] < len && s.charAt(pos[0]) == '{') {
                     final int start = pos[0];
@@ -391,7 +391,17 @@ public final class ClassBodyParser {
                         pos[0]++;
                     }
                     if (pos[0] < len) pos[0]++;
-                    return new ClassNode.PropertyLeaf("\\N" + s.substring(start, pos[0]), false);
+                    final String braced = s.substring(start, pos[0]);
+                    if (braced.length() >= 2 && braced.charAt(0) == '{'
+                            && braced.charAt(braced.length() - 1) == '}') {
+                        final String name = braced.substring(1, braced.length() - 1);
+                        try {
+                            return new ClassNode.Literal(Character.codePointOf(name));
+                        } catch (IllegalArgumentException ignored) {
+                            // unknown name — fall through to pass-through
+                        }
+                    }
+                    return new ClassNode.PropertyLeaf("\\N" + braced, false);
                 }
                 return new ClassNode.Literal('N');
             }

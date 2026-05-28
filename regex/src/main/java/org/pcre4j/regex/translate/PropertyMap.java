@@ -65,10 +65,43 @@ public final class PropertyMap {
         TABLE.put("javaJavaIdentifierPart",       "[\\p{L}\\p{Nl}\\p{Mn}\\p{Mc}\\p{Nd}\\p{Pc}_$]");
         TABLE.put("javaUnicodeIdentifierStart",   "[\\p{L}\\p{Nl}]");
         TABLE.put("javaUnicodeIdentifierPart",    "[\\p{L}\\p{Nl}\\p{Mn}\\p{Mc}\\p{Nd}\\p{Pc}]");
+        TABLE.put("javaIdentifierIgnorable",
+                "[\\x{00}-\\x{08}\\x{0E}-\\x{1B}\\x{7F}-\\x{9F}\\p{Cf}]");
         // Per Character.isWhitespace() Javadoc:
         TABLE.put("javaWhitespace",
                 "[\\t\\n\\x0B\\f\\r \\x{1C}-\\x{1F}\\x{1680}" +
                 "\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{205F}\\x{3000}]");
+
+        // --- POSIX-style class names accepted by Java's \p{Xxx} (default, non-UNICODE) ---
+        TABLE.put("Lower",  "[a-z]");
+        TABLE.put("Upper",  "[A-Z]");
+        TABLE.put("Alpha",  "[a-zA-Z]");
+        TABLE.put("Digit",  "[0-9]");
+        TABLE.put("Alnum",  "[a-zA-Z0-9]");
+        TABLE.put("Punct",  "[!-/:-@\\[-`{-~]");
+        TABLE.put("Graph",  "[!-~]");
+        TABLE.put("Print",  "[ -~]");
+        TABLE.put("Blank",  "[ \\t]");
+        TABLE.put("Cntrl",  "[\\x00-\\x1F\\x{7F}]");
+        TABLE.put("XDigit", "[0-9a-fA-F]");
+        TABLE.put("Space",  "[ \\t\\n\\x0B\\f\\r]");
+
+        // --- Java property names not recognised as PCRE2 long names ---
+        // PCRE2 wants short general-category aliases here.
+        TABLE.put("Control", "Cc");
+        TABLE.put("Format",  "Cf");
+        TABLE.put("TitleCase", "Lt");
+        TABLE.put("UpperCase", "Lu");
+        TABLE.put("LowerCase", "Ll");
+        TABLE.put("Letter",      "L");
+        TABLE.put("Mark",        "M");
+        TABLE.put("Number",      "N");
+        TABLE.put("Punctuation", "P");
+        TABLE.put("Symbol",      "S");
+        TABLE.put("Separator",   "Z");
+        TABLE.put("Other",       "C");
+        TABLE.put("Assigned",    "\\P{Cn}");
+        TABLE.put("Unassigned",  "Cn");
     }
 
     private PropertyMap() {
@@ -82,15 +115,38 @@ public final class PropertyMap {
      * @return the PCRE2 replacement string, or {@code null} if no rewrite is needed
      */
     public static String apply(final String name) {
+        // 0. Strip Java/Unicode qualifier prefixes: gc=Lu, sc=Greek, blk=Latin, etc.
+        final int eq = name.indexOf('=');
+        if (eq > 0) {
+            final String key = name.substring(0, eq).toLowerCase();
+            final String value = name.substring(eq + 1);
+            switch (key) {
+                case "gc":
+                case "general_category":
+                    return resolveOrPass(value);
+                case "sc":
+                case "script":
+                    return resolveOrPass(value);
+                case "blk":
+                case "block":
+                    return resolveOrPass("In" + value);
+                default:
+                    return null;
+            }
+        }
+
         // 1. Exact table match
         final String exact = TABLE.get(name);
         if (exact != null) {
             return exact;
         }
 
-        // 2. \p{IsXxx} → strip "Is" prefix and pass through (handles IsL, IsLC, IsASCII, IsPf, IsP, …)
+        // 2. \p{IsXxx} → strip "Is" prefix; if the stripped name is a known JDK alias
+        //    (e.g. "IsControl" → "Control" → "Cc"), prefer that mapping over passthrough.
         if (name.startsWith("Is") && name.length() > 2) {
-            return name.substring(2);
+            final String stripped = name.substring(2);
+            final String mapped = TABLE.get(stripped);
+            return mapped != null ? mapped : stripped;
         }
 
         // 3. \p{InXxx} → strip "In" prefix; PCRE2 recognises both block and script names without prefix.
@@ -103,5 +159,10 @@ public final class PropertyMap {
 
         // 4. No rewrite
         return null;
+    }
+
+    private static String resolveOrPass(final String value) {
+        final String mapped = TABLE.get(value);
+        return mapped != null ? mapped : value;
     }
 }

@@ -106,6 +106,51 @@ public final class JavaRegexTranslator {
                     }
                 }
 
+                // Java \\uXXXX → PCRE2 \\x{XXXX} (PCRE2 does not accept \\u in patterns).
+                if (next == 'u' && i + 5 < len + 1) {
+                    int k = i + 2;
+                    final int hexEnd = Math.min(k + 4, len);
+                    while (k < hexEnd && isHexDigit(javaPattern.charAt(k))) {
+                        k++;
+                    }
+                    if (k - (i + 2) == 4) {
+                        out.append("\\x{").append(javaPattern, i + 2, k).append('}');
+                        i = k;
+                        continue;
+                    }
+                }
+
+                // Java \N{name} → \x{HHHH} via Character.codePointOf. Falls through to
+                // verbatim copy on lookup failure so PCRE2 can produce the diagnostic.
+                if (next == 'N' && i + 2 < len && javaPattern.charAt(i + 2) == '{') {
+                    final int close = javaPattern.indexOf('}', i + 3);
+                    if (close > 0) {
+                        final String name = javaPattern.substring(i + 3, close);
+                        try {
+                            final int cp = Character.codePointOf(name);
+                            out.append("\\x{").append(Integer.toHexString(cp)).append('}');
+                            i = close + 1;
+                            continue;
+                        } catch (IllegalArgumentException ignored) {
+                            // unknown name — copy braced body literally below
+                        }
+                        out.append(javaPattern, i, close + 1);
+                        i = close + 1;
+                        continue;
+                    }
+                }
+
+                // \x{...} — consume whole braced body so the quantifier-brace validator
+                // below does not misread it as {n,m}.
+                if (next == 'x' && i + 2 < len && javaPattern.charAt(i + 2) == '{') {
+                    final int close = javaPattern.indexOf('}', i + 3);
+                    if (close > 0) {
+                        out.append(javaPattern, i, close + 1);
+                        i = close + 1;
+                        continue;
+                    }
+                }
+
                 // Any other backslash sequence: copy backslash and advance.
                 out.append(c);
                 i++;
@@ -219,6 +264,10 @@ public final class JavaRegexTranslator {
             k++;
         }
         return k == n;
+    }
+
+    private static boolean isHexDigit(final char ch) {
+        return (ch >= '0' && ch <= '9') || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
     }
 
     /**
