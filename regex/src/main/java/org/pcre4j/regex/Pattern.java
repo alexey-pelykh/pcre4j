@@ -220,7 +220,15 @@ public class Pattern {
             throw new IllegalArgumentException("api cannot be null");
         }
         if (regex == null) {
-            throw new IllegalArgumentException("regex cannot be null");
+            // JDK contract: Pattern.compile(null) must throw NullPointerException.
+            throw new NullPointerException("regex cannot be null");
+        }
+        final int allFlagsMask = CASE_INSENSITIVE | MULTILINE | DOTALL | UNICODE_CASE | CANON_EQ
+                | UNIX_LINES | LITERAL | UNICODE_CHARACTER_CLASS | COMMENTS;
+        if ((flags & ~allFlagsMask) != 0) {
+            // JDK contract: unknown flag bits must trigger IllegalArgumentException.
+            throw new IllegalArgumentException(
+                    "Unknown flag bits 0x" + Integer.toHexString(flags & ~allFlagsMask));
         }
 
         this.api = api;
@@ -478,7 +486,8 @@ public class Pattern {
      */
     public Matcher matcher(CharSequence input) {
         if (input == null) {
-            throw new IllegalArgumentException("input must not be null");
+            // JDK contract: matcher(null) must throw NullPointerException.
+            throw new NullPointerException("input must not be null");
         }
         return new Matcher(this, input);
     }

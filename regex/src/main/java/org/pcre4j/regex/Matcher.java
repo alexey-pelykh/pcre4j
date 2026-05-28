@@ -406,10 +406,13 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             throw new IllegalStateException("No match available");
         }
-        // Append text between last append position and start of match
+        // JDK contract (4750244): when the replacement is invalid, nothing must be appended to the
+        // target. Process the replacement into a temporary buffer first; only on success copy the
+        // leading text and processed replacement into the caller-provided buffer.
+        final var tmp = new StringBuilder();
+        MatcherReplacementProcessor.appendReplacement(tmp, replacement, this, groupNameToIndex);
         sb.append(input, appendPos, start());
-        // Process and append replacement string
-        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
+        sb.append(tmp);
         // Update append position to end of current match
         appendPos = end();
         return this;
@@ -439,10 +442,13 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             throw new IllegalStateException("No match available");
         }
-        // Append text between last append position and start of match
+        // JDK contract (4750244): when the replacement is invalid, nothing must be appended to the
+        // target. Process the replacement into a temporary buffer first; only on success copy the
+        // leading text and processed replacement into the caller-provided buffer.
+        final var tmp = new StringBuilder();
+        MatcherReplacementProcessor.appendReplacement(tmp, replacement, this, groupNameToIndex);
         sb.append(input, appendPos, start());
-        // Process and append replacement string
-        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
+        sb.append(tmp);
         // Update append position to end of current match
         appendPos = end();
         return this;
@@ -933,6 +939,10 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return the string resulting from replacing every match with the replacement string
      */
     public String replaceAll(String replacement) {
+        if (replacement == null) {
+            // JDK contract: replaceAll(null) must throw NullPointerException.
+            throw new NullPointerException("replacement");
+        }
         reset();
 
         // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
@@ -999,6 +1009,10 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return the string resulting from replacing the first match with the replacement string
      */
     public String replaceFirst(String replacement) {
+        if (replacement == null) {
+            // JDK contract: replaceFirst(null) must throw NullPointerException.
+            throw new NullPointerException("replacement");
+        }
         reset();
 
         // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
