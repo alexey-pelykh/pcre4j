@@ -14,6 +14,9 @@
  */
 package org.pcre4j.regex.translate;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * Translates Java regex syntax to PCRE2-compatible syntax for use inside
  * {@code org.pcre4j.regex.Pattern}.
@@ -39,6 +42,8 @@ package org.pcre4j.regex.translate;
  * sections and does not match {@code \\p{...}} (escaped backslash followed by {@code p}).
  */
 public final class JavaRegexTranslator {
+
+    private static final Logger LOG = Logger.getLogger(JavaRegexTranslator.class.getName());
 
     private JavaRegexTranslator() {
     }
@@ -154,6 +159,10 @@ public final class JavaRegexTranslator {
                     // to avoid undefined interactions with PCRE2's UTF mode. Scan the entire
                     // (now-known) class extent so very large classes are handled correctly.
                     if (containsRawSurrogate(javaPattern, classStart, classEnd)) {
+                        if (LOG.isLoggable(Level.FINE)) {
+                            LOG.fine("pcre4j translator: lone surrogate detected in class at "
+                                    + "index " + classStart + "; falling back to Phase-1 rewrite");
+                        }
                         out.append(rewritePropertiesOnly(javaPattern, classStart, classEnd));
                         i = classEnd;
                         continue;
@@ -170,7 +179,12 @@ public final class JavaRegexTranslator {
                     i = classEnd;
                     continue;
                 } catch (IllegalArgumentException e) {
-                    // Parser failed — copy verbatim and let PCRE2 handle (or reject) it
+                    // Parser failed — copy verbatim and let PCRE2 produce the diagnostic.
+                    // Log at FINE so support can opt in to seeing the original parser failure.
+                    if (LOG.isLoggable(Level.FINE)) {
+                        LOG.log(Level.FINE, "ClassBodyParser rejected class at index "
+                                + classStart + " of pattern; passing through to PCRE2", e);
+                    }
                     out.append(c);
                     i++;
                     continue;
@@ -193,7 +207,7 @@ public final class JavaRegexTranslator {
             // At this point '{' is in quantifier position: not escaped, not inside a class,
             // not inside Q...E, and not consumed as part of property/hex escapes.
             // JDK rejects any {body} where body is not /\d+(,\d*)?/ with "Illegal repetition".
-            if (c == '{') {
+            if (c == '{' && !hasOddTrailingBackslashes(out)) {
                 final int close = javaPattern.indexOf('}', i + 1);
                 if (close > i) {
                     final String body = javaPattern.substring(i + 1, close);

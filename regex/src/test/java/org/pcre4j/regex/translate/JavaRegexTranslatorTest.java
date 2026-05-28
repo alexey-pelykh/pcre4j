@@ -127,8 +127,8 @@ class JavaRegexTranslatorTest {
     @Test
     void intersectionBecomesRangeSet() {
         final String result = JavaRegexTranslator.translate("[a-c&&d-f]", 0);
-        // Empty intersection → matches nothing
-        assertFalse(result.contains("&&"), "Should not contain &&: " + result);
+        // [a-c] ∩ [d-f] is empty — translator emits an unmatched-by-anything class
+        assertEquals("[^\\x{0}-\\x{10FFFF}]", result);
     }
 
     @Test
@@ -217,5 +217,23 @@ class JavaRegexTranslatorTest {
         final String out = JavaRegexTranslator.translate("[\\p{L}&&[\\P{InGreek}]]", 0);
         assertFalse(out.contains("&&"), "Should not contain && after evaluation: " + out);
         assertFalse(out.contains("[["), "Should not have nested [[ after evaluation: " + out);
+    }
+
+    // --- Escaped quantifier-brace must not be rejected (review critical #1) ---
+
+    @Test
+    void escapedBraceIsNotQuantifier() {
+        // "\\{" is a literal '{' and must pass through unchanged, not raise "Illegal repetition".
+        // JDK accepts this pattern; PCRE4J must too.
+        assertEquals("\\{", JavaRegexTranslator.translate("\\{", 0));
+        assertEquals("a\\{b}", JavaRegexTranslator.translate("a\\{b}", 0));
+        assertEquals("\\{not-a-quantifier}", JavaRegexTranslator.translate("\\{not-a-quantifier}", 0));
+    }
+
+    @Test
+    void doubleBackslashThenBraceStillQuantifier() {
+        // "\\\\{x}" is "literal backslash" + "{x}" which IS in quantifier position → reject.
+        assertThrows(java.util.regex.PatternSyntaxException.class,
+                () -> JavaRegexTranslator.translate("\\\\{x}", 0));
     }
 }
