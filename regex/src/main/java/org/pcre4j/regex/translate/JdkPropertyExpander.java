@@ -26,9 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * {@link RangeSet}s by iterating over the full Unicode code-point space using the JDK's
  * {@link Character} API.
  *
- * <p>All supported positive properties are built eagerly at class-init time (one pass over
- * 0..0x10FFFF). Subsequent calls are O(1) map lookups; negated variants are computed on demand
- * and memoised in a {@link ConcurrentHashMap}.
+ * <p>The expensive per-property scan over 0..0x10FFFF is deferred to first use of each property
+ * (lazy initialisation): patterns that never touch {@code \p{…}} pay nothing. Each property's
+ * {@link RangeSet} is memoised in a {@link ConcurrentHashMap}.
  *
  * <p>Supports:
  * <ul>
@@ -56,12 +56,27 @@ final class JdkPropertyExpander {
     private static final String[] TYPE_TO_CAT = buildTypeMap();
 
     /**
-     * Maps uppercase property name → positive {@link RangeSet}.
-     * Populated once at class-init; thereafter read-only.
+     * Maps uppercase property name → positive {@link RangeSet}. Built lazily on first call to
+     * {@link #expand} via {@link #positiveMap()} so unused patterns don't pay the ~50 ms
+     * full-Unicode scan.
      */
-    private static final Map<String, RangeSet> POSITIVE = buildPositiveMap();
+    private static volatile Map<String, RangeSet> positive;
 
     private JdkPropertyExpander() {
+    }
+
+    private static Map<String, RangeSet> positiveMap() {
+        Map<String, RangeSet> map = positive;
+        if (map == null) {
+            synchronized (JdkPropertyExpander.class) {
+                map = positive;
+                if (map == null) {
+                    map = buildPositiveMap();
+                    positive = map;
+                }
+            }
+        }
+        return map;
     }
 
     // -----------------------------------------------------------------------
@@ -104,7 +119,7 @@ final class JdkPropertyExpander {
             return NOT_FOUND;
         }
 
-        final RangeSet base = POSITIVE.get(name);
+        final RangeSet base = positiveMap().get(name);
         if (base == null) {
             return NOT_FOUND;
         }
