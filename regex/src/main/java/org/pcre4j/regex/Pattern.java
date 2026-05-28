@@ -264,7 +264,8 @@ public class Pattern {
                 );
             }
         } catch (Pcre2CompileException e) {
-            throw new PatternSyntaxException(e.message(), regex /* original pattern, not translated */, (int) e.offset());
+            // Surface the original (untranslated) pattern in the exception, per JDK contract.
+            throw new PatternSyntaxException(e.message(), regex, (int) e.offset());
         }
 
         namedGroups = new HashMap<>();

@@ -154,13 +154,13 @@ final class JdkPropertyExpander {
         // One builder per leaf general-category name (uppercase)
         final Map<String, SpanBuilder> catBuilders = new HashMap<>();
         for (final String cat : new String[]{
-            "LU", "LL", "LT", "LM", "LO",
-            "MN", "ME", "MC",
-            "ND", "NL", "NO",
-            "PC", "PD", "PS", "PE", "PI", "PF", "PO",
-            "SM", "SC", "SK", "SO",
-            "ZS", "ZL", "ZP",
-            "CC", "CF", "CS", "CO", "CN",
+                "LU", "LL", "LT", "LM", "LO",
+                "MN", "ME", "MC",
+                "ND", "NL", "NO",
+                "PC", "PD", "PS", "PE", "PI", "PF", "PO",
+                "SM", "SC", "SK", "SO",
+                "ZS", "ZL", "ZP",
+                "CC", "CF", "CS", "CO", "CN",
         }) {
             catBuilders.put(cat, new SpanBuilder());
         }
