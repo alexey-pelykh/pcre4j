@@ -18,8 +18,12 @@ package org.pcre4j.regex.translate;
  * Translates Java regex syntax to PCRE2-compatible syntax for use inside
  * {@code org.pcre4j.regex.Pattern}.
  *
- * <p>Phase 1 scope: rewrite {@code \p{...}} / {@code \P{...}} property tokens using
- * {@link PropertyMap}. All other syntax is passed through unchanged.
+ * <p>Phase 1: rewrite {@code \p{...}} / {@code \P{...}} property tokens outside character
+ * classes using {@link PropertyMap}.
+ *
+ * <p>Phase 2: rewrite character-class bodies — flatten nested unions ({@code [abc[def]]}),
+ * resolve intersections ({@code [a-c&&b-d]}), and escape {@code -} after multi-char escapes
+ * like {@code [\w-#]} so PCRE2 does not misinterpret them as range operators.
  *
  * <p>The translator correctly skips tokens that appear inside {@code \Q...\E} literal
  * sections and does not match {@code \\p{...}} (escaped backslash followed by {@code p}).
@@ -55,7 +59,6 @@ public final class JavaRegexTranslator {
                 final char next = javaPattern.charAt(i + 1);
 
                 if (!inQuotation && next == 'Q') {
-                    // Enter \Q...\E region — copy both chars and flip state
                     out.append('\\');
                     out.append('Q');
                     i += 2;
@@ -64,7 +67,6 @@ public final class JavaRegexTranslator {
                 }
 
                 if (inQuotation && next == 'E') {
-                    // Leave \Q...\E region
                     out.append('\\');
                     out.append('E');
                     i += 2;
@@ -73,7 +75,6 @@ public final class JavaRegexTranslator {
                 }
 
                 if (inQuotation) {
-                    // Inside quotation: copy verbatim
                     out.append(c);
                     i++;
                     continue;
@@ -81,48 +82,31 @@ public final class JavaRegexTranslator {
 
                 // Outside quotation: check for a property token \p{...} or \P{...}
                 if (next == 'p' || next == 'P') {
-                    // Peek ahead: is the character before this backslash also a backslash?
-                    // We track "number of consecutive backslashes before this position" in the
-                    // output to decide whether this backslash is itself escaped.
-                    // However, since we build `out` on the fly and have already copied all prior
-                    // chars, we count trailing backslashes in `out`.
                     if (!hasOddTrailingBackslashes(out)) {
-                        // Try to consume a property token starting at i
                         final int tokenEnd = findPropertyTokenEnd(javaPattern, i);
                         if (tokenEnd > i) {
-                            // Extract the name between { and }
                             final int braceOpen = javaPattern.indexOf('{', i + 2);
                             final String name = javaPattern.substring(braceOpen + 1, tokenEnd - 1);
                             final String replacement = PropertyMap.apply(name);
 
                             if (replacement != null) {
                                 if (replacement.startsWith("[")) {
-                                    // Whole-token replacement (expanded range / multi-class)
-                                    // For \P{...} (negated) we cannot simply wrap in [^...] because
-                                    // the replacement may already be a full class. We handle the
-                                    // common cases:
-                                    //   \p{...} → replacement (already a [...])
-                                    //   \P{...} → negate: we prepend [^ and strip outer [ from replacement
                                     if (next == 'P') {
-                                        // Negate the expanded class: [stuff] → [^stuff]
                                         out.append("[^");
                                         out.append(replacement, 1, replacement.length());
                                     } else {
                                         out.append(replacement);
                                     }
                                 } else if (replacement.startsWith("\\P{")) {
-                                    // Special case: javaDefined → \P{Cn}  (a whole negated property)
                                     if (next == 'P') {
-                                        // \P{javaDefined} → \p{Cn}  (double negation → positive)
                                         out.append("\\p{");
                                         out.append(replacement, 3, replacement.length());
                                     } else {
                                         out.append(replacement);
                                     }
                                 } else {
-                                    // Plain name replacement
                                     out.append('\\');
-                                    out.append(next); // keep p or P
+                                    out.append(next);
                                     out.append('{');
                                     out.append(replacement);
                                     out.append('}');
@@ -130,7 +114,6 @@ public final class JavaRegexTranslator {
                                 i = tokenEnd;
                                 continue;
                             }
-                            // No rewrite: copy the original token verbatim
                             out.append(javaPattern, i, tokenEnd);
                             i = tokenEnd;
                             continue;
@@ -138,8 +121,7 @@ public final class JavaRegexTranslator {
                     }
                 }
 
-                // Any other backslash sequence: copy backslash and advance; the next char
-                // will be picked up in the next iteration (single-char copy path).
+                // Any other backslash sequence: copy backslash and advance.
                 out.append(c);
                 i++;
                 continue;
@@ -149,6 +131,42 @@ public final class JavaRegexTranslator {
                 out.append(c);
                 i++;
                 continue;
+            }
+
+            // --- Phase 2: character class body rewrite ---
+            if (c == '[' && !hasOddTrailingBackslashes(out)) {
+                final int classStart = i;
+                final int[] pos = {i};
+                try {
+                    // If the class body contains raw surrogate code units, preserve Phase-1
+                    // behaviour to avoid undefined interactions with PCRE2's UTF mode.
+                    if (containsRawSurrogate(javaPattern, classStart)) {
+                        // Scan ahead to find the end of this class (Phase 1 pass handles nesting)
+                        final ClassNode classNode = ClassBodyParser.parseClass(javaPattern, pos);
+                        final int classEnd = pos[0];
+                        out.append(rewritePropertiesOnly(javaPattern, classStart, classEnd));
+                        i = classEnd;
+                        continue;
+                    }
+                    final ClassNode classNode = ClassBodyParser.parseClass(javaPattern, pos);
+                    final int classEnd = pos[0];
+                    final String rendered = ClassRenderer.render(classNode);
+                    if (rendered.contains("&&")) {
+                        // Fallback: intersection could not be evaluated.
+                        // Preserve Phase-1 behaviour by rewriting only property tokens in the
+                        // original class text — keeping [, ], && and nested structure verbatim.
+                        out.append(rewritePropertiesOnly(javaPattern, classStart, classEnd));
+                    } else {
+                        out.append(rendered);
+                    }
+                    i = classEnd;
+                    continue;
+                } catch (IllegalArgumentException e) {
+                    // Parser failed — copy verbatim and let PCRE2 handle (or reject) it
+                    out.append(c);
+                    i++;
+                    continue;
+                }
             }
 
             // Normal character — copy verbatim
@@ -197,5 +215,105 @@ public final class JavaRegexTranslator {
             }
         }
         return (count & 1) == 1;
+    }
+
+    /**
+     * Applies Phase-1-style property rewriting to the substring {@code s[from, to)} — which
+     * must be a character class text like {@code [\p{InGreek}&&[^x]]} — rewriting only
+     * {@code \p{...}} / {@code \P{...}} tokens and leaving all other syntax unchanged.
+     *
+     * <p>This is used as the intersection fallback: when a class with {@code &&} cannot be
+     * fully evaluated to a {@link RangeSet}, we preserve the original structure so that PCRE2
+     * parses it the same way it would have with Phase-1-only translation, avoiding regressions.
+     */
+    private static String rewritePropertiesOnly(final String s, final int from, final int to) {
+        final StringBuilder sb = new StringBuilder(to - from + 8);
+        int i = from;
+        boolean inQuote = false;
+        while (i < to) {
+            final char c = s.charAt(i);
+            if (c == '\\' && i + 1 < to) {
+                final char next = s.charAt(i + 1);
+                if (!inQuote && next == 'Q') {
+                    sb.append('\\').append('Q');
+                    i += 2;
+                    inQuote = true;
+                    continue;
+                }
+                if (inQuote && next == 'E') {
+                    sb.append('\\').append('E');
+                    i += 2;
+                    inQuote = false;
+                    continue;
+                }
+                if (!inQuote && (next == 'p' || next == 'P') && !hasOddTrailingBackslashes(sb)) {
+                    final int tokenEnd = findPropertyTokenEnd(s, i);
+                    if (tokenEnd > i) {
+                        final int braceOpen = s.indexOf('{', i + 2);
+                        final String name = s.substring(braceOpen + 1, tokenEnd - 1);
+                        final String replacement = PropertyMap.apply(name);
+                        if (replacement != null) {
+                            if (replacement.startsWith("[")) {
+                                if (next == 'P') {
+                                    sb.append("[^");
+                                    sb.append(replacement, 1, replacement.length());
+                                } else {
+                                    sb.append(replacement);
+                                }
+                            } else if (replacement.startsWith("\\P{")) {
+                                if (next == 'P') {
+                                    sb.append("\\p{");
+                                    sb.append(replacement, 3, replacement.length());
+                                } else {
+                                    sb.append(replacement);
+                                }
+                            } else {
+                                sb.append('\\').append(next).append('{')
+                                  .append(replacement).append('}');
+                            }
+                            i = tokenEnd;
+                            continue;
+                        }
+                        sb.append(s, i, tokenEnd);
+                        i = tokenEnd;
+                        continue;
+                    }
+                }
+                sb.append(c);
+                i++;
+                continue;
+            }
+            sb.append(c);
+            i++;
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Returns {@code true} if the substring starting at {@code from} contains any <em>lone</em>
+     * surrogate code unit (a high surrogate not followed by a low surrogate, or a low surrogate
+     * not preceded by a high surrogate) before the class body ends.
+     *
+     * <p>Lone surrogates in class bodies cause PCRE2 behavior that depends on JNA/FFM string
+     * encoding details.  We preserve Phase-1 semantics for those classes to avoid regressions.
+     *
+     * <p>Valid supplementary characters stored as surrogate pairs are NOT considered lone
+     * surrogates and will be handled normally.
+     */
+    private static boolean containsRawSurrogate(final String s, final int from) {
+        final int limit = Math.min(from + 4096, s.length());
+        for (int k = from; k < limit; k++) {
+            final char ch = s.charAt(k);
+            if (ch >= 0xD800 && ch <= 0xDFFF) {
+                // Check if it's a valid surrogate pair
+                if (Character.isHighSurrogate(ch) && k + 1 < limit
+                        && Character.isLowSurrogate(s.charAt(k + 1))) {
+                    k++; // skip the low surrogate — this is a valid pair
+                } else {
+                    return true; // lone surrogate
+                }
+            }
+        }
+        return false;
     }
 }

@@ -89,4 +89,49 @@ class JavaRegexTranslatorTest {
     void multipleTokensInOnePattern() {
         assertEquals("\\p{Greek}\\p{Hiragana}", JavaRegexTranslator.translate("\\p{InGreek}\\p{InHiragana}", 0));
     }
+
+    // --- Phase 2: character class body rewrite ---
+
+    @Test
+    void nestedUnionFlattens() {
+        final String result = JavaRegexTranslator.translate("[abc[def]]", 0);
+        // Should produce a flat class (no nested [[)
+        assertFalse(result.contains("[["), "Should not have nested [[: " + result);
+        assertEquals("[abcdef]", result);
+    }
+
+    @Test
+    void intersectionBecomesRangeSet() {
+        final String result = JavaRegexTranslator.translate("[a-c&&d-f]", 0);
+        // Empty intersection → matches nothing
+        assertFalse(result.contains("&&"), "Should not contain &&: " + result);
+    }
+
+    @Test
+    void wDashHashEscapesDash() {
+        final String result = JavaRegexTranslator.translate("[\\w-#]", 0);
+        // '-' should be escaped so PCRE2 doesn't interpret it as a range operator
+        assertTrue(result.contains("\\-"), "Dash should be escaped in: " + result);
+    }
+
+    @Test
+    void classBodyRewritePreservesOutsidePattern() {
+        final String result = JavaRegexTranslator.translate("a[bc]d", 0);
+        assertEquals("a[bc]d", result);
+    }
+
+    @Test
+    void propertyInsideClassRewritten() {
+        // \p{InGreek} inside a class should be rewritten to \p{Greek}
+        final String result = JavaRegexTranslator.translate("[\\p{InGreek}]", 0);
+        assertTrue(result.contains("\\p{Greek}"), "Expected \\p{Greek} in: " + result);
+        assertFalse(result.contains("\\p{InGreek}"), "Should not contain InGreek: " + result);
+    }
+
+    @Test
+    void intersectionWithKnownPropertyEvaluated() {
+        // [\d&&[0-3]] should evaluate to [0-3]
+        final String result = JavaRegexTranslator.translate("[\\d&&[0-3]]", 0);
+        assertFalse(result.contains("&&"), "Should not contain &&: " + result);
+    }
 }
