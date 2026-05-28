@@ -60,6 +60,7 @@ public final class JavaRegexTranslator {
             return javaPattern;
         }
 
+        final boolean caseless = (flags & java.util.regex.Pattern.CASE_INSENSITIVE) != 0;
         final int len = javaPattern.length();
         final StringBuilder out = new StringBuilder(len + 32);
 
@@ -98,7 +99,7 @@ public final class JavaRegexTranslator {
                 // Outside quotation: check for a property token \p{...} or \P{...}
                 if (next == 'p' || next == 'P') {
                     if (!hasOddTrailingBackslashes(out)) {
-                        final int tokenEnd = tryAppendPropertyToken(javaPattern, i, next, out);
+                        final int tokenEnd = tryAppendPropertyToken(javaPattern, i, next, out, caseless);
                         if (tokenEnd > i) {
                             i = tokenEnd;
                             continue;
@@ -204,18 +205,24 @@ public final class JavaRegexTranslator {
                         continue;
                     }
                     final String rendered = ClassRenderer.render(classNode);
-                    if (rendered.contains("&&")) {
+                    final String maybeFolded = caseless ? expandCasedPropertiesInClass(rendered) : rendered;
+                    if (maybeFolded.contains("&&")) {
                         // Fallback: intersection could not be evaluated.
                         // Preserve Phase-1 behaviour by rewriting only property tokens in the
                         // original class text — keeping [, ], && and nested structure verbatim.
                         out.append(rewritePropertiesOnly(javaPattern, classStart, classEnd));
                     } else {
-                        out.append(rendered);
+                        out.append(maybeFolded);
                     }
                     i = classEnd;
                     continue;
                 } catch (IllegalArgumentException e) {
-                    // Parser failed — copy verbatim and let PCRE2 produce the diagnostic.
+                    // Bad intersection: JDK rejects [...&&] (empty right operand).
+                    if (e.getMessage() != null && e.getMessage().startsWith("Bad intersection syntax")) {
+                        throw new java.util.regex.PatternSyntaxException(
+                                "Bad intersection syntax", javaPattern, classStart);
+                    }
+                    // Other parser failure — copy verbatim and let PCRE2 produce the diagnostic.
                     // Log at FINE so support can opt in to seeing the original parser failure.
                     if (LOG.isLoggable(Level.FINE)) {
                         LOG.log(Level.FINE, "ClassBodyParser rejected class at index "
@@ -441,7 +448,8 @@ public final class JavaRegexTranslator {
      * index just past the token, or {@code start} if no valid token was present.
      */
     private static int tryAppendPropertyToken(
-            final String s, final int start, final char pOrP, final StringBuilder out) {
+            final String s, final int start, final char pOrP, final StringBuilder out,
+            final boolean caseless) {
         final int tokenEnd = findPropertyTokenEnd(s, start);
         if (tokenEnd <= start) {
             return start;
@@ -449,6 +457,17 @@ public final class JavaRegexTranslator {
         final int braceOpen = s.indexOf('{', start + 2);
         final String name = s.substring(braceOpen + 1, tokenEnd - 1);
         final String replacement = PropertyMap.apply(name);
+        final String effective = replacement != null ? replacement : name;
+        // Under CASELESS, PCRE2 does not case-fold property classes. Rewrite cased categories
+        // to the union [Lu Ll Lt] so JDK's CASE_INSENSITIVE semantics are preserved.
+        if (caseless && isCasedLetterCategory(effective)) {
+            if (pOrP == 'P') {
+                out.append("[^\\p{Lu}\\p{Ll}\\p{Lt}]");
+            } else {
+                out.append("[\\p{Lu}\\p{Ll}\\p{Lt}]");
+            }
+            return tokenEnd;
+        }
         if (replacement == null) {
             out.append(s, start, tokenEnd);
         } else if (replacement.startsWith("[")) {
@@ -467,6 +486,70 @@ public final class JavaRegexTranslator {
             out.append('\\').append(pOrP).append('{').append(replacement).append('}');
         }
         return tokenEnd;
+    }
+
+    private static boolean isCasedLetterCategory(final String resolved) {
+        switch (resolved) {
+            case "Lu":
+            case "Ll":
+            case "Lt":
+            case "Lowercase":
+            case "Uppercase":
+            case "Titlecase":
+            case "[a-z]":
+            case "[A-Z]":
+                return true;
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Inside a rendered char class (already starts with {@code [} and ends with {@code ]}), expand
+     * cased property atoms ({@code \p{Lu}}, {@code \p{Ll}}, {@code \p{Lt}}, and the binary aliases
+     * {@code \p{Lowercase|Uppercase|Titlecase}}) into the union of all three so PCRE2's CASELESS
+     * semantics match JDK's CASE_INSENSITIVE for property classes. Also expands the ASCII ranges
+     * {@code a-z} and {@code A-Z} (which JDK's CASE_INSENSITIVE folds to all case-equivalents,
+     * including titlecase letters like U+01C8) to include the cased-letter union.
+     */
+    private static String expandCasedPropertiesInClass(final String classText) {
+        final boolean hasProp = classText.indexOf("\\p{") >= 0 || classText.indexOf("\\P{") >= 0;
+        final boolean hasAsciiCasedRange = classText.contains("a-z") || classText.contains("A-Z");
+        if (!hasProp && !hasAsciiCasedRange) {
+            return classText;
+        }
+        final StringBuilder sb = new StringBuilder(classText.length() + 32);
+        final int n = classText.length();
+        boolean appendedCasedUnion = false;
+        for (int i = 0; i < n; i++) {
+            final char c = classText.charAt(i);
+            if (c == '\\' && i + 3 < n && (classText.charAt(i + 1) == 'p' || classText.charAt(i + 1) == 'P')
+                    && classText.charAt(i + 2) == '{') {
+                final int close = classText.indexOf('}', i + 3);
+                if (close > 0) {
+                    final String body = classText.substring(i + 3, close);
+                    if (isCasedLetterCategory(body)) {
+                        if (classText.charAt(i + 1) == 'P') {
+                            // \P{Lu} → leave as-is (rare and not in JDK CASELESS tests).
+                            sb.append(classText, i, close + 1);
+                        } else {
+                            sb.append("\\p{Lu}\\p{Ll}\\p{Lt}");
+                            appendedCasedUnion = true;
+                        }
+                        i = close;
+                        continue;
+                    }
+                }
+            }
+            sb.append(c);
+        }
+        // If we left ASCII a-z / A-Z ranges in place, append a cased-letter union before the
+        // closing ']' so non-ASCII case-equivalents (e.g. U+01C7 LJ family) also match.
+        if (hasAsciiCasedRange && !appendedCasedUnion
+                && sb.length() > 1 && sb.charAt(sb.length() - 1) == ']') {
+            sb.insert(sb.length() - 1, "\\p{Lu}\\p{Ll}\\p{Lt}");
+        }
+        return sb.toString();
     }
 
     /**
@@ -515,7 +598,7 @@ public final class JavaRegexTranslator {
                     continue;
                 }
                 if (!inQuote && (next == 'p' || next == 'P') && !hasOddTrailingBackslashes(sb)) {
-                    final int tokenEnd = tryAppendPropertyToken(s, i, next, sb);
+                    final int tokenEnd = tryAppendPropertyToken(s, i, next, sb, false);
                     if (tokenEnd > i) {
                         i = tokenEnd;
                         continue;

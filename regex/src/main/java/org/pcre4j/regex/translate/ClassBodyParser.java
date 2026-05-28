@@ -104,6 +104,10 @@ public final class ClassBodyParser {
                     && s.charAt(pos[0]) == '&'
                     && s.charAt(pos[0] + 1) == '&') {
                 pos[0] += 2; // consume '&&'
+                if (pos[0] >= len || s.charAt(pos[0]) == ']') {
+                    throw new IllegalArgumentException(
+                            "Bad intersection syntax near index " + pos[0]);
+                }
                 operands.add(parseUnion(s, pos));
             }
             return new ClassNode.Intersection(operands);
@@ -367,9 +371,13 @@ public final class ClassBodyParser {
                     final String token;
                     if (rewritten == null) {
                         token = "\\" + esc + "{" + propName + "}";
+                    } else if (rewritten.startsWith("[") && rewritten.endsWith("]") && !neg) {
+                        // Expanded to a bracketed expansion — embed contents directly into the
+                        // outer class as a union. Only safe for the positive case; negation of
+                        // a bracketed expansion can't be expressed inline within a class.
+                        token = rewritten.substring(1, rewritten.length() - 1);
                     } else if (rewritten.startsWith("[")) {
-                        // Expanded to a range string — keep as opaque PCRE2 token;
-                        // for evaluation purposes we mark as unknown so Evaluator falls back
+                        // Negated variant of a bracketed expansion — keep original opaque token.
                         token = "\\" + esc + "{" + propName + "}";
                     } else if (rewritten.startsWith("\\P{")) {
                         // Double-negation case (javaDefined)
