@@ -152,13 +152,30 @@ public final class PropertyMap {
         // 3. \p{InXxx} → strip "In" prefix; PCRE2 recognises both block and script names without prefix.
         //    Special case: ALL_CAPS_WITH_UNDERSCORES names (e.g. HIGH_SURROGATES after stripping "In")
         //    are Unicode block names that were already handled by exact lookup above; if we reach here
-        //    it means they had no explicit range entry, so just strip the prefix and let PCRE2 decide.
+        //    it means they had no explicit range entry, so insert underscores at CamelCase boundaries
+        //    (BasicLatin → Basic_Latin, MathematicalAlphanumericSymbols → Mathematical_Alphanumeric_Symbols)
+        //    so PCRE2's block lookup succeeds.
         if (name.startsWith("In") && name.length() > 2) {
-            return name.substring(2);
+            return camelCaseToUnderscores(name.substring(2));
         }
 
         // 4. No rewrite
         return null;
+    }
+
+    private static String camelCaseToUnderscores(final String s) {
+        if (s.indexOf('_') >= 0) {
+            return s; // already underscored or mixed; leave alone
+        }
+        final StringBuilder sb = new StringBuilder(s.length() + 8);
+        for (int i = 0; i < s.length(); i++) {
+            final char c = s.charAt(i);
+            if (i > 0 && Character.isUpperCase(c) && Character.isLowerCase(s.charAt(i - 1))) {
+                sb.append('_');
+            }
+            sb.append(c);
+        }
+        return sb.toString();
     }
 
     private static String resolveOrPass(final String value) {

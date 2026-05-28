@@ -246,6 +246,10 @@ public class Matcher implements java.util.regex.MatchResult {
             final var matchLimit = System.getProperty(MATCH_LIMIT_PROPERTY);
             if (matchLimit != null) {
                 matchContext.setMatchLimit(parsePositiveInt(MATCH_LIMIT_PROPERTY, matchLimit));
+            } else {
+                // JDK has no fixed match limit; raise PCRE2's default (10M) so patterns that JDK
+                // tolerates with naive backtracking don't fail with MatchLimitException here.
+                matchContext.setMatchLimit(Integer.MAX_VALUE);
             }
         }
 
