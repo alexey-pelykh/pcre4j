@@ -358,15 +358,19 @@ public final class JavaRegexTranslator {
 
     /**
      * Returns {@code true} if {@code c} is a Java inline mode flag character
-     * ({@code i}, {@code d}, {@code m}, {@code s}, {@code u}, {@code x}, or {@code U}).
+     * ({@code i}, {@code d}, {@code m}, {@code s}, {@code u}, {@code c}, {@code x}, or {@code U}).
+     * Note: {@code c} (CANON_EQ) is accepted at the syntax level so {@code (?c)} compiles, even
+     * though it is filtered out before being handed to PCRE2 (CANON_EQ is implemented by NFD
+     * normalisation of the pattern at compile time, not by an inline-flag mechanism).
      */
     private static boolean isJavaModeFlag(final char c) {
-        return c == 'i' || c == 'd' || c == 'm' || c == 's' || c == 'u' || c == 'x' || c == 'U';
+        return c == 'i' || c == 'd' || c == 'm' || c == 's' || c == 'u' || c == 'c' || c == 'x' || c == 'U';
     }
 
     /**
      * Returns the substring {@code s[from, to)} with Java-only mode flags ({@code u}, {@code U},
-     * {@code d}) removed, preserving the order of the remaining flag characters.
+     * {@code d}, {@code c}) removed, preserving the order of the remaining flag characters.
+     * {@code c} (CANON_EQ) has no PCRE2 inline equivalent and is handled by NFD normalisation.
      */
     private static String filterModeFlags(final String s, final int from, final int to) {
         if (from >= to) {
@@ -375,7 +379,7 @@ public final class JavaRegexTranslator {
         final StringBuilder sb = new StringBuilder(to - from);
         for (int k = from; k < to; k++) {
             final char f = s.charAt(k);
-            if (f != 'u' && f != 'U' && f != 'd') {
+            if (f != 'u' && f != 'U' && f != 'd' && f != 'c') {
                 sb.append(f);
             }
         }

@@ -238,6 +238,18 @@ public class Pattern {
         this.depthLimit = depthLimit;
         this.heapLimit = heapLimit;
 
+        // JDK contract: a pattern that ends with an unescaped backslash must throw with a
+        // diagnostic mentioning "Unescaped trailing backslash" before any translation/compile.
+        // Count trailing backslashes; if odd, the last one is unescaped.
+        int trailingBs = 0;
+        for (int k = regex.length() - 1; k >= 0 && regex.charAt(k) == '\\'; k--) {
+            trailingBs++;
+        }
+        if ((trailingBs & 1) == 1) {
+            throw new PatternSyntaxException(
+                    "Unescaped trailing backslash", regex, regex.length() - 1);
+        }
+
         // Translate Java regex syntax to PCRE2-compatible syntax.
         // The original regex is preserved in this.regex for pattern() method.
         // Translation can be disabled via -Dpcre4j.regex.translate=false.
