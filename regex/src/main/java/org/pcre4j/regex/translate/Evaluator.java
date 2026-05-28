@@ -68,6 +68,21 @@ public final class Evaluator {
         throw new EvaluationFailedException("Unknown node type: " + node.getClass());
     }
 
+    /**
+     * Non-throwing variant of {@link #toRangeSet}: returns the {@link RangeSet}, or {@code null}
+     * if the node (or a descendant) contains a property leaf that cannot be expanded.
+     *
+     * <p>Preferred over catching {@link EvaluationFailedException} when the caller would otherwise
+     * use exception flow for routine fall-back decisions.
+     */
+    public static RangeSet tryToRangeSet(final ClassNode node) {
+        try {
+            return toRangeSet(node);
+        } catch (EvaluationFailedException e) {
+            return null;
+        }
+    }
+
     // -----------------------------------------------------------------------
     // Property expansion table (ASCII-only approximations)
     // -----------------------------------------------------------------------

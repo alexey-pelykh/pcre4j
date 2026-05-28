@@ -57,13 +57,27 @@ public final class ClassRenderer {
         if (containsIntersection(inner)) {
             return renderWithIntersection(inner, negated);
         }
-        // Simple path: no intersection — flat emission
+        // Simple path: no intersection — try flat emission, fall back to original-style
+        // if any nested negated subtree can't be evaluated (so we don't silently drop '^').
         final StringBuilder sb = new StringBuilder();
         sb.append('[');
         if (negated) {
             sb.append('^');
         }
-        emitFlat(inner, sb);
+        try {
+            emitFlat(inner, sb);
+        } catch (EvaluationFailedException e) {
+            // Nested [^...] that can't be evaluated to a RangeSet — preserve the wrapper by
+            // re-emitting in original style so PCRE2 sees identical structure to Phase-1 output.
+            final StringBuilder fallback = new StringBuilder();
+            fallback.append('[');
+            if (negated) {
+                fallback.append('^');
+            }
+            emitOriginalStyle(inner, fallback);
+            fallback.append(']');
+            return fallback.toString();
+        }
         sb.append(']');
         return sb.toString();
     }
@@ -75,8 +89,13 @@ public final class ClassRenderer {
     /**
      * Emits the body of {@code node} into {@code sb} without surrounding {@code [...]}.
      * Nested unions are flattened inline.
+     *
+     * @throws EvaluationFailedException if a nested {@link ClassNode.Negated} subtree cannot be
+     *         evaluated to a {@link RangeSet}; the caller should fall back to original-style
+     *         rendering so the {@code ^} is not silently lost.
      */
-    private static void emitFlat(final ClassNode node, final StringBuilder sb) {
+    private static void emitFlat(final ClassNode node, final StringBuilder sb)
+            throws EvaluationFailedException {
         switch (node) {
             case ClassNode.Literal lit -> emitLiteralInClass(lit.cp(), sb);
             case ClassNode.Range r -> {
@@ -87,15 +106,14 @@ public final class ClassRenderer {
             case ClassNode.PropertyLeaf leaf -> sb.append(leaf.pcre2Token());
             case ClassNode.Negated neg -> {
                 // A negated subtree inside a non-negated flat class.
-                // Try to evaluate + complement so we can inline the ranges.
-                try {
-                    final RangeSet rs = Evaluator.toRangeSet(neg.child()).complement();
-                    sb.append(rs.toPcre2ClassBody());
-                } catch (EvaluationFailedException e) {
-                    // Cannot evaluate — flatten the child directly without negation
-                    // (information loss is acceptable; PCRE2 cannot express inner [^...])
-                    emitFlat(neg.child(), sb);
+                // Evaluate + complement so we can inline the ranges. If evaluation fails the
+                // exception propagates and render() falls back to original-style emission.
+                final RangeSet rs = Evaluator.tryToRangeSet(neg.child());
+                if (rs == null) {
+                    throw new EvaluationFailedException(
+                            "Cannot flatten nested [^...]; caller must fall back");
                 }
+                sb.append(rs.complement().toPcre2ClassBody());
             }
             case ClassNode.Union union -> {
                 for (final ClassNode child : union.children()) {
@@ -103,8 +121,9 @@ public final class ClassRenderer {
                 }
             }
             case ClassNode.Intersection inter -> {
-                // Should not occur in flat path; emit with && as fallback
-                emitIntersectionFallback(inter, sb);
+                // Unreachable: render() routes intersections through renderWithIntersection.
+                throw new AssertionError(
+                        "emitFlat must not be called on Intersection nodes: " + inter);
             }
         }
     }
@@ -144,8 +163,8 @@ public final class ClassRenderer {
 
     private static String renderWithIntersection(final ClassNode inner, final boolean negated) {
         // Strategy 1: Try to evaluate the entire subtree to a RangeSet
-        try {
-            RangeSet rs = Evaluator.toRangeSet(inner);
+        RangeSet rs = Evaluator.tryToRangeSet(inner);
+        if (rs != null) {
             if (negated) {
                 rs = rs.complement();
             }
@@ -153,15 +172,13 @@ public final class ClassRenderer {
                 return EMPTY_CLASS;
             }
             return "[" + rs.toPcre2ClassBody() + "]";
-        } catch (EvaluationFailedException strategy1Failure) {
-            // Strategy 2 below
         }
 
         // Strategy 2: If the top node is Intersection, try each operand individually
         if (inner instanceof ClassNode.Intersection inter) {
-            final RangeSet rs = tryEvaluateIntersectionRangeSet(inter);
-            if (rs != null) {
-                final RangeSet effective = negated ? rs.complement() : rs;
+            final RangeSet operandResult = tryEvaluateIntersectionRangeSet(inter);
+            if (operandResult != null) {
+                final RangeSet effective = negated ? operandResult.complement() : operandResult;
                 if (effective.isEmpty()) {
                     return EMPTY_CLASS;
                 }
@@ -189,29 +206,17 @@ public final class ClassRenderer {
         final List<ClassNode> operands = inter.operands();
         final List<RangeSet> sets = new ArrayList<>(operands.size());
         for (final ClassNode op : operands) {
-            try {
-                sets.add(Evaluator.toRangeSet(op));
-            } catch (EvaluationFailedException e) {
+            final RangeSet rs = Evaluator.tryToRangeSet(op);
+            if (rs == null) {
                 return null;
             }
+            sets.add(rs);
         }
         RangeSet result = RangeSet.ALL;
         for (final RangeSet rs : sets) {
             result = result.intersect(rs);
         }
         return result;
-    }
-
-    /** Emits the intersection's operands with {@code &&} separators (PCRE2 fallback). */
-    private static void emitIntersectionFallback(
-            final ClassNode.Intersection inter, final StringBuilder sb) {
-        final List<ClassNode> operands = inter.operands();
-        for (int i = 0; i < operands.size(); i++) {
-            if (i > 0) {
-                sb.append("&&");
-            }
-            emitFlat(operands.get(i), sb);
-        }
     }
 
     /**
