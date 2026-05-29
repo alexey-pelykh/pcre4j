@@ -18,12 +18,15 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class PropertyMapTest {
 
     @Test
     void inPrefixStrip() {
-        assertEquals("Greek", PropertyMap.apply("InGreek"));
+        // PR #606 review F3: InXxxx now materialises to a Character.UnicodeBlock range,
+        // not the (potentially-incorrect) PCRE2 script alias.
+        assertEquals("[\\x{370}-\\x{3FF}]", PropertyMap.apply("InGreek"));
     }
 
     @Test
@@ -43,17 +46,23 @@ class PropertyMapTest {
 
     @Test
     void javaLowerCase() {
-        assertEquals("Ll", PropertyMap.apply("javaLowerCase"));
+        // PR #606 review F4: javaLowerCase must NOT be a Ll alias — Character.isLowerCase()
+        // is a strict superset (e.g. U+00AA ª has gc=Lo but isLowerCase).
+        final String result = PropertyMap.apply("javaLowerCase");
+        assertTrue(result.startsWith("[") && result.contains("\\x{AA}"),
+                "Expected materialised class with U+00AA, got: " + result);
     }
 
     @Test
-    void highSurrogatesExpandToRange() {
-        assertEquals("[\\x{D800}-\\x{DB7F}]", PropertyMap.apply("InHIGH_SURROGATES"));
+    void highSurrogatesNeverMatchSentinel() {
+        // PR #606 review F2: PCRE2 in UTF mode refuses surrogate ranges; PropertyMap signals
+        // this with the NEVER_MATCH sentinel that the translator turns into (?!).
+        assertEquals(PropertyMap.NEVER_MATCH, PropertyMap.apply("InHIGH_SURROGATES"));
     }
 
     @Test
-    void lowSurrogatesExpandToRange() {
-        assertEquals("[\\x{DC00}-\\x{DFFF}]", PropertyMap.apply("InLOW_SURROGATES"));
+    void lowSurrogatesNeverMatchSentinel() {
+        assertEquals(PropertyMap.NEVER_MATCH, PropertyMap.apply("InLOW_SURROGATES"));
     }
 
     @Test

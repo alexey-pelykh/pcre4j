@@ -91,6 +91,8 @@ class TxtCompatTest {
             future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             future.cancel(true);
+            RECORDER.recordTimeout(source, c.index(), c.pattern(), c.input(), c.patternFlags(),
+                    TIMEOUT_SECONDS * 1000L);
             Assumptions.abort("Timed out after " + TIMEOUT_SECONDS + "s: " + source + "#" + c.index()
                     + " pattern=" + c.pattern());
         } catch (java.util.concurrent.ExecutionException e) {

@@ -41,7 +41,7 @@ public final class ReportRenderer {
 
         Map<String, int[]> summary = new TreeMap<>();
         for (RawRecord r : records) {
-            int[] s = summary.computeIfAbsent(r.source(), k -> new int[6]);
+            int[] s = summary.computeIfAbsent(r.source(), k -> new int[8]);
             s[0]++;
             Verdict v = classify(r);
             switch (v) {
@@ -59,21 +59,29 @@ public final class ReportRenderer {
                     s[5]++;
                 }
                 case SUT_ACCEPTS_REJECTED -> s[2]++;
-                case BOTH_REJECTED -> s[1]++;
+                case BOTH_REJECTED -> s[6]++;
+                case TIMEOUT -> {
+                    s[2]++;
+                    s[7]++;
+                }
             }
         }
 
         StringBuilder out = new StringBuilder();
         out.append("# pcre4j compat report vs java.util.regex\n\n");
         out.append("## Summary\n\n");
-        out.append("| Source | Total | Pass | Fail | sut-compile-error | sut-runtime-error | behavior-diff |\n");
-        out.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: |\n");
+        out.append("| Source | Total | Pass | Fail | both-rejected | sut-compile-error | sut-runtime-error | behavior-diff | timeout |\n");
+        out.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
         for (var e : summary.entrySet()) {
             int[] s = e.getValue();
             out.append("| ").append(e.getKey()).append(" | ").append(s[0]).append(" | ").append(s[1])
-                    .append(" | ").append(s[2]).append(" | ").append(s[3]).append(" | ")
-                    .append(s[4]).append(" | ").append(s[5]).append(" |\n");
+                    .append(" | ").append(s[2]).append(" | ").append(s[6]).append(" | ")
+                    .append(s[3]).append(" | ").append(s[4]).append(" | ").append(s[5])
+                    .append(" | ").append(s[7]).append(" |\n");
         }
+
+        out.append("\n> **Pass** = oracle and SUT agree on `matches()`, `lookingAt()` and `findAll`. ")
+                .append("**both-rejected** = both engines refused to compile the pattern (counted separately so the headline number reflects behavioural agreement only).\n");
 
         out.append("\n## Failures by root cause\n\n");
         out.append("| Cause | Count | Sample pattern |\n| --- | ---: | --- |\n");
@@ -96,10 +104,11 @@ public final class ReportRenderer {
     }
 
     private enum Verdict {
-        PASS, SUT_COMPILE_ERROR, SUT_RUNTIME_ERROR, SUT_ACCEPTS_REJECTED, BEHAVIOR_DIFF, BOTH_REJECTED
+        PASS, SUT_COMPILE_ERROR, SUT_RUNTIME_ERROR, SUT_ACCEPTS_REJECTED, BEHAVIOR_DIFF, BOTH_REJECTED, TIMEOUT
     }
 
     private static Verdict classify(RawRecord r) {
+        if ("timeout".equals(r.outcomeTag())) return Verdict.TIMEOUT;
         boolean oOk = "ok".equals(r.oracleCompile());
         boolean sOk = "ok".equals(r.sutCompile());
         if (!oOk && !sOk) return Verdict.BOTH_REJECTED;
@@ -109,7 +118,10 @@ public final class ReportRenderer {
             return Verdict.SUT_COMPILE_ERROR;
         }
         if (!oOk && sOk) return Verdict.SUT_ACCEPTS_REJECTED;
+        // Both compiled: behaviour must agree on all three probe operations.
         if (!Objects.equals(r.oracleMatches(), r.sutMatches())) return Verdict.BEHAVIOR_DIFF;
+        if (!Objects.equals(r.oracleLookingAt(), r.sutLookingAt())) return Verdict.BEHAVIOR_DIFF;
+        if (!Objects.equals(r.oracleFindAll(), r.sutFindAll())) return Verdict.BEHAVIOR_DIFF;
         return Verdict.PASS;
     }
 }

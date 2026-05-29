@@ -37,27 +37,31 @@ public final class PropertyMap {
 
     static {
         // --- Block properties with surrogate-range expansion ---
-        // Lone surrogate ranges: PCRE2_UTF will reject code points in the surrogate range, but we
-        // translate to the explicit hex ranges so the syntax is at least accepted by the parser.
-        // TODO: If PCRE2 still rejects these under PCRE2_UTF, users must disable UTF mode manually.
-        TABLE.put("InHIGH_SURROGATES",       "[\\x{D800}-\\x{DB7F}]");
-        TABLE.put("InHIGH_PRIVATE_USE_SURROGATES", "[\\x{DB80}-\\x{DBFF}]");
-        TABLE.put("InLOW_SURROGATES",        "[\\x{DC00}-\\x{DFFF}]");
+        // Surrogate blocks are intentionally NOT registered with explicit \x{D800}-\x{DFFF}
+        // ranges: PCRE2 in UTF mode rejects code points in the surrogate area at compile time
+        // (error 173). java.util.regex accepts these properties (they just never match against
+        // any code point a UTF-8 PCRE2 can see). They are now routed to the never-match
+        // construct in {@link #apply(String)} so a valid Java pattern containing
+        // {@code \\p{InHighSurrogates}} no longer throws PatternSyntaxException.
 
         // --- Short alias: L1 (JDK's Latin-1 shorthand) ---
         TABLE.put("L1",     "[\\x{00}-\\x{FF}]");
 
         // --- \p{javaXxx} Java-specific properties ---
-        // These are best-effort approximations; documented deviations noted inline.
-        TABLE.put("javaLowerCase",                "Ll");
-        TABLE.put("javaUpperCase",                "Lu");
+        // Most javaXxx are exact GC aliases (TitleCase=Lt, Mirrored=Bidi_Mirrored, etc.) and
+        // stay here as cheap PropertyMap rewrites. The three properties below are intentionally
+        // omitted because Java's predicate is a *superset* of the corresponding PCRE2 GC, and
+        // returning the GC alias would silently narrow the match. They are materialised via
+        // {@link JdkPropertyExpander#materializeJavaProperty(String)} in {@link #apply(String)}.
+        //   - javaLowerCase  (incl. e.g. U+00AA ª, gc=Lo)
+        //   - javaUpperCase  (incl. e.g. Roman numerals, gc=Nl)
+        //   - javaSpaceChar  (drops U+2028/U+2029 if mapped to Zs)
         TABLE.put("javaTitleCase",                "Lt");
         TABLE.put("javaDigit",                    "Nd");
         TABLE.put("javaLetter",                   "L");
         TABLE.put("javaLetterOrDigit",            "[\\p{L}\\p{Nd}]");
         TABLE.put("javaAlphabetic",               "Alphabetic");
         TABLE.put("javaIdeographic",              "Ideographic");
-        TABLE.put("javaSpaceChar",                "Zs");
         TABLE.put("javaMirrored",                 "Bidi_Mirrored");
         TABLE.put("javaDefined",                  "\\P{Cn}");  // not-unassigned; whole-token replacement
         TABLE.put("javaISOControl",               "[\\x00-\\x1F\\x{7F}-\\x{9F}]");
@@ -104,6 +108,15 @@ public final class PropertyMap {
         TABLE.put("Unassigned",  "Cn");
     }
 
+    /**
+     * Sentinel returned by {@link #apply(String)} when a property should compile to a
+     * never-matching pattern (e.g. JDK block names {@code InHighSurrogates} /
+     * {@code InHighPrivateUseSurrogates} / {@code InLowSurrogates} that PCRE2 cannot accept
+     * under its always-on UTF mode). The translator recognises this exact string and emits a
+     * top-level {@code (?!)} (or its negated counterpart for {@code \\P{…}}).
+     */
+    public static final String NEVER_MATCH = "\u0001NEVER_MATCH\u0001";
+
     private PropertyMap() {
     }
 
@@ -129,10 +142,20 @@ public final class PropertyMap {
                     return resolveOrPass(value);
                 case "blk":
                 case "block":
-                    return resolveOrPass("In" + value);
+                    return resolveBlock(value);
                 default:
                     return null;
             }
+        }
+
+        // 1a. \p{javaXxx} that diverges from any PCRE2 category: materialise via JDK predicate.
+        //     Cheap exact-table aliases (javaTitleCase, etc.) are checked first below; only the
+        //     three Character.isLowerCase/isUpperCase/isSpaceChar properties — whose Java
+        //     semantics are a strict superset of the GC alias — go through the expander.
+        if ("javaLowerCase".equals(name)
+                || "javaUpperCase".equals(name)
+                || "javaSpaceChar".equals(name)) {
+            return JdkPropertyExpander.materializeJavaProperty(name);
         }
 
         // 1. Exact table match
@@ -149,18 +172,38 @@ public final class PropertyMap {
             return mapped != null ? mapped : stripped;
         }
 
-        // 3. \p{InXxx} → strip "In" prefix; PCRE2 recognises both block and script names without prefix.
-        //    Special case: ALL_CAPS_WITH_UNDERSCORES names (e.g. HIGH_SURROGATES after stripping "In")
-        //    are Unicode block names that were already handled by exact lookup above; if we reach here
-        //    it means they had no explicit range entry, so insert underscores at CamelCase boundaries
-        //    (BasicLatin → Basic_Latin, MathematicalAlphanumericSymbols → Mathematical_Alphanumeric_Symbols)
-        //    so PCRE2's block lookup succeeds.
+        // 3. \p{InXxx} → Java block names. PCRE2 has no block table at all (only scripts), so
+        //    we MUST materialise blocks ourselves via Character.UnicodeBlock; a CamelCase →
+        //    snake_case rewrite alone would still fail on PCRE2 with error 147 (unknown
+        //    property). Surrogate blocks resolve to an empty range (PCRE2 in UTF mode never
+        //    matches surrogate code points anyway) and are emitted as the NEVER_MATCH sentinel
+        //    so the translator can substitute a top-level {@code (?!)} construct.
         if (name.startsWith("In") && name.length() > 2) {
-            return camelCaseToUnderscores(name.substring(2));
+            return resolveBlock(name.substring(2));
         }
 
         // 4. No rewrite
         return null;
+    }
+
+    private static String resolveBlock(final String blockName) {
+        // Surrogate blocks: PCRE2 in UTF mode (the only mode PCRE4J turns on) refuses
+        // \\x{D800}-\\x{DFFF} ranges. Java's regex accepts these blocks; they just never
+        // match against decoded UTF-16 input. Return the NEVER_MATCH sentinel so the
+        // translator emits a never-matching construct rather than a compile error.
+        final String upper = blockName.toUpperCase().replace('_', ' ').replace(' ', '_');
+        if ("HIGH_SURROGATES".equals(upper)
+                || "HIGH_PRIVATE_USE_SURROGATES".equals(upper)
+                || "LOW_SURROGATES".equals(upper)) {
+            return NEVER_MATCH;
+        }
+        final String materialized = JdkPropertyExpander.materializeUnicodeBlock(blockName);
+        if (materialized != null) {
+            return materialized;
+        }
+        // Last-ditch fallback: hand PCRE2 the snake-cased name. PCRE2 will reject it with a
+        // clear "unknown property" error rather than us silently dropping the token.
+        return camelCaseToUnderscores(blockName);
     }
 
     private static String camelCaseToUnderscores(final String s) {

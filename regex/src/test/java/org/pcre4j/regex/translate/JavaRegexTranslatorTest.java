@@ -32,10 +32,12 @@ class JavaRegexTranslatorTest {
 
     @Test
     void rewritesInBlockProperty() {
-        assertEquals("\\p{Greek}", JavaRegexTranslator.translate("\\p{InGreek}", 0));
-        assertEquals("\\P{Greek}", JavaRegexTranslator.translate("\\P{InGreek}", 0));
-        assertEquals("a\\p{Greek}b", JavaRegexTranslator.translate("a\\p{InGreek}b", 0));
-        assertEquals("[\\p{Greek}]", JavaRegexTranslator.translate("[\\p{InGreek}]", 0));
+        // PR #606 review F3: PCRE2 has no block table — Java's \p{InGreek} (the GREEK block
+        // U+0370-U+03FF) must be materialised via Character.UnicodeBlock rather than passed
+        // through as the script alias \p{Greek} (which has different membership).
+        assertEquals("[\\x{370}-\\x{3FF}]", JavaRegexTranslator.translate("\\p{InGreek}", 0));
+        assertEquals("[^\\x{370}-\\x{3FF}]", JavaRegexTranslator.translate("\\P{InGreek}", 0));
+        assertEquals("a[\\x{370}-\\x{3FF}]b", JavaRegexTranslator.translate("a\\p{InGreek}b", 0));
     }
 
     @Test
@@ -52,7 +54,13 @@ class JavaRegexTranslatorTest {
 
     @Test
     void rewritesJavaProperty() {
-        assertEquals("\\p{Ll}", JavaRegexTranslator.translate("\\p{javaLowerCase}", 0));
+        // PR #606 review F4: javaLowerCase must NOT be a Ll alias — Java's predicate is a
+        // superset of GC=Ll (e.g. it matches U+00AA ª whose category is Lo). Verify the result
+        // is a materialised class containing U+00AA but not just \p{Ll}.
+        final String result = JavaRegexTranslator.translate("\\p{javaLowerCase}", 0);
+        assertTrue(result.startsWith("["), "Expected materialised class, got: " + result);
+        assertTrue(result.contains("\\x{AA}"), "Expected U+00AA (ª) in javaLowerCase: " + result);
+        assertFalse(result.equals("\\p{Ll}"), "Must not be a bare \\p{Ll} alias: " + result);
     }
 
     @Test
@@ -89,19 +97,24 @@ class JavaRegexTranslatorTest {
 
     @Test
     void escapeHatchDisablesTranslator() {
-        // Tested at Pattern level — sanity-only: translator itself always translates
-        assertEquals("\\p{Greek}", JavaRegexTranslator.translate("\\p{InGreek}", 0));
+        // Tested at Pattern level — sanity-only: translator itself always translates,
+        // and InGreek now materialises to the block range (see rewritesInBlockProperty).
+        assertEquals("[\\x{370}-\\x{3FF}]", JavaRegexTranslator.translate("\\p{InGreek}", 0));
     }
 
     @Test
     void rewritesSurrogateBlockToRange() {
-        assertEquals("[\\x{D800}-\\x{DB7F}]", JavaRegexTranslator.translate("\\p{InHIGH_SURROGATES}", 0));
-        assertEquals("[\\x{DC00}-\\x{DFFF}]", JavaRegexTranslator.translate("\\p{InLOW_SURROGATES}", 0));
+        // PR #606 review F2: PCRE2 in UTF mode refuses \\x{D800}-\\x{DFFF}, so the surrogate
+        // blocks must compile to never-match instead of the literal range.
+        assertEquals("(?!)", JavaRegexTranslator.translate("\\p{InHIGH_SURROGATES}", 0));
+        assertEquals("(?!)", JavaRegexTranslator.translate("\\p{InLOW_SURROGATES}", 0));
     }
 
     @Test
     void negatedSurrogateBlockIsNegated() {
-        assertEquals("[^\\x{D800}-\\x{DB7F}]", JavaRegexTranslator.translate("\\P{InHIGH_SURROGATES}", 0));
+        // The complement of "never match" is "match any code point". The class
+        // [\\x{0}-\\x{10FFFF}] is the canonical match-everything in PCRE2 UTF mode.
+        assertEquals("[\\x{0}-\\x{10FFFF}]", JavaRegexTranslator.translate("\\P{InHIGH_SURROGATES}", 0));
     }
 
     @Test
@@ -111,7 +124,10 @@ class JavaRegexTranslatorTest {
 
     @Test
     void multipleTokensInOnePattern() {
-        assertEquals("\\p{Greek}\\p{Hiragana}", JavaRegexTranslator.translate("\\p{InGreek}\\p{InHiragana}", 0));
+        // PR #606 review F3: InGreek/InHiragana materialise to block ranges (PCRE2 doesn't have
+        // a block table). Verify both blocks appear as ranges in the output.
+        assertEquals("[\\x{370}-\\x{3FF}][\\x{3040}-\\x{309F}]",
+                JavaRegexTranslator.translate("\\p{InGreek}\\p{InHiragana}", 0));
     }
 
     // --- Phase 2: character class body rewrite ---
@@ -146,9 +162,11 @@ class JavaRegexTranslatorTest {
 
     @Test
     void propertyInsideClassRewritten() {
-        // \p{InGreek} inside a class should be rewritten to \p{Greek}
+        // \p{InGreek} inside a class is materialised to the Greek block range; verify the
+        // block code points appear and the \p{InXxx} token does not survive.
         final String result = JavaRegexTranslator.translate("[\\p{InGreek}]", 0);
-        assertTrue(result.contains("\\p{Greek}"), "Expected \\p{Greek} in: " + result);
+        assertTrue(result.contains("\\x{370}") || result.contains("\\x{3FF}"),
+                "Expected Greek block range in: " + result);
         assertFalse(result.contains("\\p{InGreek}"), "Should not contain InGreek: " + result);
     }
 

@@ -283,6 +283,10 @@ public final class ClassBodyParser {
                     boolean any = false;
                     while (pos[0] < len && s.charAt(pos[0]) != '}') {
                         val = val * 16 + hexDigit(s.charAt(pos[0]));
+                        if (val > 0x10FFFF) {
+                            throw new IllegalArgumentException(
+                                    "\\x{...} escape exceeds Unicode max U+10FFFF");
+                        }
                         pos[0]++;
                         any = true;
                     }

@@ -40,6 +40,31 @@ public final class ComparisonRecorder implements AutoCloseable {
                 + "\"oracle\":" + probeToJson(oracle) + ","
                 + "\"sut\":" + probeToJson(sut)
                 + "}";
+        writeLine(json);
+    }
+
+    /**
+     * Records a TIMEOUT outcome for a case that was cancelled before either probe could
+     * write its own line. Keeps the JSONL denominator honest: a hung pathological pattern
+     * still counts in the report rather than being silently dropped.
+     */
+    public void recordTimeout(String source, int caseIndex, String pattern, String input,
+                              int flags, long timeoutMillis) {
+        String json = "{"
+                + "\"source\":" + jsonString(source) + ","
+                + "\"caseIndex\":" + caseIndex + ","
+                + "\"flags\":" + flags + ","
+                + "\"pattern\":" + jsonString(pattern) + ","
+                + "\"input\":" + jsonString(input) + ","
+                + "\"outcome\":\"timeout\","
+                + "\"timeoutMs\":" + timeoutMillis + ","
+                + "\"oracle\":{\"compile\":\"timeout\",\"matches\":null,\"lookingAt\":null,\"findAll\":[]},"
+                + "\"sut\":{\"compile\":\"timeout\",\"matches\":null,\"lookingAt\":null,\"findAll\":[]}"
+                + "}";
+        writeLine(json);
+    }
+
+    private void writeLine(String json) {
         synchronized (lock) {
             try {
                 writer.write(json);

@@ -238,9 +238,14 @@ public final class JavaRegexTranslator {
                         i = classEnd;
                         continue;
                     }
-                    final String rendered = ClassRenderer.render(classNode);
+                    final ClassRenderer.RenderResult rr = ClassRenderer.renderWithSignal(classNode);
+                    final String rendered = rr.text();
                     final String maybeFolded = caseless ? expandCasedPropertiesInClass(rendered) : rendered;
-                    if (maybeFolded.contains("&&")) {
+                    // Typed signal from the renderer: true iff at least one intersection operand
+                    // could not be evaluated to a RangeSet and was emitted as a literal {@code &&}.
+                    // This replaces the previous {@code rendered.contains("&&")} heuristic, which
+                    // could fire on unrelated text and is what F5 in PR #606 review flagged.
+                    if (rr.intersectionUnresolved()) {
                         // Fallback: intersection could not be evaluated.
                         // Preserve Phase-1 behaviour by rewriting only property tokens in the
                         // original class text — keeping [, ], && and nested structure verbatim.
@@ -570,6 +575,23 @@ public final class JavaRegexTranslator {
         }
         if (replacement == null) {
             out.append(s, start, tokenEnd);
+        } else if (PropertyMap.NEVER_MATCH.equals(replacement)) {
+            // \p{...} on a never-match property → always fail; \P{...} → always succeed.
+            // (?!) is the canonical never-match in PCRE2 (negative lookahead of the empty string).
+            // For \P, emit a construct that matches any single code point (the surrogate area is
+            // already excluded by PCRE2's UTF mode, mirroring what JDK's Pattern would do here).
+            if (pOrP == 'P') {
+                out.append("[\\x{0}-\\x{10FFFF}]");
+            } else {
+                out.append("(?!)");
+            }
+        } else if (replacement.startsWith("[^")) {
+            if (pOrP == 'P') {
+                // Negation of [^…] is […], so just drop the leading '^'.
+                out.append('[').append(replacement, 2, replacement.length());
+            } else {
+                out.append(replacement);
+            }
         } else if (replacement.startsWith("[")) {
             if (pOrP == 'P') {
                 out.append("[^").append(replacement, 1, replacement.length());

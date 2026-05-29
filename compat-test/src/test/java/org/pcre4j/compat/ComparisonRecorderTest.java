@@ -61,4 +61,19 @@ class ComparisonRecorderTest {
         }
         assertEquals(n, Files.readAllLines(out).size());
     }
+
+    @Test
+    void recordTimeoutEmitsLineWithOutcomeTag(@TempDir Path dir) throws Exception {
+        Path out = dir.resolve("raw.jsonl");
+        try (var rec = new ComparisonRecorder(out)) {
+            rec.recordTimeout("Sup.txt", 42, "(a+)+b", "aaaaa", 0, 10_000L);
+        }
+        List<String> lines = Files.readAllLines(out);
+        assertEquals(1, lines.size());
+        String l = lines.get(0);
+        assertTrue(l.contains("\"outcome\":\"timeout\""), l);
+        assertTrue(l.contains("\"caseIndex\":42"), l);
+        assertTrue(l.contains("\"timeoutMs\":10000"), l);
+        assertTrue(l.contains("\"source\":\"Sup.txt\""), l);
+    }
 }

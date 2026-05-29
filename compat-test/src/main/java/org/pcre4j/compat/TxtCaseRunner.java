@@ -123,24 +123,28 @@ public final class TxtCaseRunner {
     /**
      * Applies {@code grabLine}-style escape substitutions: two-char backslash-n becomes a newline,
      * and backslash-uXXXX sequences are replaced with the corresponding Unicode character.
+     * Malformed or truncated {@code \\u} occurrences are skipped past without aborting the rest of
+     * the scan, so a single bad sequence cannot corrupt later valid escapes on the same line.
      */
     static String applyEscapes(String line) {
-        // Replace \n (two chars: backslash + n) with actual newline.
         StringBuilder sb = new StringBuilder(line);
         int idx;
         while ((idx = sb.indexOf("\\n")) != -1) {
             sb.replace(idx, idx + 2, "\n");
         }
-        // Replace backslash-uXXXX sequences with the Unicode character.
-        while ((idx = sb.indexOf("\\u")) != -1) {
-            if (idx + 6 > sb.length()) break;
+        int from = 0;
+        while (from < sb.length() && (idx = sb.indexOf("\\u", from)) != -1) {
+            if (idx + 6 > sb.length()) {
+                from = idx + 2;
+                continue;
+            }
             String hex = sb.substring(idx + 2, idx + 6);
             try {
                 char c = (char) Integer.parseInt(hex, 16);
                 sb.replace(idx, idx + 6, String.valueOf(c));
+                from = idx + 1;
             } catch (NumberFormatException e) {
-                // Not a valid backslash-uXXXX sequence; leave as-is and skip past it.
-                break;
+                from = idx + 2;
             }
         }
         return sb.toString();

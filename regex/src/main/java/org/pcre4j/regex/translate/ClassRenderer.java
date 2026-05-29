@@ -43,6 +43,14 @@ public final class ClassRenderer {
     }
 
     /**
+     * Outcome of {@link #renderWithSignal(ClassNode)}: the rendered PCRE2 string and a flag
+     * indicating whether any intersection in the AST had to be left as a literal {@code &&}
+     * fallback (i.e. could not be evaluated to a concrete {@link RangeSet}).
+     */
+    public record RenderResult(String text, boolean intersectionUnresolved) {
+    }
+
+    /**
      * Renders the given {@link ClassNode} as a PCRE2 character class string.
      *
      * @param node the root AST node (typically the result of
@@ -50,12 +58,26 @@ public final class ClassRenderer {
      * @return PCRE2 character class string including surrounding {@code [} and {@code ]}
      */
     public static String render(final ClassNode node) {
+        return renderWithSignal(node).text();
+    }
+
+    /**
+     * Like {@link #render(ClassNode)}, but also reports whether any intersection subtree was left
+     * unresolved (i.e. {@code &&} still appears in the output). Callers that previously inferred
+     * this by scanning the rendered text for {@code "&&"} should use this typed result instead —
+     * it cannot be fooled by literal ampersands appearing for unrelated reasons.
+     */
+    public static RenderResult renderWithSignal(final ClassNode node) {
         // Determine negation at top level
         final boolean negated = node instanceof ClassNode.Negated;
         final ClassNode inner = negated ? ((ClassNode.Negated) node).child() : node;
 
         if (containsIntersection(inner)) {
-            return renderWithIntersection(inner, negated);
+            final String rendered = renderWithIntersection(inner, negated);
+            // The intersection-rendering path only keeps {@code &&} in its output when at least one
+            // operand could not be evaluated to a RangeSet (otherwise it returns a concrete class
+            // body or the EMPTY_CLASS sentinel).
+            return new RenderResult(rendered, rendered.contains("&&"));
         }
         // Simple path: no intersection — try flat emission, fall back to original-style
         // if any nested negated subtree can't be evaluated (so we don't silently drop '^').
@@ -76,10 +98,10 @@ public final class ClassRenderer {
             }
             emitOriginalStyle(inner, fallback);
             fallback.append(']');
-            return fallback.toString();
+            return new RenderResult(fallback.toString(), false);
         }
         sb.append(']');
-        return sb.toString();
+        return new RenderResult(sb.toString(), false);
     }
 
     // -----------------------------------------------------------------------
@@ -254,9 +276,15 @@ public final class ClassRenderer {
                 default   -> sb.append((char) cp);
             }
         } else if (cp >= 0xD800 && cp <= 0xDFFF) {
-            // Lone surrogate — emit as raw Java char to preserve PCRE2 behaviour.
-            // PCRE2 rejects \x{D800} in UTF mode but may accept the raw surrogate byte sequence.
-            sb.append((char) cp);
+            // Lone surrogate inside a class body. PCRE2 in UTF mode rejects both \x{D800} and
+            // a raw surrogate byte, so there is no escape we can emit that compiles cleanly.
+            // JDK's java.util.regex accepts \uD800 in a class (it just never matches against
+            // any decoded UTF-16 input). Throw a clear translator error so callers see a
+            // PatternSyntaxException with context rather than a cryptic PCRE2 compile failure
+            // produced after the rendered string is already discarded.
+            throw new IllegalArgumentException(
+                    "Lone surrogate U+" + String.format("%04X", cp)
+                            + " is not representable in PCRE2 UTF mode");
         } else {
             sb.append(String.format("\\x{%X}", cp));
         }

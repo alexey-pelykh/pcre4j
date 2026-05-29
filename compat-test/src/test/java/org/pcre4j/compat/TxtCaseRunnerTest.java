@@ -51,4 +51,29 @@ class TxtCaseRunnerTest {
         assertTrue(cases.stream().anyMatch(TxtCaseRunner.Case::expectedMatch));
         assertTrue(cases.stream().anyMatch(c -> !c.expectedMatch()));
     }
+
+    @Test
+    void applyEscapesContinuesPastMalformedUnicode() {
+        // A malformed backslash-uZZZZ must not poison the rest of the scan: a valid
+        // backslash-u0041 after it must still be decoded. Regression: previously
+        // `break`-ed the entire loop.
+        String input = "x\\uZZZZ\\u0041y";
+        String out = TxtCaseRunner.applyEscapes(input);
+        assertEquals("x\\uZZZZAy", out);
+    }
+
+    @Test
+    void applyEscapesContinuesPastTruncatedUnicodeMidLine() {
+        // A truncated backslash-u at end-of-string must also not abort processing earlier
+        // valid sequences that have already been replaced (covered by indexOf rescan).
+        String input = "\\u0041tail\\uF";
+        String out = TxtCaseRunner.applyEscapes(input);
+        assertEquals("Atail\\uF", out);
+    }
+
+    @Test
+    void applyEscapesAllValidUnicodeReplaced() {
+        String input = "\\u0041\\u0042\\u0043";
+        assertEquals("ABC", TxtCaseRunner.applyEscapes(input));
+    }
 }

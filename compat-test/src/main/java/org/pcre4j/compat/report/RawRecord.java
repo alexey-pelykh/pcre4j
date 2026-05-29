@@ -19,8 +19,9 @@ import java.util.regex.Pattern;
 
 public record RawRecord(
         String source, int caseIndex, String pattern, String input,
-        String oracleCompile, Boolean oracleMatches,
-        String sutCompile, String sutErr, Boolean sutMatches
+        String oracleCompile, Boolean oracleMatches, Boolean oracleLookingAt, String oracleFindAll,
+        String sutCompile, String sutErr, Boolean sutMatches, Boolean sutLookingAt, String sutFindAll,
+        String outcomeTag
 ) {
 
     private static String extract(String json, String key) {
@@ -37,23 +38,37 @@ public record RawRecord(
         return v.equals("null") ? null : Boolean.valueOf(v);
     }
 
+    private static Integer extractInt(String json, String key) {
+        Pattern p = Pattern.compile("\"" + Pattern.quote(key) + "\":(-?\\d+)");
+        Matcher m = p.matcher(json);
+        return m.find() ? Integer.valueOf(m.group(1)) : null;
+    }
+
     private static String unescape(String s) {
         return s.replace("\\\"", "\"").replace("\\\\", "\\").replace("\\n", "\n").replace("\\t", "\t");
     }
 
     public static RawRecord parse(String json) {
+        Integer caseIndex = extractInt(json, "caseIndex");
+        if (caseIndex == null) throw new IllegalArgumentException("missing caseIndex");
+        String outcomeTag = extract(json, "outcome");
         String oracle = subObject(json, "oracle");
         String sut = subObject(json, "sut");
         return new RawRecord(
                 extract(json, "source"),
-                Integer.parseInt(json.replaceAll(".*\"caseIndex\":(-?\\d+).*", "$1")),
+                caseIndex,
                 extract(json, "pattern"),
                 extract(json, "input"),
                 extract(oracle, "compile"),
                 extractBool(oracle, "matches"),
+                extractBool(oracle, "lookingAt"),
+                extractArray(oracle, "findAll"),
                 extract(sut, "compile"),
                 extract(sut, "err"),
-                extractBool(sut, "matches")
+                extractBool(sut, "matches"),
+                extractBool(sut, "lookingAt"),
+                extractArray(sut, "findAll"),
+                outcomeTag
         );
     }
 
@@ -64,12 +79,52 @@ public record RawRecord(
         int start = json.indexOf('{', i);
         for (int j = start; j < json.length(); j++) {
             char c = json.charAt(j);
-            if (c == '{') depth++;
-            else if (c == '}') {
+            if (c == '"') {
+                // skip strings (with escape awareness) so braces inside don't fool the matcher
+                j = skipString(json, j);
+            } else if (c == '{') {
+                depth++;
+            } else if (c == '}') {
                 depth--;
                 if (depth == 0) return json.substring(start, j + 1);
             }
         }
         return "{}";
+    }
+
+    /**
+     * Extracts the raw JSON text of a top-level array value (including the surrounding
+     * brackets). The returned substring is suitable for string-equality comparison between
+     * oracle and SUT, which is all the verdict needs.
+     */
+    private static String extractArray(String json, String key) {
+        int i = json.indexOf("\"" + key + "\":[");
+        if (i < 0) return null;
+        int start = json.indexOf('[', i);
+        int depth = 0;
+        for (int j = start; j < json.length(); j++) {
+            char c = json.charAt(j);
+            if (c == '"') {
+                j = skipString(json, j);
+            } else if (c == '[') {
+                depth++;
+            } else if (c == ']') {
+                depth--;
+                if (depth == 0) return json.substring(start, j + 1);
+            }
+        }
+        return null;
+    }
+
+    private static int skipString(String json, int quoteIdx) {
+        for (int k = quoteIdx + 1; k < json.length(); k++) {
+            char c = json.charAt(k);
+            if (c == '\\') {
+                k++; // skip escaped char
+                continue;
+            }
+            if (c == '"') return k;
+        }
+        return json.length() - 1;
     }
 }
