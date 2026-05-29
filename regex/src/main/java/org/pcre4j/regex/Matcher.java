@@ -1220,13 +1220,33 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             return new MatchResult(
                     null,
+                    0,
                     null,
                     groupNameToIndex
             );
         }
 
+        // Capture groups inside lookbehind/lookahead may have offsets that fall outside the main
+        // match's [start, end) span. Snapshot enough of the input to cover every matched group.
+        int minStart = lastMatchIndices[0];
+        int maxEnd = lastMatchIndices[1];
+        for (int g = 1; g <= groupCount(); g++) {
+            final int s = lastMatchIndices[g * 2];
+            final int e = lastMatchIndices[g * 2 + 1];
+            if (s < 0 || e < 0) {
+                continue;
+            }
+            if (s < minStart) {
+                minStart = s;
+            }
+            if (e > maxEnd) {
+                maxEnd = e;
+            }
+        }
+
         return new MatchResult(
-                input.substring(lastMatchIndices[0], lastMatchIndices[1]),
+                input.substring(minStart, maxEnd),
+                minStart,
                 Arrays.copyOf(lastMatchIndices, lastMatchIndices.length),
                 groupNameToIndex
         );
@@ -1964,12 +1984,15 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public static class MatchResult implements java.util.regex.MatchResult {
 
-        private final String substring;
+        private final String snapshot;
+        private final int snapshotOffset;
         private final int[] matchIndices;
         private final Map<String, Integer> groupNameToIndex;
 
-        /* package-private */ MatchResult(String substring, int[] matchIndices, Map<String, Integer> groupNameToIndex) {
-            this.substring = substring;
+        /* package-private */ MatchResult(String snapshot, int snapshotOffset, int[] matchIndices,
+                                          Map<String, Integer> groupNameToIndex) {
+            this.snapshot = snapshot;
+            this.snapshotOffset = snapshotOffset;
             this.matchIndices = matchIndices;
             this.groupNameToIndex = groupNameToIndex;
         }
@@ -2048,7 +2071,10 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalStateException("No match found");
             }
 
-            return substring;
+            return snapshot.substring(
+                    matchIndices[0] - snapshotOffset,
+                    matchIndices[1] - snapshotOffset
+            );
         }
 
         @Override
@@ -2060,10 +2086,12 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IndexOutOfBoundsException("No such group: " + group);
             }
 
-            return substring.substring(
-                    matchIndices[group * 2] - matchIndices[0],
-                    matchIndices[group * 2 + 1] - matchIndices[0]
-            );
+            final int s = matchIndices[group * 2];
+            final int e = matchIndices[group * 2 + 1];
+            if (s < 0 || e < 0) {
+                return null;
+            }
+            return snapshot.substring(s - snapshotOffset, e - snapshotOffset);
         }
 
         @Override
@@ -2076,10 +2104,12 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalArgumentException("No group with name <" + name + ">");
             }
 
-            return substring.substring(
-                    matchIndices[group * 2] - matchIndices[0],
-                    matchIndices[group * 2 + 1] - matchIndices[0]
-            );
+            final int s = matchIndices[group * 2];
+            final int e = matchIndices[group * 2 + 1];
+            if (s < 0 || e < 0) {
+                return null;
+            }
+            return snapshot.substring(s - snapshotOffset, e - snapshotOffset);
         }
 
         @Override

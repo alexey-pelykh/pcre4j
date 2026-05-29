@@ -837,7 +837,7 @@ public class Pattern {
         }
 
         var resultSize = result.size();
-        if (limit <= 0) {
+        if (limit == 0) {
             while (resultSize > 0 && result.get(resultSize - 1).isEmpty()) {
                 resultSize--;
             }

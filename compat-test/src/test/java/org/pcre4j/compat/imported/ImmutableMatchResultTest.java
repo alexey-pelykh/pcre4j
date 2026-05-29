@@ -53,6 +53,16 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class ImmutableMatchResultTest {
 
+    static {
+        // Trigger Probes static init so Pcre4j.setup(...) runs with the configured backend
+        // before any test calls org.pcre4j.regex.Pattern.compile().
+        try {
+            Class.forName(org.pcre4j.compat.Probes.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private static final int prefixLen;
     private static final int infixLen;
     private static final int suffixLen;

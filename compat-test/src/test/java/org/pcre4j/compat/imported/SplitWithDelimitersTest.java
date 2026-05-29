@@ -43,6 +43,14 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class SplitWithDelimitersTest {
 
+    static {
+        try {
+            Class.forName(org.pcre4j.compat.Probes.class.getName());
+        } catch (ClassNotFoundException e) {
+            throw new ExceptionInInitializerError(e);
+        }
+    }
+
     private static String[] dropOddIndexed(String[] a, int limit) {
         String[] r = new String[(a.length + 1) / 2];
         for (int i = 0; i < a.length; i += 2) {
