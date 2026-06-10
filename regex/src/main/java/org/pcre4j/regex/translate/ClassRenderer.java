@@ -73,11 +73,12 @@ public final class ClassRenderer {
         final ClassNode inner = negated ? ((ClassNode.Negated) node).child() : node;
 
         if (containsIntersection(inner)) {
-            final String rendered = renderWithIntersection(inner, negated);
-            // The intersection-rendering path only keeps {@code &&} in its output when at least one
-            // operand could not be evaluated to a RangeSet (otherwise it returns a concrete class
-            // body or the EMPTY_CLASS sentinel).
-            return new RenderResult(rendered, rendered.contains("&&"));
+            // renderWithIntersection now reports its own intersection-unresolved status
+            // (true iff Strategy 3 fallback fires and at least one operand left a literal
+            // {@code &&} in the output). Threading the boolean directly removes the prior
+            // {@code rendered.contains("&&")} string-scan, which would have misfired if any
+            // future code path emitted a literal {@code &&} from a resolved subtree.
+            return renderWithIntersection(inner, negated);
         }
         // Simple path: no intersection — try flat emission, fall back to original-style
         // if any nested negated subtree can't be evaluated (so we don't silently drop '^').
@@ -125,7 +126,7 @@ public final class ClassRenderer {
                 sb.append('-');
                 emitLiteralInClass(r.hi(), sb);
             }
-            case ClassNode.PropertyLeaf leaf -> sb.append(leaf.pcre2Token());
+            case ClassNode.PropertyLeaf leaf -> sb.append(renderPropertyToken(leaf));
             case ClassNode.Negated neg -> {
                 // A negated subtree inside a non-negated flat class.
                 // Evaluate + complement so we can inline the ranges. Use toRangeSet directly so
@@ -169,7 +170,7 @@ public final class ClassRenderer {
                 sb.append('-');
                 emitLiteralInClass(r.hi(), sb);
             }
-            case ClassNode.PropertyLeaf leaf -> sb.append(leaf.pcre2Token());
+            case ClassNode.PropertyLeaf leaf -> sb.append(renderPropertyToken(leaf));
             case ClassNode.Negated neg -> {
                 // Keep the [^...] wrapper intact so PCRE2 parses it identically to Phase 1 output
                 sb.append("[^");
@@ -189,7 +190,7 @@ public final class ClassRenderer {
     // Intersection-aware rendering
     // -----------------------------------------------------------------------
 
-    private static String renderWithIntersection(final ClassNode inner, final boolean negated) {
+    private static RenderResult renderWithIntersection(final ClassNode inner, final boolean negated) {
         // Strategy 1: Try to evaluate the entire subtree to a RangeSet
         RangeSet rs = Evaluator.tryToRangeSet(inner);
         if (rs != null) {
@@ -197,9 +198,9 @@ public final class ClassRenderer {
                 rs = rs.complement();
             }
             if (rs.isEmpty()) {
-                return EMPTY_CLASS;
+                return new RenderResult(EMPTY_CLASS, false);
             }
-            return "[" + rs.toPcre2ClassBody() + "]";
+            return new RenderResult("[" + rs.toPcre2ClassBody() + "]", false);
         }
 
         // Strategy 2: If the top node is Intersection, try each operand individually
@@ -208,14 +209,17 @@ public final class ClassRenderer {
             if (operandResult != null) {
                 final RangeSet effective = negated ? operandResult.complement() : operandResult;
                 if (effective.isEmpty()) {
-                    return EMPTY_CLASS;
+                    return new RenderResult(EMPTY_CLASS, false);
                 }
-                return "[" + effective.toPcre2ClassBody() + "]";
+                return new RenderResult("[" + effective.toPcre2ClassBody() + "]", false);
             }
         }
 
         // Strategy 3: Fallback — emit in "original style" preserving [^...] structure
         // so that PCRE2 parses identically to the Phase-1-only output (no new regressions).
+        // This is the only branch that can leave a literal {@code &&} in the rendered string;
+        // we set intersectionUnresolved=true unconditionally here so callers know without
+        // having to re-scan the text.
         final StringBuilder sb = new StringBuilder();
         sb.append('[');
         if (negated) {
@@ -223,7 +227,7 @@ public final class ClassRenderer {
         }
         emitOriginalStyle(inner, sb);
         sb.append(']');
-        return sb.toString();
+        return new RenderResult(sb.toString(), true);
     }
 
     /**
@@ -265,6 +269,29 @@ public final class ClassRenderer {
     // -----------------------------------------------------------------------
     // Literal emission inside a class body
     // -----------------------------------------------------------------------
+
+    /**
+     * Renders a {@link ClassNode.PropertyLeaf}'s class-body form. For most leaves this is just the
+     * stored {@code pcre2Token}, but for negated JDK-specific properties such as
+     * {@code \P{InGreek}} or {@code \P{javaLowerCase}} — which PCRE2 cannot evaluate inside a
+     * class body — we resolve the positive set via {@link JdkPropertyExpander}, complement it,
+     * and inline the resulting ranges. The leaf's stored token stays opaque so that
+     * {@link Evaluator} can still expand it for intersection algebra.
+     */
+    private static String renderPropertyToken(final ClassNode.PropertyLeaf leaf) {
+        final String token = leaf.pcre2Token();
+        if (token.startsWith("\\P{") && token.endsWith("}")) {
+            final String propName = token.substring(3, token.length() - 1);
+            final RangeSet positive = JdkPropertyExpander.expand("\\p{" + propName + "}");
+            if (positive != null) {
+                final RangeSet complement = positive.complement();
+                if (!complement.isEmpty()) {
+                    return complement.toPcre2ClassBody();
+                }
+            }
+        }
+        return token;
+    }
 
     static void emitLiteralInClass(final int cp, final StringBuilder sb) {
         if (cp >= 0x20 && cp <= 0x7E) {

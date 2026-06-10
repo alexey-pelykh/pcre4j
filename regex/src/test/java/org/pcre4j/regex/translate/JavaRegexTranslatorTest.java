@@ -118,6 +118,16 @@ class JavaRegexTranslatorTest {
     }
 
     @Test
+    void surrogateBlockAcceptsCamelCaseSpelling() {
+        // PR #606 round-2 F1: Java's javadoc-documented spelling for blocks is CamelCase
+        // (e.g. InHighSurrogates) and PropertyMap.resolveBlock must normalise both that and
+        // the all-upper InHIGH_SURROGATES form to the same never-match expansion.
+        assertEquals("(?!)", JavaRegexTranslator.translate("\\p{InHighSurrogates}", 0));
+        assertEquals("(?!)", JavaRegexTranslator.translate("\\p{InHighPrivateUseSurrogates}", 0));
+        assertEquals("(?!)", JavaRegexTranslator.translate("\\p{InLowSurrogates}", 0));
+    }
+
+    @Test
     void rewritesJavaDefinedAsNegatedUnassigned() {
         assertEquals("\\P{Cn}", JavaRegexTranslator.translate("\\p{javaDefined}", 0));
     }
@@ -168,6 +178,21 @@ class JavaRegexTranslatorTest {
         assertTrue(result.contains("\\x{370}") || result.contains("\\x{3FF}"),
                 "Expected Greek block range in: " + result);
         assertFalse(result.contains("\\p{InGreek}"), "Should not contain InGreek: " + result);
+    }
+
+    @Test
+    void negatedPropertyInsideClassRewritten() {
+        // PR #606 round-2 F5: [\P{InGreek}] inside a class must not survive as a literal
+        // \P{InGreek} token — PCRE2 has no block table and rejects it with error 147.
+        // ClassRenderer.renderPropertyToken inlines the complement of the Greek block.
+        final String result = JavaRegexTranslator.translate("[\\P{InGreek}]", 0);
+        assertFalse(result.contains("\\P{InGreek}"),
+                "Negated block token must not survive into PCRE2 output: " + result);
+        assertFalse(result.contains("\\p{InGreek}"),
+                "Positive block token must not survive either: " + result);
+        // The complement must include code points either side of the Greek block (U+370..U+3FF).
+        assertTrue(result.contains("\\x{36F}") || result.contains("\\x{400}"),
+                "Expected complement range boundaries in: " + result);
     }
 
     @Test

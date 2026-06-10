@@ -378,10 +378,17 @@ public final class ClassBodyParser {
                     } else if (rewritten.startsWith("[") && rewritten.endsWith("]") && !neg) {
                         // Expanded to a bracketed expansion — embed contents directly into the
                         // outer class as a union. Only safe for the positive case; negation of
-                        // a bracketed expansion can't be expressed inline within a class.
+                        // a bracketed expansion is left as an opaque \P{name} PropertyLeaf so
+                        // that {@link Evaluator} can still resolve it via JdkPropertyExpander
+                        // for intersection algebra. {@link ClassRenderer} expands the body at
+                        // emit time when no intersection is present.
                         token = rewritten.substring(1, rewritten.length() - 1);
                     } else if (rewritten.startsWith("[")) {
-                        // Negated variant of a bracketed expansion — keep original opaque token.
+                        // Negated variant of a bracketed expansion (e.g. \P{InGreek}). Keep the
+                        // opaque \P{name} form so the Evaluator can still expand it via
+                        // JdkPropertyExpander when this leaf participates in an intersection.
+                        // ClassRenderer handles the render-time expansion to a flat body so
+                        // PCRE2 (which has no block table) never sees a raw \P{InGreek}.
                         token = "\\" + esc + "{" + propName + "}";
                     } else if (rewritten.startsWith("\\P{")) {
                         // Double-negation case (javaDefined)

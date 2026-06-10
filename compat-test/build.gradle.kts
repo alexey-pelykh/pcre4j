@@ -12,9 +12,6 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
-import java.net.URLClassLoader
-import java.nio.file.Path as NioPath
-
 plugins {
     `java-library`
     checkstyle
@@ -70,23 +67,28 @@ tasks.withType<Checkstyle>().configureEach {
     exclude("org/pcre4j/compat/imported/**")
 }
 
-tasks.register("compatReport") {
+tasks.register<JavaExec>("compatReport") {
     group = "verification"
     description = "Render build/reports/compat/report.md from raw.jsonl"
-    notCompatibleWithConfigurationCache("Uses dynamic class loading via reflection")
     dependsOn("test")
-    val rendererClasspath = sourceSets["main"].runtimeClasspath
-    doLast {
-        val raw = layout.buildDirectory.file("reports/compat/raw.jsonl").get().asFile.toPath()
-        val out = layout.buildDirectory.file("reports/compat/report.md").get().asFile.toPath()
-        val urls = rendererClasspath.files.map { it.toURI().toURL() }.toTypedArray()
-        val cl = URLClassLoader(urls, ClassLoader.getSystemClassLoader())
-        val cls = cl.loadClass("org.pcre4j.compat.report.ReportRenderer")
-        val pathClass = NioPath::class.java
-        val method = cls.getMethod("render", pathClass, pathClass)
-        @Suppress("UNCHECKED_CAST")
-        val result: Any? = method.invoke(null, raw, out)
-        if (result != null) logger.info("render returned: $result")
-        println("Wrote $out")
-    }
+
+    // Launch on the project's Java 21 toolchain rather than the Gradle daemon's JVM.
+    // The previous in-process URLClassLoader path failed with UnsupportedClassVersionError
+    // whenever the daemon was running on an older JDK, silently preventing report.md from
+    // being produced.
+    javaLauncher.set(
+        javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    )
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("org.pcre4j.compat.report.ReportRenderer")
+
+    val raw = layout.buildDirectory.file("reports/compat/raw.jsonl")
+    val out = layout.buildDirectory.file("reports/compat/report.md")
+    inputs.file(raw)
+    outputs.file(out)
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(raw.get().asFile.absolutePath, out.get().asFile.absolutePath)
+    })
 }

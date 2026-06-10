@@ -8,9 +8,6 @@ Runs OpenJDK 21u's own `java/util/regex` tests and `.txt` data files against `or
 recording oracle-vs-SUT discrepancies into `build/reports/compat/raw.jsonl` and rendering a
 categorized summary into `build/reports/compat/report.md`.
 
-Source of truth for the design:
-`docs/superpowers/specs/2026-05-28-pcre4j-jur-compat-verification-design.md`.
-
 ## Running
 
 ```bash

@@ -191,10 +191,13 @@ public final class PropertyMap {
         // \\x{D800}-\\x{DFFF} ranges. Java's regex accepts these blocks; they just never
         // match against decoded UTF-16 input. Return the NEVER_MATCH sentinel so the
         // translator emits a never-matching construct rather than a compile error.
-        final String upper = blockName.toUpperCase().replace('_', ' ').replace(' ', '_');
-        if ("HIGH_SURROGATES".equals(upper)
-                || "HIGH_PRIVATE_USE_SURROGATES".equals(upper)
-                || "LOW_SURROGATES".equals(upper)) {
+        // Compare against the underscore-stripped, upper-cased form so we catch every
+        // JDK-accepted spelling: \p{InHighSurrogates}, \p{InHIGH_SURROGATES},
+        // \p{InHigh_Surrogates}, \p{In_high_surrogates} etc.
+        final String compact = blockName.toUpperCase().replace("_", "");
+        if ("HIGHSURROGATES".equals(compact)
+                || "HIGHPRIVATEUSESURROGATES".equals(compact)
+                || "LOWSURROGATES".equals(compact)) {
             return NEVER_MATCH;
         }
         final String materialized = JdkPropertyExpander.materializeUnicodeBlock(blockName);

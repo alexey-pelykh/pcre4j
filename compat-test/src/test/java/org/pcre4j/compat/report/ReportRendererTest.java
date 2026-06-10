@@ -98,4 +98,33 @@ class ReportRendererTest {
         // Total 1, Pass 0, Fail 1, both-rejected 0, sut-compile 0, sut-runtime 0, behavior-diff 0, timeout 1
         assertTrue(body.contains("| S.txt | 1 | 0 | 1 | 0 | 0 | 0 | 0 | 1 |"), body);
     }
+
+    @Test
+    void duplicateCaseLastWinsOverInterruptedTimeout(@TempDir Path dir) throws Exception {
+        // PR #606 round-2 F4: TxtCompatTest's per-test interrupt/timeout watchdog can race the
+        // writer such that the same (source, caseIndex) appears twice in raw.jsonl — first as
+        // a "timeout" placeholder, then again as the actual completed PASS once the harness
+        // recovers. The renderer must dedupe by (source, caseIndex) and keep the *last*
+        // record (newest = authoritative), otherwise the report inflates Total and surfaces
+        // bogus timeout failures.
+        Path raw = dir.resolve("raw.jsonl");
+        Files.writeString(raw, String.join("\n",
+                "{\"source\":\"R.txt\",\"caseIndex\":0,\"flags\":0,\"pattern\":\"a\","
+                        + "\"input\":\"a\",\"outcome\":\"timeout\",\"timeoutMs\":10000,"
+                        + "\"oracle\":{\"compile\":\"timeout\",\"matches\":null,\"lookingAt\":null,\"findAll\":[]},"
+                        + "\"sut\":{\"compile\":\"timeout\",\"matches\":null,\"lookingAt\":null,\"findAll\":[]}}",
+                "{\"source\":\"R.txt\",\"caseIndex\":0,\"flags\":0,\"pattern\":\"a\","
+                        + "\"input\":\"a\",\"oracle\":{\"compile\":\"ok\",\"matches\":true,"
+                        + "\"lookingAt\":true,\"findAll\":[{\"start\":0,\"end\":1,\"text\":\"a\","
+                        + "\"groups\":[]}]},\"sut\":{\"compile\":\"ok\",\"matches\":true,"
+                        + "\"lookingAt\":true,\"findAll\":[{\"start\":0,\"end\":1,\"text\":\"a\","
+                        + "\"groups\":[]}]}}"
+        ));
+        Path report = dir.resolve("report.md");
+        ReportRenderer.render(raw, report);
+        String body = Files.readString(report);
+        // After dedupe: 1 total, 1 pass, 0 fail, 0 both-rejected, 0 sut-compile, 0 sut-runtime,
+        // 0 behavior-diff, 0 timeout
+        assertTrue(body.contains("| R.txt | 1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |"), body);
+    }
 }

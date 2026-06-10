@@ -29,15 +29,24 @@ public final class ReportRenderer {
     private ReportRenderer() {}
 
     public static void render(Path rawJsonl, Path outMd) throws IOException {
-        List<RawRecord> records = new ArrayList<>();
+        // Dedupe by (source, caseIndex), last-wins. The harness can emit two rows for the
+        // same case when a TimeoutException fires `recordTimeout(...)` and the cancelled
+        // worker subsequently completes (java.util.regex catastrophic backtracking doesn't
+        // poll Thread.interrupt) and calls the normal `record(...)`. The worker's actual
+        // outcome is the more authoritative datum, so letting the later write replace the
+        // timeout placeholder gives the most accurate verdict and — critically — keeps the
+        // Total/rate columns from double-counting the same case on slow CI runners.
+        final java.util.LinkedHashMap<String, RawRecord> dedup = new java.util.LinkedHashMap<>();
         for (String line : Files.readAllLines(rawJsonl)) {
             if (line.isBlank()) continue;
             try {
-                records.add(RawRecord.parse(line));
+                final RawRecord r = RawRecord.parse(line);
+                dedup.put(r.source() + "#" + r.caseIndex(), r);
             } catch (RuntimeException ignored) {
                 // skip malformed lines
             }
         }
+        final List<RawRecord> records = new ArrayList<>(dedup.values());
 
         Map<String, int[]> summary = new TreeMap<>();
         for (RawRecord r : records) {
@@ -70,7 +79,8 @@ public final class ReportRenderer {
         StringBuilder out = new StringBuilder();
         out.append("# pcre4j compat report vs java.util.regex\n\n");
         out.append("## Summary\n\n");
-        out.append("| Source | Total | Pass | Fail | both-rejected | sut-compile-error | sut-runtime-error | behavior-diff | timeout |\n");
+        out.append("| Source | Total | Pass | Fail | both-rejected | sut-compile-error |")
+                .append(" sut-runtime-error | behavior-diff | timeout |\n");
         out.append("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |\n");
         for (var e : summary.entrySet()) {
             int[] s = e.getValue();
@@ -81,7 +91,8 @@ public final class ReportRenderer {
         }
 
         out.append("\n> **Pass** = oracle and SUT agree on `matches()`, `lookingAt()` and `findAll`. ")
-                .append("**both-rejected** = both engines refused to compile the pattern (counted separately so the headline number reflects behavioural agreement only).\n");
+                .append("**both-rejected** = both engines refused to compile the pattern")
+                .append(" (counted separately so the headline number reflects behavioural agreement only).\n");
 
         out.append("\n## Failures by root cause\n\n");
         out.append("| Cause | Count | Sample pattern |\n| --- | ---: | --- |\n");
@@ -123,5 +134,24 @@ public final class ReportRenderer {
         if (!Objects.equals(r.oracleLookingAt(), r.sutLookingAt())) return Verdict.BEHAVIOR_DIFF;
         if (!Objects.equals(r.oracleFindAll(), r.sutFindAll())) return Verdict.BEHAVIOR_DIFF;
         return Verdict.PASS;
+    }
+
+    /**
+     * CLI entry point so the {@code :compatReport} Gradle task can launch the renderer
+     * via {@code JavaExec} on the project's Java 21 toolchain rather than via in-process
+     * reflection on the Gradle daemon's JVM. The in-process path threw
+     * {@code UnsupportedClassVersionError} whenever the daemon ran on an older JDK
+     * (class file 65.0 vs. e.g. 61.0), silently preventing {@code report.md} from being
+     * produced.
+     *
+     * <p>Usage: {@code ReportRenderer <raw.jsonl> <out.md>}.
+     */
+    public static void main(String[] args) throws IOException {
+        if (args.length != 2) {
+            System.err.println("Usage: ReportRenderer <raw.jsonl> <out.md>");
+            System.exit(2);
+        }
+        render(Path.of(args[0]), Path.of(args[1]));
+        System.out.println("Wrote " + args[1]);
     }
 }
