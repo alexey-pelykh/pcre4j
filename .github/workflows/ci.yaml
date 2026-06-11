@@ -418,10 +418,10 @@ jobs:
           cp -a regex/build/docs/javadoc/. build/gh-pages/javadoc/regex
 
       - name: Codecov
-        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v5
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: build/reports/jacoco/jacocoAggregatedTestReport/jacoco.xml
+          files: build/reports/jacoco/jacocoAggregatedTestReport/jacocoAggregatedTestReport.xml
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
