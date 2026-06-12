@@ -12,17 +12,20 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
+package org.pcre4j.regex.translate;
 
 /**
- * PCRE4J Regex — a {@link java.util.regex.Pattern}-compatible API backed by PCRE2.
- *
- * <p>This module re-exports {@code org.pcre4j.api} and {@code org.pcre4j} so that consumers
- * can access backend and wrapper types without additional dependency declarations.</p>
+ * Thrown by {@link Evaluator} when a {@link ClassNode} tree cannot be reduced to a
+ * {@link RangeSet} because it contains a {@link ClassNode.PropertyLeaf} that has no
+ * known finite expansion.
  */
-module org.pcre4j.regex {
-    requires transitive org.pcre4j.api;
-    requires transitive org.pcre4j;
-    requires java.logging;
+public final class EvaluationFailedException extends Exception {
 
-    exports org.pcre4j.regex;
+    public EvaluationFailedException(final String message) {
+        super(message);
+    }
+
+    public EvaluationFailedException(final String message, final Throwable cause) {
+        super(message, cause);
+    }
 }

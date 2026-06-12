@@ -1,0 +1,20 @@
+This subproject (:compat-test) contains source files copied from the OpenJDK
+project (https://github.com/openjdk/jdk21u) under:
+
+    GNU General Public License, version 2, with the Classpath Exception
+    (GPLv2 + CE)
+
+The imported files live under:
+    src/test/java/org/pcre4j/compat/imported/
+    src/test/resources/imported/
+
+Their original headers are preserved verbatim and identify each file's
+upstream source (`jdk-21+<build>` or commit SHA noted in
+src/test/java/org/pcre4j/compat/imported/README.md).
+
+The rest of :compat-test (everything outside the two `imported/` directories
+listed above) is part of PCRE4J and is licensed under LGPL-3.0-or-later, the
+same as the rest of the repository.
+
+This subproject is NOT published to Maven Central nor distributed with
+PCRE4J releases. It is an internal compatibility regression tool.

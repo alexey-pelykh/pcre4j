@@ -246,6 +246,10 @@ public class Matcher implements java.util.regex.MatchResult {
             final var matchLimit = System.getProperty(MATCH_LIMIT_PROPERTY);
             if (matchLimit != null) {
                 matchContext.setMatchLimit(parsePositiveInt(MATCH_LIMIT_PROPERTY, matchLimit));
+            } else {
+                // JDK has no fixed match limit; raise PCRE2's default (10M) so patterns that JDK
+                // tolerates with naive backtracking don't fail with MatchLimitException here.
+                matchContext.setMatchLimit(Integer.MAX_VALUE);
             }
         }
 
@@ -406,10 +410,13 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             throw new IllegalStateException("No match available");
         }
-        // Append text between last append position and start of match
+        // JDK contract (4750244): when the replacement is invalid, nothing must be appended to the
+        // target. Process the replacement into a temporary buffer first; only on success copy the
+        // leading text and processed replacement into the caller-provided buffer.
+        final var tmp = new StringBuilder();
+        MatcherReplacementProcessor.appendReplacement(tmp, replacement, this, groupNameToIndex);
         sb.append(input, appendPos, start());
-        // Process and append replacement string
-        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
+        sb.append(tmp);
         // Update append position to end of current match
         appendPos = end();
         return this;
@@ -439,10 +446,13 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             throw new IllegalStateException("No match available");
         }
-        // Append text between last append position and start of match
+        // JDK contract (4750244): when the replacement is invalid, nothing must be appended to the
+        // target. Process the replacement into a temporary buffer first; only on success copy the
+        // leading text and processed replacement into the caller-provided buffer.
+        final var tmp = new StringBuilder();
+        MatcherReplacementProcessor.appendReplacement(tmp, replacement, this, groupNameToIndex);
         sb.append(input, appendPos, start());
-        // Process and append replacement string
-        MatcherReplacementProcessor.appendReplacement(sb, replacement, this, groupNameToIndex);
+        sb.append(tmp);
         // Update append position to end of current match
         appendPos = end();
         return this;
@@ -550,6 +560,18 @@ public class Matcher implements java.util.regex.MatchResult {
         }
 
         if (start > regionEnd) {
+            lastMatchData = null;
+            lastMatchIndices = null;
+            return false;
+        }
+
+        // \G anchors: PCRE2 does not retain "previous match end" state across separate match calls.
+        // Enforce JDK's semantic that find() with \G can only succeed when the search start equals
+        // the previous match end (in particular, an empty previous match invalidates \G after the
+        // empty-match advance above).
+        if (MatcherPatternAnalysis.patternStartsWithG(pattern.pattern())
+                && lastMatchIndices != null
+                && start != lastMatchIndices[1]) {
             lastMatchData = null;
             lastMatchIndices = null;
             return false;
@@ -933,6 +955,10 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return the string resulting from replacing every match with the replacement string
      */
     public String replaceAll(String replacement) {
+        if (replacement == null) {
+            // JDK contract: replaceAll(null) must throw NullPointerException.
+            throw new NullPointerException("replacement");
+        }
         reset();
 
         // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
@@ -999,6 +1025,10 @@ public class Matcher implements java.util.regex.MatchResult {
      * @return the string resulting from replacing the first match with the replacement string
      */
     public String replaceFirst(String replacement) {
+        if (replacement == null) {
+            // JDK contract: replaceFirst(null) must throw NullPointerException.
+            throw new NullPointerException("replacement");
+        }
         reset();
 
         // For CANON_EQ mode, we can't use PCRE2's substitute directly because the pattern
@@ -1190,13 +1220,33 @@ public class Matcher implements java.util.regex.MatchResult {
         if (!hasMatch()) {
             return new MatchResult(
                     null,
+                    0,
                     null,
                     groupNameToIndex
             );
         }
 
+        // Capture groups inside lookbehind/lookahead may have offsets that fall outside the main
+        // match's [start, end) span. Snapshot enough of the input to cover every matched group.
+        int minStart = lastMatchIndices[0];
+        int maxEnd = lastMatchIndices[1];
+        for (int g = 1; g <= groupCount(); g++) {
+            final int s = lastMatchIndices[g * 2];
+            final int e = lastMatchIndices[g * 2 + 1];
+            if (s < 0 || e < 0) {
+                continue;
+            }
+            if (s < minStart) {
+                minStart = s;
+            }
+            if (e > maxEnd) {
+                maxEnd = e;
+            }
+        }
+
         return new MatchResult(
-                input.substring(lastMatchIndices[0], lastMatchIndices[1]),
+                input.substring(minStart, maxEnd),
+                minStart,
                 Arrays.copyOf(lastMatchIndices, lastMatchIndices.length),
                 groupNameToIndex
         );
@@ -1463,6 +1513,13 @@ public class Matcher implements java.util.regex.MatchResult {
             if (regionEnd < input.length()) {
                 options.add(Pcre2MatchOption.NOTEOL);
             }
+        }
+        // When the pattern starts with \G (previous-match-end anchor), find() must only attempt to
+        // match at exactly startOffset — never advance — because PCRE2 does not track the previous
+        // match end across separate match calls and would otherwise treat \G as "matches anywhere
+        // at startOffset" and then advance past failures.
+        if (MatcherPatternAnalysis.patternStartsWithG(pattern.pattern())) {
+            options.add(Pcre2MatchOption.ANCHORED);
         }
         return options;
     }
@@ -1731,6 +1788,11 @@ public class Matcher implements java.util.regex.MatchResult {
                 } else if (MatcherPatternAnalysis.patternCanConsumeMoreAtEnd(pattern.pattern())) {
                     // Pattern has constructs that could consume more input at the end
                     hitEnd = true;
+                } else if (probePartialHardWouldExtend(regionSubject, matchOptions)) {
+                    // Use PCRE2 PARTIAL_HARD to detect cases where a longer subject could have
+                    // extended the match (e.g. ...\R consumed \r at end-of-input but could
+                    // have consumed \r\n if more input were available).
+                    hitEnd = true;
                 }
             }
         } else {
@@ -1758,19 +1820,55 @@ public class Matcher implements java.util.regex.MatchResult {
             if (partialResult == IPcre2.ERROR_PARTIAL) {
                 // Partial match exists - more input could lead to a match
                 hitEnd = true;
+            } else if (MatcherPatternAnalysis.patternIsAnchoredAtStart(pattern.pattern())) {
+                // Pattern is anchored at start (^ or \A): the search only tried the start
+                // position, and since the partial-match probe also failed there, the engine
+                // gave up on a hard mismatch before reaching end-of-input. Java reports
+                // hitEnd=false in this case.
+                hitEnd = false;
             } else {
-                // No partial match - but the search still needed to examine the input.
-                // In Java's implementation, hitEnd is typically true when no match is found
-                // because the search engine had to look through the entire input.
-                // Set hitEnd=true unless we can prove the search ended early.
-                //
-                // For a pattern like "xyz" against "abc", Java returns hitEnd=true because
-                // the search engine had to examine all positions to determine there's no match.
+                // Unanchored pattern: the search engine had to examine every position to
+                // determine no match, so by JDK convention hitEnd is true.
                 hitEnd = true;
             }
         }
     }
 
+
+    /**
+     * Probes whether the current match (which ended at end-of-input) could have been extended
+     * if more input were available, by re-running PCRE2 with {@link Pcre2MatchOption#PARTIAL_HARD}
+     * at the same start offset. PARTIAL_HARD treats end-of-input as "may have more later", so
+     * constructs like {@code \R} that matched a single {@code \r} will report a partial match
+     * instead of a successful complete match. This catches the JDK quirk where, e.g., matching
+     * {@code ...\R} against {@code "cat\r"} should set {@code hitEnd=true} because a trailing
+     * {@code \n} could turn the 1-char {@code \r} match into a 2-char {@code \r\n} match.
+     *
+     * @param regionSubject the region subject used for the original match
+     * @param matchOptions  the match options used for the original match
+     * @return {@code true} if PARTIAL_HARD reports a partial match (more input could extend)
+     */
+    private boolean probePartialHardWouldExtend(RegionSubject regionSubject,
+            EnumSet<Pcre2MatchOption> matchOptions) {
+        final var partialOptions = EnumSet.copyOf(matchOptions);
+        partialOptions.remove(Pcre2MatchOption.PARTIAL_SOFT);
+        partialOptions.add(Pcre2MatchOption.PARTIAL_HARD);
+        final var partialMatchData = new Pcre2MatchData(pattern.code);
+        final int result;
+        try {
+            result = pattern.code.match(
+                    regionSubject.subject(),
+                    regionSubject.startOffset(),
+                    partialOptions,
+                    partialMatchData,
+                    matchContext
+            );
+        } catch (RuntimeException e) {
+            // Backend doesn't support PARTIAL_HARD here — be conservative and don't claim hitEnd.
+            return false;
+        }
+        return result == IPcre2.ERROR_PARTIAL;
+    }
 
     /**
      * Process match results: convert ovector to string indices and adjust for region offset.
@@ -1886,12 +1984,15 @@ public class Matcher implements java.util.regex.MatchResult {
      */
     public static class MatchResult implements java.util.regex.MatchResult {
 
-        private final String substring;
+        private final String snapshot;
+        private final int snapshotOffset;
         private final int[] matchIndices;
         private final Map<String, Integer> groupNameToIndex;
 
-        /* package-private */ MatchResult(String substring, int[] matchIndices, Map<String, Integer> groupNameToIndex) {
-            this.substring = substring;
+        /* package-private */ MatchResult(String snapshot, int snapshotOffset, int[] matchIndices,
+                                          Map<String, Integer> groupNameToIndex) {
+            this.snapshot = snapshot;
+            this.snapshotOffset = snapshotOffset;
             this.matchIndices = matchIndices;
             this.groupNameToIndex = groupNameToIndex;
         }
@@ -1970,7 +2071,10 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalStateException("No match found");
             }
 
-            return substring;
+            return snapshot.substring(
+                    matchIndices[0] - snapshotOffset,
+                    matchIndices[1] - snapshotOffset
+            );
         }
 
         @Override
@@ -1982,10 +2086,12 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IndexOutOfBoundsException("No such group: " + group);
             }
 
-            return substring.substring(
-                    matchIndices[group * 2] - matchIndices[0],
-                    matchIndices[group * 2 + 1] - matchIndices[0]
-            );
+            final int s = matchIndices[group * 2];
+            final int e = matchIndices[group * 2 + 1];
+            if (s < 0 || e < 0) {
+                return null;
+            }
+            return snapshot.substring(s - snapshotOffset, e - snapshotOffset);
         }
 
         @Override
@@ -1998,10 +2104,12 @@ public class Matcher implements java.util.regex.MatchResult {
                 throw new IllegalArgumentException("No group with name <" + name + ">");
             }
 
-            return substring.substring(
-                    matchIndices[group * 2] - matchIndices[0],
-                    matchIndices[group * 2 + 1] - matchIndices[0]
-            );
+            final int s = matchIndices[group * 2];
+            final int e = matchIndices[group * 2 + 1];
+            if (s < 0 || e < 0) {
+                return null;
+            }
+            return snapshot.substring(s - snapshotOffset, e - snapshotOffset);
         }
 
         @Override

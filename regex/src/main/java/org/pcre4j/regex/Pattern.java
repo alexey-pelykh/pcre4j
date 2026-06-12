@@ -32,6 +32,8 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
 
@@ -55,6 +57,35 @@ import java.util.stream.Stream;
  * may observe higher native memory usage until the garbage collector runs.</p>
  */
 public class Pattern {
+
+    private static final Logger LOG = Logger.getLogger(Pattern.class.getName());
+
+    /** Tracks whether we've already logged that the translator is disabled, to avoid spam. */
+    private static volatile boolean translatorDisabledLogged = false;
+
+    /** Whether the Java→PCRE2 syntax translator is active (see {@code pcre4j.regex.translate}). */
+    private static boolean translatorEnabled() {
+        final String prop = System.getProperty("pcre4j.regex.translate");
+        if (prop == null) {
+            return true;
+        }
+        // Accept "true"/"false" case-insensitively; anything else is logged and treated as "true"
+        // so that typos like "flase" or "0" don't silently turn the translator off.
+        if (prop.equalsIgnoreCase("true")) {
+            return true;
+        }
+        if (prop.equalsIgnoreCase("false")) {
+            if (!translatorDisabledLogged) {
+                translatorDisabledLogged = true;
+                LOG.info("pcre4j: Java->PCRE2 syntax translator disabled "
+                        + "via -Dpcre4j.regex.translate=false");
+            }
+            return false;
+        }
+        LOG.warning("pcre4j: unrecognised value for pcre4j.regex.translate="
+                + prop + "; defaulting to true");
+        return true;
+    }
 
     /**
      * A {@link java.util.regex.Pattern#CASE_INSENSITIVE}-compatible flag implemented via
@@ -189,7 +220,15 @@ public class Pattern {
             throw new IllegalArgumentException("api cannot be null");
         }
         if (regex == null) {
-            throw new IllegalArgumentException("regex cannot be null");
+            // JDK contract: Pattern.compile(null) must throw NullPointerException.
+            throw new NullPointerException("regex cannot be null");
+        }
+        final int allFlagsMask = CASE_INSENSITIVE | MULTILINE | DOTALL | UNICODE_CASE | CANON_EQ
+                | UNIX_LINES | LITERAL | UNICODE_CHARACTER_CLASS | COMMENTS;
+        if ((flags & ~allFlagsMask) != 0) {
+            // JDK contract: unknown flag bits must trigger IllegalArgumentException.
+            throw new IllegalArgumentException(
+                    "Unknown flag bits 0x" + Integer.toHexString(flags & ~allFlagsMask));
         }
 
         this.api = api;
@@ -199,32 +238,87 @@ public class Pattern {
         this.depthLimit = depthLimit;
         this.heapLimit = heapLimit;
 
-        // When CANON_EQ is set, normalize the pattern to NFD form for compilation
-        // The original regex is preserved in this.regex for pattern() method
+        // JDK contract: a pattern that ends with an unescaped backslash must throw with a
+        // diagnostic mentioning "Unescaped trailing backslash" before any translation/compile.
+        // Count trailing backslashes; if odd, the last one is unescaped.
+        int trailingBs = 0;
+        for (int k = regex.length() - 1; k >= 0 && regex.charAt(k) == '\\'; k--) {
+            trailingBs++;
+        }
+        if ((trailingBs & 1) == 1) {
+            throw new PatternSyntaxException(
+                    "Unescaped trailing backslash", regex, regex.length() - 1);
+        }
+
+        // JDK contract: capturing group names ((?<name>…)) and back-references (\k<name>) must
+        // start with a Latin letter and may only contain Latin letters and digits. The diagnostic
+        // text matches OpenJDK exactly so JDK-style tests can match-prefix on it.
+        validateGroupNames(regex);
+
+        // JDK contract: bounded-repetition quantifiers {n}, {n,}, {n,m} must contain only digits,
+        // be non-negative, fit in int, and satisfy n <= m. Surface JDK-style "Illegal repetition"
+        // diagnostics before PCRE2 (whose validation differs or treats malformed forms as literal).
+        validateRepetitionRanges(regex);
+
+        // Translate Java regex syntax to PCRE2-compatible syntax.
+        // The original regex is preserved in this.regex for pattern() method.
+        // Translation can be disabled via -Dpcre4j.regex.translate=false.
+        String translated = regex;
+        if (translatorEnabled()) {
+            try {
+                translated = org.pcre4j.regex.translate.JavaRegexTranslator.translate(regex, flags);
+            } catch (PatternSyntaxException e) {
+                // Translator deliberately surfaced a JDK-compatible diagnostic (e.g. "Illegal
+                // repetition"); pass it through unchanged.
+                throw e;
+            } catch (RuntimeException e) {
+                // Unexpected translator bug — wrap so support can tell it apart from a PCRE2 error
+                // and the original cause is preserved.
+                LOG.log(Level.WARNING,
+                        "pcre4j: translator failed for pattern; rethrowing", e);
+                final PatternSyntaxException pse = new PatternSyntaxException(
+                        "translator: " + e.getMessage(), regex, 0);
+                pse.initCause(e);
+                throw pse;
+            }
+        }
+
+        // When CANON_EQ is set, normalize the (already translated) pattern to NFD form for compilation
         if ((flags & CANON_EQ) != 0) {
-            this.compiledRegex = Normalizer.normalize(regex, Normalizer.Form.NFD);
+            this.compiledRegex = Normalizer.normalize(translated, Normalizer.Form.NFD);
         } else {
-            this.compiledRegex = regex;
+            this.compiledRegex = translated;
         }
 
         this.compileOptions = EnumSet.of(Pcre2CompileOption.UTF);
+        final boolean literal = (flags & LITERAL) != 0;
         if ((flags & CASE_INSENSITIVE) != 0) {
             compileOptions.add(Pcre2CompileOption.CASELESS);
+            // JDK \p{Lu} under CASE_INSENSITIVE matches both cases; PCRE2 needs UCP for this.
+            // UCP is incompatible with PCRE2_LITERAL, so skip it when literal mode is active
+            // (LITERAL strips all regex semantics anyway, so case-folding behaviour is unaffected).
+            if (!literal) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
         }
-        if ((flags & DOTALL) != 0) {
-            compileOptions.add(Pcre2CompileOption.DOTALL);
-        }
-        if ((flags & LITERAL) != 0) {
+        if (literal) {
             compileOptions.add(Pcre2CompileOption.LITERAL);
         }
-        if ((flags & MULTILINE) != 0) {
-            compileOptions.add(Pcre2CompileOption.MULTILINE);
-        }
-        if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
-            compileOptions.add(Pcre2CompileOption.UCP);
-        }
-        if ((flags & COMMENTS) != 0) {
-            compileOptions.add(Pcre2CompileOption.EXTENDED);
+        // PCRE2_LITERAL is incompatible with DOTALL/MULTILINE/EXTENDED/UCP.
+        // JDK Pattern semantics: LITERAL makes all other regex flags "superfluous".
+        if (!literal) {
+            if ((flags & DOTALL) != 0) {
+                compileOptions.add(Pcre2CompileOption.DOTALL);
+            }
+            if ((flags & MULTILINE) != 0) {
+                compileOptions.add(Pcre2CompileOption.MULTILINE);
+            }
+            if ((flags & UNICODE_CHARACTER_CLASS) != 0) {
+                compileOptions.add(Pcre2CompileOption.UCP);
+            }
+            if ((flags & COMMENTS) != 0) {
+                compileOptions.add(Pcre2CompileOption.EXTENDED);
+            }
         }
         // Note: UNICODE_CASE flag is recognized for API compatibility but has no additional effect
         // since PCRE2 with UTF mode (always enabled) already performs Unicode-aware case folding.
@@ -245,7 +339,7 @@ public class Pattern {
                         api,
                         compiledRegex,
                         compileOptions,
-                        EnumSet.of(Pcre2JitOption.COMPLETE),
+                        EnumSet.of(Pcre2JitOption.COMPLETE, Pcre2JitOption.PARTIAL_SOFT, Pcre2JitOption.PARTIAL_HARD),
                         compileContext
                 );
             } else {
@@ -257,7 +351,16 @@ public class Pattern {
                 );
             }
         } catch (Pcre2CompileException e) {
-            throw new PatternSyntaxException(e.message(), e.pattern(), (int) e.offset());
+            // Surface the original (untranslated) pattern in the exception, per JDK contract.
+            // The offset reported by PCRE2 is into the translated pattern and can exceed
+            // regex.length() when translation inserted characters; clamp into the original range.
+            int offset = (int) e.offset();
+            if (offset < 0 || offset > regex.length()) {
+                offset = Math.max(0, Math.min(regex.length(), offset));
+            }
+            final PatternSyntaxException pse = new PatternSyntaxException(e.message(), regex, offset);
+            pse.initCause(e);
+            throw pse;
         }
 
         namedGroups = new HashMap<>();
@@ -405,7 +508,8 @@ public class Pattern {
      */
     public Matcher matcher(CharSequence input) {
         if (input == null) {
-            throw new IllegalArgumentException("input must not be null");
+            // JDK contract: matcher(null) must throw NullPointerException.
+            throw new NullPointerException("input must not be null");
         }
         return new Matcher(this, input);
     }
@@ -417,6 +521,224 @@ public class Pattern {
      */
     public String pattern() {
         return regex;
+    }
+
+    /**
+     * Pre-validates JDK-style named group declarations ({@code (?<name>…)}) and back-references
+     * ({@code \k<name>}) so that callers see JDK-equivalent diagnostics instead of PCRE2-flavoured
+     * errors. The name must start with a Latin letter ([A-Za-z]) and contain only Latin letters
+     * and digits ([A-Za-z0-9]).
+     * <p>
+     * Names are skipped inside character classes and inside {@code \Q…\E} quoted spans; lookbehind
+     * groups {@code (?<=…)} and {@code (?<!…)} are recognised and skipped. Unbalanced or unknown
+     * forms are left to the translator/PCRE2 to report.
+     *
+     * @param regex the original pattern
+     * @throws PatternSyntaxException if a named group declaration or back-reference is invalid
+     */
+    private static void validateGroupNames(String regex) {
+        final int n = regex.length();
+        int charClassDepth = 0;
+        for (int i = 0; i < n; i++) {
+            final char c = regex.charAt(i);
+            if (c == '\\') {
+                if (i + 1 >= n) {
+                    return; // trailing backslash already handled
+                }
+                final char next = regex.charAt(i + 1);
+                if (next == 'Q') {
+                    final int end = regex.indexOf("\\E", i + 2);
+                    i = (end < 0) ? n - 1 : end + 1;
+                    continue;
+                }
+                if (next == 'k' && charClassDepth == 0
+                        && i + 2 < n && regex.charAt(i + 2) == '<') {
+                    final int close = regex.indexOf('>', i + 3);
+                    if (close < 0) {
+                        throw new PatternSyntaxException(
+                                "named capturing group is missing trailing '>'",
+                                regex, i + 3);
+                    }
+                    validateName(regex, i + 3, close);
+                    i = close;
+                    continue;
+                }
+                i++; // skip escaped char
+                continue;
+            }
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+            if (charClassDepth > 0) {
+                continue;
+            }
+            if (c == '(' && i + 2 < n
+                    && regex.charAt(i + 1) == '?' && regex.charAt(i + 2) == '<') {
+                // Distinguish (?<= and (?<! lookbehind from (?<name> capturing group
+                if (i + 3 < n) {
+                    final char after = regex.charAt(i + 3);
+                    if (after == '=' || after == '!') {
+                        continue;
+                    }
+                }
+                final int close = regex.indexOf('>', i + 3);
+                if (close < 0) {
+                    throw new PatternSyntaxException(
+                            "named capturing group is missing trailing '>'",
+                            regex, i + 3);
+                }
+                validateName(regex, i + 3, close);
+                i = close;
+            }
+        }
+    }
+
+    private static void validateName(String regex, int start, int end) {
+        if (start >= end) {
+            throw new PatternSyntaxException(
+                    "capturing group name does not start with a Latin letter",
+                    regex, start);
+        }
+        final char first = regex.charAt(start);
+        if (!((first >= 'a' && first <= 'z') || (first >= 'A' && first <= 'Z'))) {
+            throw new PatternSyntaxException(
+                    "capturing group name does not start with a Latin letter",
+                    regex, start);
+        }
+        for (int k = start + 1; k < end; k++) {
+            final char ch = regex.charAt(k);
+            final boolean ok = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+                    || (ch >= '0' && ch <= '9');
+            if (!ok) {
+                throw new PatternSyntaxException(
+                        "named capturing group is missing trailing '>'",
+                        regex, k);
+            }
+        }
+    }
+
+    /**
+     * Scans for bounded-repetition quantifiers {@code {n}}, {@code {n,}}, {@code {n,m}} outside
+     * of character classes and {@code \Q…\E} spans and validates them: digits-only, non-negative,
+     * fitting in a signed 32-bit int, and {@code n <= m}. Anything else triggers a
+     * {@link PatternSyntaxException} whose detail message starts with "Illegal repetition", to
+     * match the JDK contract checked by {@code RegExTest.illegalRepetitionRange}.
+     *
+     * @param regex the original pattern
+     */
+    private static void validateRepetitionRanges(String regex) {
+        final int n = regex.length();
+        int charClassDepth = 0;
+        for (int i = 0; i < n; i++) {
+            final char c = regex.charAt(i);
+            if (c == '\\') {
+                if (i + 1 >= n) {
+                    return;
+                }
+                final char esc = regex.charAt(i + 1);
+                if (esc == 'Q') {
+                    final int end = regex.indexOf("\\E", i + 2);
+                    i = (end < 0) ? n - 1 : end + 1;
+                    continue;
+                }
+                // Skip \p{...}, \P{...}, \N{...}, \x{...} so the inner braces are not parsed as repetition.
+                if ((esc == 'p' || esc == 'P' || esc == 'N' || esc == 'x') && i + 2 < n && regex.charAt(i + 2) == '{') {
+                    final int end = regex.indexOf('}', i + 3);
+                    i = (end < 0) ? n - 1 : end;
+                    continue;
+                }
+                i++; // skip escaped char
+                continue;
+            }
+            if (c == '[') {
+                charClassDepth++;
+                continue;
+            }
+            if (c == ']' && charClassDepth > 0) {
+                charClassDepth--;
+                continue;
+            }
+            if (charClassDepth > 0) {
+                continue;
+            }
+            if (c != '{') {
+                continue;
+            }
+            // Only treat as a repetition range if it follows a quantifier-able token.
+            // Approximation: a preceding character that's not ( | ^ start-of-string. False
+            // positives are bounded — anything malformed is going to error anyway.
+            if (i == 0) {
+                continue;
+            }
+            final char prev = regex.charAt(i - 1);
+            if (prev == '(' || prev == '|') {
+                continue;
+            }
+            final int close = regex.indexOf('}', i + 1);
+            if (close < 0) {
+                continue; // let PCRE2 surface the error
+            }
+            final String body = regex.substring(i + 1, close);
+            if (!isValidRepetitionBody(body)) {
+                throw new PatternSyntaxException(
+                        "Illegal repetition", regex, i);
+            }
+            i = close;
+        }
+    }
+
+    private static boolean isValidRepetitionBody(String body) {
+        if (body.isEmpty()) {
+            return false;
+        }
+        final int comma = body.indexOf(',');
+        if (comma < 0) {
+            return parsePositiveInt(body) >= 0;
+        }
+        if (body.indexOf(',', comma + 1) >= 0) {
+            return false; // more than one comma
+        }
+        final String lo = body.substring(0, comma);
+        final String hi = body.substring(comma + 1);
+        if (lo.isEmpty()) {
+            return false; // JDK rejects {,m}
+        }
+        final int loVal = parsePositiveInt(lo);
+        if (loVal < 0) {
+            return false;
+        }
+        if (hi.isEmpty()) {
+            return true; // {n,} is valid
+        }
+        final int hiVal = parsePositiveInt(hi);
+        if (hiVal < 0) {
+            return false;
+        }
+        return loVal <= hiVal;
+    }
+
+    /** Returns the parsed non-negative int, or -1 if not a digit-only string or overflow. */
+    private static int parsePositiveInt(String s) {
+        if (s.isEmpty()) {
+            return -1;
+        }
+        long acc = 0;
+        for (int k = 0; k < s.length(); k++) {
+            final char ch = s.charAt(k);
+            if (ch < '0' || ch > '9') {
+                return -1;
+            }
+            acc = acc * 10 + (ch - '0');
+            if (acc > Integer.MAX_VALUE) {
+                return -1;
+            }
+        }
+        return (int) acc;
     }
 
     /**
@@ -515,7 +837,7 @@ public class Pattern {
         }
 
         var resultSize = result.size();
-        if (limit <= 0) {
+        if (limit == 0) {
             while (resultSize > 0 && result.get(resultSize - 1).isEmpty()) {
                 resultSize--;
             }

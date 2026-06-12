@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2026 Oleksii PELYKH
+ * Copyright (C) 2026 Oleksii PELYKH
  *
  * This file is a part of the PCRE4J. The PCRE4J is free software: you can redistribute it and/or modify it under the
  * terms of the GNU Lesser General Public License as published by the Free Software Foundation, either version 3 of the
@@ -12,17 +12,6 @@
  * You should have received a copy of the GNU Lesser General Public License along with this program. If not, see
  * <https://www.gnu.org/licenses/>.
  */
+package org.pcre4j.compat;
 
-/**
- * PCRE4J Regex — a {@link java.util.regex.Pattern}-compatible API backed by PCRE2.
- *
- * <p>This module re-exports {@code org.pcre4j.api} and {@code org.pcre4j} so that consumers
- * can access backend and wrapper types without additional dependency declarations.</p>
- */
-module org.pcre4j.regex {
-    requires transitive org.pcre4j.api;
-    requires transitive org.pcre4j;
-    requires java.logging;
-
-    exports org.pcre4j.regex;
-}
+public record Group(String name, int start, int end, String text) {}
